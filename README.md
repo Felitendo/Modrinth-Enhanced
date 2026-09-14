@@ -17,7 +17,7 @@ works.
 | `0002-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                      |
 | `0003-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embeds, and the playtime and server-play reports the launcher sends to Modrinth. |
 | `0004-Add-offline-accounts`                | A way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                   |
-| `0005-Hide-Modrinth-Servers-...`           | Modrinth Servers off in the sidebar by default, and a news section that folds away and stays folded.                                        |
+| `0005-Make-the-sidebars-foldable`          | A switch for the Modrinth Servers button, a news section that folds away, and a title bar button that folds the right sidebar away.         |
 | `0006-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
 
 ### Offline accounts
@@ -51,9 +51,16 @@ application registered with Ely.by — one has not been registered for Modrinth 
 
 ### Sidebar and news
 
-Modrinth Servers is hidden from the left sidebar by default and can be switched back on under
-Settings > Features > Sidebar. The news section in the right sidebar folds away by clicking its
-heading and stays that way across restarts.
+The Modrinth Servers button in the left sidebar can be switched off under
+Settings > Features > Sidebar.
+
+The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
+folds away with the arrow button in the title bar, which upstream only shows once "Hide right
+sidebar" is turned on in settings. Both remember what they were set to across restarts.
+
+None of the three reach Modrinth. Preference syncing maps a fixed list of named fields in both
+directions and these are not in it, so they are neither sent to your Modrinth account nor
+overwritten by another device.
 
 ### What is *not* removed
 

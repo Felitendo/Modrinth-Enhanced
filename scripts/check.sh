@@ -61,6 +61,8 @@ check "Modrinth Servers is behind a flag" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" "getFeatureFlag('show_hosting_in_sidebar')"
 check "the news section can be collapsed" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
+check "the right sidebar has a fold button" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setSidebarCollapsed(sidebarToggled)'
 
 log "No telemetry in the sources"
 # Quoted, so that the module names being mentioned in a comment explaining why

@@ -1,24 +1,33 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
 Date: Mon, 14 Sep 2026 13:06:38 +0200
-Subject: [PATCH] Hide Modrinth Servers in the sidebar and fold away the news
+Subject: [PATCH] Make the sidebars foldable
 
-Two sidebar preferences, both stored as feature flags so they survive a
+Three sidebar preferences, all stored as feature flags so they survive a
 restart without needing a settings migration:
 
-* The Modrinth Servers button in the left sidebar is off by default and
-  can be turned back on under Settings > Features > Sidebar.
+* The Modrinth Servers button in the left sidebar can be switched off
+  under Settings > Features > Sidebar. It stays on by default.
 * The news section in the right sidebar collapses by clicking its
   heading, remembering the state the way the friends list does.
+* The button that folds the right sidebar away is always in the title
+  bar, rather than appearing only once "Hide right sidebar" is turned on
+  in settings, and what it is set to is remembered. That setting still
+  works, and still seeds the state. Its label was pointing at the wrong
+  message ("Next image"), which is fixed here too.
+
+None of these three reach Modrinth. Preference syncing maps a fixed list
+of named fields in both directions, and these are not in it, so they are
+neither sent nor overwritten by another device.
 ---
- apps/app-frontend/src/App.vue                 | 31 +++++++++++++++++--
- .../ui/settings/display/FeaturesSettings.vue  | 27 ++++++++++++++++
- .../src/composables/use-app-settings.ts       |  2 ++
- packages/app-lib/src/state/settings.rs        |  2 ++
- 4 files changed, 59 insertions(+), 3 deletions(-)
+ apps/app-frontend/src/App.vue                 | 67 ++++++++++++++++---
+ .../ui/settings/display/FeaturesSettings.vue  | 27 ++++++++
+ .../src/composables/use-app-settings.ts       |  3 +
+ packages/app-lib/src/state/settings.rs        |  3 +
+ 4 files changed, 91 insertions(+), 9 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 33c29ce..1cab873 100644
+index 33c29ce..3be5fe7 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -11,6 +11,7 @@ import {
@@ -29,7 +38,42 @@ index 33c29ce..1cab873 100644
  	ChevronLeftIcon,
  	ChevronRightIcon,
  	CompassIcon,
-@@ -370,6 +371,21 @@ const hasPlus = computed(
+@@ -257,12 +258,31 @@ const credentials = ref()
+ const storedModrinthAccounts = ref([])
+ let credentialsRefreshId = 0
+ const sidebarToggled = ref(true)
++// Whether the right sidebar is folded away, remembered across restarts in the
++// feature flags. The title bar button below is what normally sets it; the
++// "Hide right sidebar" setting still seeds it, so turning that on folds the
++// sidebar away as it always did.
+ watch(
+-	() => appSettings.toggleSidebar,
+-	(toggleSidebar) => {
+-		sidebarToggled.value = !toggleSidebar
++	() => appSettings.getFeatureFlag('right_sidebar_collapsed'),
++	(collapsed) => {
++		sidebarToggled.value = !collapsed
+ 	},
++	{ immediate: true },
+ )
++watch(
++	() => appSettings.toggleSidebar,
++	(hide) => setSidebarCollapsed(hide),
++)
++
++function setSidebarCollapsed(collapsed) {
++	appSettings.featureFlags.right_sidebar_collapsed = collapsed
++	getSettings()
++		.then((settings) => {
++			settings.feature_flags.right_sidebar_collapsed = collapsed
++			return setSettings(settings)
++		})
++		.catch(handleError)
++}
+ const forceSidebar = computed(
+ 	() =>
+ 		route.path.startsWith('/browse') ||
+@@ -370,6 +390,21 @@ const hasPlus = computed(
  // ad cookie consent flow that only exists to serve it are both switched off.
  const showAd = computed(() => false)
  const adConsentAvailable = computed(() => false)
@@ -51,7 +95,16 @@ index 33c29ce..1cab873 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -2278,6 +2294,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -600,6 +635,8 @@ const messages = defineMessages({
+ 	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
+ 	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
+ 	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
++	hideSidebar: { id: 'app.navigation.hide-sidebar', defaultMessage: 'Hide sidebar' },
++	showSidebar: { id: 'app.navigation.show-sidebar', defaultMessage: 'Show sidebar' },
+ 	updateDownloadMissingVersion: {
+ 		id: 'app.update.download-error.missing-version',
+ 		defaultMessage: 'Failed to download update: no version available',
+@@ -2278,6 +2315,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -59,7 +112,26 @@ index 33c29ce..1cab873 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2528,10 +2545,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2404,12 +2442,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 			</div>
+ 			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
+ 				<IconButton
+-					v-if="!forceSidebar && appSettings.toggleSidebar"
++					v-if="!forceSidebar"
++					v-tooltip="
++						formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)
++					"
+ 					:type="sidebarToggled ? 'base' : 'quiet'"
+-					:label="formatMessage(messages.nextImage)"
++					:label="formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)"
+ 					class="mr-3 transition-transform"
+ 					:class="{ 'rotate-180': !sidebarToggled }"
+-					@click="sidebarToggled = !sidebarToggled"
++					@click="setSidebarCollapsed(sidebarToggled)"
+ 				>
+ 					<RightArrowIcon />
+ 				</IconButton>
+@@ -2528,10 +2569,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
@@ -162,28 +234,30 @@ index 1d3e379..54f1c51 100644
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index 0d58903..4f0b2aa 100644
+index 0d58903..59da62b 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -24,6 +24,8 @@ export const DEFAULT_FEATURE_FLAGS = {
+@@ -24,6 +24,9 @@ export const DEFAULT_FEATURE_FLAGS = {
  	friends_pending_collapsed: true,
  	dismissed_photosensitivity_filter_warning: false,
  	localhost_sign_in: false,
-+	show_hosting_in_sidebar: false,
++	show_hosting_in_sidebar: true,
 +	news_collapsed: false,
++	right_sidebar_collapsed: false,
  }
  
  export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 20601b8..b02bbe0 100644
+index 20601b8..2fd0d87 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -88,6 +88,8 @@ pub enum FeatureFlag {
+@@ -88,6 +88,9 @@ pub enum FeatureFlag {
      FriendsPendingCollapsed,
      DismissedPhotosensitivityFilterWarning,
      LocalhostSignIn,
 +    ShowHostingInSidebar,
 +    NewsCollapsed,
++    RightSidebarCollapsed,
  }
  
  impl Settings {
