@@ -19,12 +19,17 @@ restart without needing a settings migration:
 None of these three reach Modrinth. Preference syncing maps a fixed list
 of named fields in both directions, and these are not in it, so they are
 neither sent nor overwritten by another device.
+
+The Modrinth Servers switch says so where it sits, because it sits on a
+page headed "Sync features across devices" and would otherwise look like
+it syncs. The other two are not settings entries - a heading and a title
+bar button - so nothing there promises anything.
 ---
  apps/app-frontend/src/App.vue                 | 67 ++++++++++++++++---
- .../ui/settings/display/FeaturesSettings.vue  | 27 ++++++++
+ .../ui/settings/display/FeaturesSettings.vue  | 28 ++++++++
  .../src/composables/use-app-settings.ts       |  3 +
  packages/app-lib/src/state/settings.rs        |  3 +
- 4 files changed, 91 insertions(+), 9 deletions(-)
+ 4 files changed, 92 insertions(+), 9 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
 index 33c29ce..3be5fe7 100644
@@ -154,7 +159,7 @@ index 33c29ce..3be5fe7 100644
  								v-for="(item, index) in news"
  								:key="`news-${index}`"
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index 1d3e379..54f1c51 100644
+index 1d3e379..ae88550 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 +++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 @@ -43,6 +43,7 @@ const quickInstances = useQuickInstanceLimit()
@@ -165,7 +170,7 @@ index 1d3e379..54f1c51 100644
  
  const messages = defineMessages({
  	syncAcrossDevicesTitle: {
-@@ -95,6 +96,14 @@ const messages = defineMessages({
+@@ -95,6 +96,15 @@ const messages = defineMessages({
  		id: 'app.features-settings.show-skin-selector.description',
  		defaultMessage: 'Show a button in the left sidebar to open the skin selector.',
  	},
@@ -175,12 +180,13 @@ index 1d3e379..54f1c51 100644
 +	},
 +	showHostingDescription: {
 +		id: 'app.features-settings.show-hosting.description',
-+		defaultMessage: 'Show a button in the left sidebar to manage Modrinth Servers.',
++		defaultMessage:
++			'Show a button in the left sidebar to manage Modrinth Servers. Added by Modrinth Enhanced, so it stays on this device and is not synced to your Modrinth account.',
 +	},
  	quickInstancesTitle: {
  		id: 'app.features-settings.quick-instances.title',
  		defaultMessage: 'Quick instances in sidebar',
-@@ -125,6 +134,7 @@ type FeaturesSettingsState = {
+@@ -125,6 +135,7 @@ type FeaturesSettingsState = {
  	showScreenshotsTab: boolean
  	showAllScreenshots: boolean
  	showSkinSelector: boolean
@@ -188,7 +194,7 @@ index 1d3e379..54f1c51 100644
  	quickInstanceCount: number
  	showJumpIn: boolean
  }
-@@ -144,6 +154,7 @@ function getFeaturesSettingsState(
+@@ -144,6 +155,7 @@ function getFeaturesSettingsState(
  		showScreenshotsTab: settings.show_screenshots_tab_in_instances,
  		showAllScreenshots: globalSyncedOptions.screenshots,
  		showSkinSelector: settings.show_skin_selector_in_sidebar,
@@ -196,7 +202,7 @@ index 1d3e379..54f1c51 100644
  		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
  		showJumpIn: settings.feature_flags[showJumpInFlag] ?? DEFAULT_FEATURE_FLAGS[showJumpInFlag],
  	}
-@@ -184,6 +195,7 @@ const settingsMutation = useMutation({
+@@ -184,6 +196,7 @@ const settingsMutation = useMutation({
  			feature_flags: {
  				...latestSettings.feature_flags,
  				[showJumpInFlag]: value.showJumpIn,
@@ -204,7 +210,7 @@ index 1d3e379..54f1c51 100644
  			},
  		}
  
-@@ -206,6 +218,7 @@ const settingsMutation = useMutation({
+@@ -206,6 +219,7 @@ const settingsMutation = useMutation({
  		appSettings.showScreenshotsTabInInstances = value.showScreenshotsTab
  		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
  		appSettings.featureFlags[showJumpInFlag] = value.showJumpIn
@@ -212,7 +218,7 @@ index 1d3e379..54f1c51 100644
  
  		if (updateQuickInstanceCount) {
  			quickInstances.setLimit(value.quickInstanceCount)
-@@ -366,6 +379,20 @@ onBeforeUnmount(() => {
+@@ -366,6 +380,20 @@ onBeforeUnmount(() => {
  				/>
  			</div>
  
