@@ -1,0 +1,124 @@
+name: Upstream release
+
+# Watches Modrinth for a new Modrinth App release, rebuilds Modrinth Enhanced
+# on top of it, and publishes a release of our own if everything still works.
+#
+# Nothing is published unless the patches applied, the checks passed and all
+# three platforms built, so an upstream change that breaks a patch stops here
+# and reports a failure instead of shipping a broken build.
+
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      upstream-ref:
+        description: Build this upstream tag instead of the newest one
+        type: string
+        required: false
+      force:
+        description: Release even if this version was already released
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-release
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.check.outputs.tag }}
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the newest upstream release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.upstream-ref }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          tag="${REQUESTED:-$(scripts/latest-upstream.sh)}"
+          current="$(tr -d '[:space:]' < upstream.txt)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Newest upstream release: $tag (we are on $current)"
+
+          if gh release view "$tag" >/dev/null 2>&1 && [ "$FORCE" != 'true' ]; then
+            echo "$tag has already been released; nothing to do."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build
+    needs: detect
+    if: needs.detect.outputs.proceed == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      upstream-ref: ${{ needs.detect.outputs.tag }}
+
+  release:
+    name: Release
+    needs: [detect, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the upstream release we build against
+        env:
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$TAG" > upstream.txt
+          if git diff --quiet -- upstream.txt; then
+            echo "upstream.txt already points at $TAG"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "Track upstream $TAG" -- upstream.txt
+          git push origin HEAD:${{ github.event.repository.default_branch }}
+
+      - name: Download installers
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.detect.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ls -la artifacts
+          notes="$(cat <<EOF
+          Modrinth Enhanced built from [Modrinth App $TAG](https://github.com/modrinth/code/releases/tag/$TAG).
+
+          Same app as upstream, with the patches in \`patches/\` applied:
+
+          - no advertising,
+          - no telemetry, crash reporting or survey embeds,
+          - offline accounts for singleplayer and offline-mode servers,
+          - renamed and re-iconed as Modrinth Enhanced.
+
+          It keeps using the same data directory as the official Modrinth App,
+          so instances, settings and accounts carry over. Do not run both at
+          the same time.
+
+          See the upstream release notes for everything else that changed.
+          EOF
+          )"
+          gh release create "$TAG" \
+            --title "Modrinth Enhanced $TAG" \
+            --notes "$notes" \
+            artifacts/*

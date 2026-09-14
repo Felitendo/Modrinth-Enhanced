@@ -1,0 +1,2 @@
+# Everything under build/ is regenerated from upstream.txt plus patches/.
+/build/

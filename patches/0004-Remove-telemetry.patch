@@ -1,0 +1,451 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 10:23:01 +0200
+Subject: [PATCH] Remove telemetry
+
+Product analytics, crash reporting and the user survey embed are all
+removed, and the Modrinth analytics endpoints the launcher itself posts
+to are no longer called:
+
+* `helpers/analytics.ts` becomes an inert module. It keeps the event map
+  and the exported functions so that every call site still type checks
+  without a patch of its own, but nothing is queued or sent and the
+  PostHog SDK is no longer part of the bundle at all.
+* `helpers/error-reporting.ts` no longer loads `@sentry/vue`; errors are
+  logged locally, as they are in upstream development builds.
+* The third-party Tally embed is dropped from `index.html` and the
+  survey list is no longer fetched, so the popup that carries the
+  signed-in Modrinth user id never appears.
+* `analytics/playtime` and `analytics/minecraft-server-play` are no
+  longer posted from `app-lib`. The latter also removes a Mojang session
+  handshake whose only purpose was to authenticate that report.
+* The webview CSP no longer allows PostHog, Sentry or Tally at all, so
+  this is enforced rather than merely intended.
+
+`posthog-js` and `@sentry/vue` stay in package.json. Removing them would
+mean carrying a patch against the lockfile, and nothing imports them any
+more, so neither ends up in a build.
+
+Download attribution is deliberately left in place: it is a header on
+downloads the user already requested and is what credits project authors
+for them.
+---
+ apps/app-frontend/index.html                  |  1 -
+ .../src/components/ui/SurveyPopup.vue         | 12 ++-
+ .../ui/settings/account/PrivacySettings.vue   |  3 +-
+ apps/app-frontend/src/helpers/analytics.ts    | 89 ++++---------------
+ .../src/helpers/error-reporting.ts            | 72 +++------------
+ .../app-frontend/src/locales/en-US/index.json |  2 +-
+ apps/app/tauri.conf.json                      |  6 +-
+ packages/app-lib/src/api/instance/run.rs      | 83 +++--------------
+ 8 files changed, 50 insertions(+), 218 deletions(-)
+
+diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
+index 6367788..9738bbc 100644
+--- a/apps/app-frontend/index.html
++++ b/apps/app-frontend/index.html
+@@ -11,7 +11,6 @@
+ 
+ 	<body>
+ 		<div id="app"></div>
+-		<script src="https://tally.so/widgets/embed.js" async></script>
+ 		<script type="module" src="/src/main.js"></script>
+ 	</body>
+ </html>
+diff --git a/apps/app-frontend/src/components/ui/SurveyPopup.vue b/apps/app-frontend/src/components/ui/SurveyPopup.vue
+index 7c2f406..6d63e0a 100644
+--- a/apps/app-frontend/src/components/ui/SurveyPopup.vue
++++ b/apps/app-frontend/src/components/ui/SurveyPopup.vue
+@@ -2,7 +2,6 @@
+ import { NotepadTextIcon, XIcon } from '@modrinth/assets'
+ import { Button, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
+ import { type } from '@tauri-apps/plugin-os'
+-import { $fetch } from 'ofetch'
+ import { onMounted, onUnmounted, ref } from 'vue'
+ 
+ import { release_ads_window_hold, take_ads_window_hold } from '@/helpers/ads.js'
+@@ -157,12 +156,11 @@ async function processPendingSurveys() {
+ 			isWithinLastTwoWeeks(instance.last_played) && !isWithinLastTwoWeeks(instance.created),
+ 	)
+ 
+-	let surveys: Survey[] = []
+-	try {
+-		surveys = await $fetch('https://api.modrinth.com/v2/surveys')
+-	} catch (e) {
+-		console.error('Error fetching surveys:', e)
+-	}
++	// Modrinth Enhanced does not show Modrinth's user surveys. They are served
++	// through a third-party Tally embed that is loaded on every start and they
++	// carry the signed-in Modrinth user id as a hidden form field, so the
++	// survey list is never fetched and the popup never appears.
++	const surveys: Survey[] = []
+ 
+ 	const surveyToShow = surveys.find(
+ 		(survey) =>
+diff --git a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+index 8773f8f..d31e8c5 100644
+--- a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
++++ b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+@@ -40,7 +40,7 @@ const messages = defineMessages({
+ 	telemetryDescription: {
+ 		id: 'app.settings.privacy.telemetry.description',
+ 		defaultMessage:
+-			'Modrinth collects anonymized analytics and usage data to improve our user experience and customize your experience. By disabling this option, you opt out and your data will no longer be collected.',
++			'Modrinth Enhanced collects no analytics or usage data and sends no crash reports, so there is nothing here to turn off.',
+ 	},
+ 	discordRichPresenceTitle: {
+ 		id: 'app.settings.privacy.discord-rich-presence.title',
+@@ -97,7 +97,6 @@ watch(
+ 				{{ formatMessage(messages.telemetryDescription) }}
+ 			</p>
+ 		</div>
+-		<Toggle id="opt-out-analytics" v-model="settings.telemetry" />
+ 	</div>
+ 
+ 	<div class="mt-4 flex items-center justify-between gap-4">
+diff --git a/apps/app-frontend/src/helpers/analytics.ts b/apps/app-frontend/src/helpers/analytics.ts
+index b3d2c0a..c9f4846 100644
+--- a/apps/app-frontend/src/helpers/analytics.ts
++++ b/apps/app-frontend/src/helpers/analytics.ts
+@@ -1,4 +1,16 @@
+-import type { PostHog } from 'posthog-js'
++/**
++ * Modrinth Enhanced does not collect analytics.
++ *
++ * Upstream this module lazily loads `posthog-js` on the first interaction and
++ * sends every event below to `posthog.modrinth.com`. Here the whole module is
++ * inert: nothing is loaded, nothing is queued and nothing is sent, which also
++ * keeps the PostHog SDK out of the bundle entirely rather than merely leaving
++ * it switched off.
++ *
++ * The event map and the exported functions are kept exactly as upstream
++ * declares them so that every `trackEvent` call site still type checks and
++ * needs no patch of its own.
++ */
+ 
+ interface InstanceProperties {
+ 	loader: string
+@@ -43,72 +55,13 @@ type AnalyticsEventMap = {
+ 
+ export type AnalyticsEvent = keyof AnalyticsEventMap
+ 
+-let analytics: PostHog | undefined
+-let pending: Promise<void> | undefined
+-let enabled = false
+-let activated = false
+-let debug = false
+-let explicitlyOptedIn = false
+-const events: Array<{ name: AnalyticsEvent; properties: Record<string, unknown> | undefined }> = []
+-const allowed = import.meta.env.PROD || import.meta.env.VITE_ENABLE_ANALYTICS === 'true'
++export const initAnalytics = () => {}
+ 
+-function removeActivationListeners() {
+-	window.removeEventListener('pointerdown', activate)
+-	window.removeEventListener('keydown', activate)
+-}
+-
+-function activate() {
+-	activated = true
+-	removeActivationListeners()
+-	if (!enabled || pending || analytics) return
+-	pending = import('posthog-js')
+-		.then(({ posthog }) => {
+-			if (!enabled) return
+-			posthog.init('phc_9Iqi6lFs9sr5BSqh9RRNRSJ0mATS9PSgirDiX3iOYJ', {
+-				persistence: 'localStorage',
+-				api_host: 'https://posthog.modrinth.com',
+-			})
+-			analytics = posthog
+-			if (explicitlyOptedIn) posthog.opt_in_capturing()
+-			if (debug) posthog.debug()
+-			for (const event of events.splice(0)) posthog.capture(event.name, event.properties)
+-		})
+-		.catch(() => {
+-			events.length = 0
+-		})
+-		.finally(() => {
+-			pending = undefined
+-		})
+-}
++export const debugAnalytics = () => {}
+ 
+-export const initAnalytics = () => {
+-	if (!allowed || enabled) return
+-	enabled = true
+-	if (activated) activate()
+-	else {
+-		window.addEventListener('pointerdown', activate, { once: true, passive: true })
+-		window.addEventListener('keydown', activate, { once: true })
+-	}
+-}
++export const optOutAnalytics = () => {}
+ 
+-export const debugAnalytics = () => {
+-	debug = true
+-	analytics?.debug()
+-}
+-
+-export const optOutAnalytics = () => {
+-	explicitlyOptedIn = false
+-	enabled = false
+-	events.length = 0
+-	removeActivationListeners()
+-	analytics?.opt_out_capturing()
+-}
+-
+-export const optInAnalytics = () => {
+-	explicitlyOptedIn = true
+-	initAnalytics()
+-	analytics?.opt_in_capturing()
+-}
++export const optInAnalytics = () => {}
+ 
+ type OptionalArgs<T> = Record<string, never> extends T ? [properties?: T] : [properties: T]
+ 
+@@ -116,10 +69,6 @@ export const trackEvent = <E extends AnalyticsEvent>(
+ 	eventName: E,
+ 	...args: OptionalArgs<AnalyticsEventMap[E]>
+ ) => {
+-	if (!enabled) return
+-	if (analytics) analytics.capture(eventName, args[0])
+-	else {
+-		if (events.length >= 100) events.shift()
+-		events.push({ name: eventName, properties: args[0] })
+-	}
++	void eventName
++	void args
+ }
+diff --git a/apps/app-frontend/src/helpers/error-reporting.ts b/apps/app-frontend/src/helpers/error-reporting.ts
+index bb20aa9..46a9749 100644
+--- a/apps/app-frontend/src/helpers/error-reporting.ts
++++ b/apps/app-frontend/src/helpers/error-reporting.ts
+@@ -1,66 +1,16 @@
+ import type { App } from 'vue'
+ import type { Router } from 'vue-router'
+ 
++/**
++ * Modrinth Enhanced does not send crash reports.
++ *
++ * Upstream this installs a Vue error handler plus `error` and
++ * `unhandledrejection` listeners that lazily load `@sentry/vue` and ship
++ * exceptions — including breadcrumbs and route traces — to Sentry. This
++ * build keeps the local behaviour of the upstream development path instead:
++ * errors are logged to the console and go nowhere else.
++ */
+ export function setupErrorReporting(app: App, router: Router): void {
+-	if (!import.meta.env.PROD) return
+-
+-	const previousHandler = app.config.errorHandler
+-	let pending: Promise<typeof import('@sentry/vue')> | undefined
+-	let queuedErrors = 0
+-
+-	function removeListeners() {
+-		window.removeEventListener('pointerdown', activate)
+-		window.removeEventListener('keydown', activate)
+-		window.removeEventListener('error', onError)
+-		window.removeEventListener('unhandledrejection', onRejection)
+-	}
+-
+-	function load() {
+-		pending ??= import('@sentry/vue').then((sentry) => {
+-			app.config.errorHandler = previousHandler
+-			sentry.init({
+-				app,
+-				dsn: 'https://9508775ee5034536bc70433f5f531dd4@o485889.ingest.us.sentry.io/4504579615227904',
+-				integrations: [sentry.browserTracingIntegration({ router })],
+-				tracesSampleRate: 0.1,
+-			})
+-			removeListeners()
+-			return sentry
+-		})
+-		return pending
+-	}
+-
+-	function capture(error: unknown) {
+-		if (queuedErrors >= 20) return
+-		queuedErrors++
+-		void load()
+-			.then((sentry) => sentry.captureException(error))
+-			.catch(() => {})
+-			.finally(() => {
+-				queuedErrors--
+-			})
+-	}
+-
+-	function onError(event: ErrorEvent) {
+-		capture(event.error ?? event.message)
+-	}
+-
+-	function onRejection(event: PromiseRejectionEvent) {
+-		capture(event.reason)
+-	}
+-
+-	function activate() {
+-		void load().catch(() => {})
+-	}
+-
+-	app.config.errorHandler = (error, instance, info) => {
+-		if (previousHandler) previousHandler(error, instance, info)
+-		else console.error(error)
+-		capture(error)
+-	}
+-	window.addEventListener('error', onError)
+-	window.addEventListener('unhandledrejection', onRejection)
+-	window.addEventListener('pointerdown', activate, { once: true, passive: true })
+-	window.addEventListener('keydown', activate, { once: true })
+-	app.onUnmount(removeListeners)
++	void app
++	void router
+ }
+diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
+index faab078..233cac2 100644
+--- a/apps/app-frontend/src/locales/en-US/index.json
++++ b/apps/app-frontend/src/locales/en-US/index.json
+@@ -2667,7 +2667,7 @@
+     "message": "Discord Rich Presence"
+   },
+   "app.settings.privacy.telemetry.description": {
+-    "message": "Modrinth collects anonymized analytics and usage data to improve our user experience and customize your experience. By disabling this option, you opt out and your data will no longer be collected."
++    "message": "Modrinth Enhanced collects no analytics or usage data and sends no crash reports, so there is nothing here to turn off."
+   },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetry"
+diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
+index e69e6b7..e5bbabe 100644
+--- a/apps/app/tauri.conf.json
++++ b/apps/app/tauri.conf.json
+@@ -102,12 +102,12 @@
+ 			"capabilities": ["ads", "core", "plugins"],
+ 			"csp": {
+ 				"default-src": "'self' customprotocol: asset:",
+-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.posthog.com https://posthog.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
++				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
+ 				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
+ 				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
+ 				"style-src": "'unsafe-inline' 'self'",
+-				"script-src": "https://*.posthog.com https://posthog.modrinth.com https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
+-				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://tally.so/popup/ https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
++				"script-src": "https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com 'self'",
++				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
+ 				"media-src": "https://*.githubusercontent.com"
+ 			}
+ 		}
+diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
+index 25626c1..d638128 100644
+--- a/packages/app-lib/src/api/instance/run.rs
++++ b/packages/app-lib/src/api/instance/run.rs
+@@ -4,13 +4,10 @@ use crate::state::{
+     Credentials, InstanceLink, ProcessMetadata, Settings, State,
+     game_options_sync_is_enabled, load_game_option_preferences,
+ };
+-use crate::util::fetch;
+ use crate::util::io::IOError;
+ use serde_json::json;
+ use std::collections::HashMap;
+-use std::time::Duration;
+ use tokio::process::Command;
+-use tracing::{info, warn};
+ 
+ #[derive(Debug, Clone)]
+ pub enum QuickPlayType {
+@@ -232,54 +229,10 @@ async fn run_credentials(
+         mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
+     }
+ 
+-    if let Some(project_id) = server_play_project_id(&context.link)
+-        && !project_id.trim().is_empty()
+-    {
+-        let server_id = uuid::Uuid::new_v4().to_string();
+-        let join_result = fetch::INSECURE_REQWEST_CLIENT
+-			.post("https://sessionserver.mojang.com/session/minecraft/join")
+-			.json(&json!({
+-				"accessToken": &credentials.access_token,
+-				"selectedProfile": credentials.offline_profile.id.simple().to_string(),
+-				"serverId": &server_id,
+-			}))
+-			.timeout(Duration::from_secs(5))
+-			.send()
+-			.await;
+-
+-        match join_result {
+-            Ok(resp) if resp.status().is_success() => {
+-                let result = fetch::post_json(
+-                    concat!(
+-                        env!("MODRINTH_API_BASE_URL"),
+-                        "analytics/minecraft-server-play"
+-                    ),
+-                    json!({
+-                        "project_id": project_id,
+-                        "username": &credentials.offline_profile.name,
+-                        "server_id": &server_id,
+-                    }),
+-                    &state.api_semaphore,
+-                    &state.pool,
+-                )
+-                .await;
+-
+-                match result {
+-                    Ok(()) => {
+-                        info!(
+-                            "Tracked server play for '{project_id}' in analytics"
+-                        )
+-                    }
+-                    Err(err) => warn!("Failed to report server play: {err:?}"),
+-                }
+-            }
+-            Ok(resp) => warn!(
+-                "Failed to join Mojang session server: HTTP {}",
+-                resp.status()
+-            ),
+-            Err(err) => warn!("Failed to join Mojang session server: {err:?}"),
+-        }
+-    }
++    // Modrinth Enhanced does not report server plays. Upstream authenticates
++    // that report by handshaking with Mojang's session server and then sends
++    // the player's Minecraft username to Modrinth's analytics endpoint;
++    // neither request is made here.
+ 
+     crate::minecraft_skins::flush_pending_skin_change().await?;
+     crate::launcher::launch_minecraft(
+@@ -297,21 +250,6 @@ async fn run_credentials(
+     .await
+ }
+ 
+-fn server_play_project_id(link: &InstanceLink) -> Option<&String> {
+-    match link {
+-        InstanceLink::ServerProject { project_id }
+-        | InstanceLink::ServerProjectModpack {
+-            server_project_id: project_id,
+-            ..
+-        } => Some(project_id),
+-        InstanceLink::Unmanaged
+-        | InstanceLink::ModrinthModpack { .. }
+-        | InstanceLink::ModrinthHosting { .. }
+-        | InstanceLink::ImportedModpack { .. }
+-        | InstanceLink::SharedInstance { .. } => None,
+-    }
+-}
+-
+ pub async fn kill(instance_id: &str) -> crate::Result<()> {
+     let state = State::get().await?;
+     let processes =
+@@ -373,13 +311,12 @@ pub async fn try_update_playtime_by_instance_id(
+             }
+         }
+ 
+-        fetch::post_json(
+-            concat!(env!("MODRINTH_API_BASE_URL"), "analytics/playtime"),
+-            serde_json::to_value(hashmap)?,
+-            &state.api_semaphore,
+-            &state.pool,
+-        )
+-        .await
++        // Modrinth Enhanced does not report playtime to Modrinth's analytics
++        // endpoint. The payload is still assembled and then dropped so that
++        // the bookkeeping below, which clears the instance's recent playtime
++        // counter, keeps behaving exactly like it does upstream.
++        drop(hashmap);
++        Ok(())
+     } else {
+         Ok(())
+     };

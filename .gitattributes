@@ -1,0 +1,7 @@
+# Patch files must reach `git am` byte for byte. Line ending conversion on a
+# Windows checkout would corrupt them, binary hunks in particular.
+*.patch -text
+
+# The shell scripts run under bash, including on Windows runners, where CRLF
+# line endings break them.
+*.sh text eol=lf

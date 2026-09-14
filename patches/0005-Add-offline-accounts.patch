@@ -1,0 +1,487 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 10:27:34 +0200
+Subject: [PATCH] Add offline accounts
+
+Adds a second way to add a Minecraft account that never talks to
+Microsoft or Mojang, for playing singleplayer worlds and servers running
+in offline mode.
+
+An offline account is an ordinary row in `minecraft_users`, marked by a
+sentinel in the refresh token column, so no database migration is
+needed. `Credentials::refresh` and the online profile lookup both return
+early for such an account, which keeps every existing code path -
+launching, account switching, serialisation to the frontend - working
+without further changes.
+
+The player UUID is derived the way Minecraft itself derives it, as an
+MD5 name UUID over `OfflinePlayer:<name>`. That is what vanilla servers
+in offline mode and other launchers use, so worlds keep the same player
+data when they are opened elsewhere.
+
+Usernames are validated the way Mojang validates them: 3 to 16
+characters of letters, numbers and underscores.
+---
+ Cargo.toml                                    |   1 +
+ .../src/components/ui/AccountsCard.vue        |  25 ++++
+ .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
+ apps/app-frontend/src/helpers/auth.js         |  13 ++
+ apps/app/src/api/auth.rs                      |   7 +
+ packages/app-lib/Cargo.toml                   |   1 +
+ packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
+ packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
+ 8 files changed, 290 insertions(+)
+ create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
+
+diff --git a/Cargo.toml b/Cargo.toml
+index a4a779c..a85f576 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -132,6 +132,7 @@ lz4_flex = { version = "0.11.5", default-features = false, features = [
+   "std",
+ ] }
+ maxminddb = "0.26.0"
++md-5 = "0.10.6"
+ modrinth-content-management = { path = "packages/modrinth-content-management" }
+ modrinth-log = { path = "packages/modrinth-log" }
+ modrinth-util = { path = "packages/modrinth-util" }
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index 70cc46e..e695a6d 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -9,6 +9,10 @@
+ 			<SpinnerIcon v-else class="animate-spin" />
+ 			{{ formatMessage(messages.signInToMinecraft) }}
+ 		</Button>
++		<Button @click="offlineAccountModal?.show($event)">
++			<UserIcon />
++			{{ formatMessage(messages.addOfflineAccount) }}
++		</Button>
+ 	</div>
+ 	<Accordion
+ 		v-else
+@@ -80,9 +84,17 @@
+ 					<PlusIcon />
+ 					{{ formatMessage(messages.addAccount) }}
+ 				</Button>
++				<Button
++					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
++					@click="offlineAccountModal?.show($event)"
++				>
++					<UserIcon />
++					{{ formatMessage(messages.addOfflineAccount) }}
++				</Button>
+ 			</div>
+ 		</div>
+ 	</Accordion>
++	<OfflineAccountModal ref="offlineAccountModal" @created="offlineAccountCreated" />
+ </template>
+ 
+ <script setup lang="ts">
+@@ -93,6 +105,7 @@ import {
+ 	RadioButtonIcon,
+ 	SpinnerIcon,
+ 	TrashIcon,
++	UserIcon,
+ } from '@modrinth/assets'
+ import {
+ 	Accordion,
+@@ -106,6 +119,7 @@ import {
+ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
++import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { handleSevereError } from '@/composables/use-error.js'
+ import { trackEvent } from '@/helpers/analytics'
+@@ -135,6 +149,7 @@ type MinecraftCredential = {
+ }
+ 
+ const accounts: Ref<MinecraftCredential[]> = ref([])
++const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+@@ -247,6 +262,12 @@ async function login() {
+ 	loginDisabled.value = false
+ }
+ 
++async function offlineAccountCreated() {
++	// `login_offline` already marks the new account as the active one.
++	await refreshValues()
++	emit('change')
++}
++
+ async function logout(id: string) {
+ 	await remove_user(id).catch(handleError)
+ 	await refreshValues()
+@@ -273,6 +294,10 @@ const messages = defineMessages({
+ 		id: 'minecraft-account.add-account',
+ 		defaultMessage: 'Add account',
+ 	},
++	addOfflineAccount: {
++		id: 'minecraft-account.add-offline-account',
++		defaultMessage: 'Add offline account',
++	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+ 		defaultMessage: 'Remove account',
+diff --git a/apps/app-frontend/src/components/ui/OfflineAccountModal.vue b/apps/app-frontend/src/components/ui/OfflineAccountModal.vue
+new file mode 100644
+index 0000000..8300e28
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/OfflineAccountModal.vue
+@@ -0,0 +1,136 @@
++<template>
++	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
++		<div class="flex flex-col gap-4">
++			<p class="m-0 leading-tight text-secondary">
++				{{ formatMessage(messages.description) }}
++			</p>
++
++			<form class="flex flex-col gap-2" @submit.prevent="submit">
++				<label class="font-semibold text-contrast" for="offline-account-username">
++					{{ formatMessage(messages.usernameLabel) }}
++				</label>
++				<Input
++					id="offline-account-username"
++					ref="usernameInput"
++					v-model="username"
++					:icon="UserIcon"
++					:placeholder="formatMessage(messages.usernamePlaceholder)"
++					:error="!!error"
++					:maxlength="16"
++					autocapitalize="none"
++					autocorrect="off"
++					:spellcheck="false"
++					class="w-full"
++				/>
++				<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
++			</form>
++		</div>
++
++		<template #actions>
++			<div class="flex justify-end gap-2">
++				<Button native-type="button" @click="modal?.hide()">
++					<XIcon aria-hidden="true" />
++					{{ formatMessage(commonMessages.cancelButton) }}
++				</Button>
++				<Button
++					type="colored"
++					color="brand"
++					native-type="button"
++					:disabled="submitting || !username.trim()"
++					@click="submit"
++				>
++					<SpinnerIcon v-if="submitting" aria-hidden="true" class="animate-spin" />
++					<PlusIcon v-else aria-hidden="true" />
++					{{ formatMessage(messages.addButton) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
++</template>
++
++<script setup lang="ts">
++import { PlusIcon, SpinnerIcon, UserIcon, XIcon } from '@modrinth/assets'
++import {
++	Button,
++	commonMessages,
++	defineMessages,
++	Input,
++	NewModal,
++	useVIntl,
++} from '@modrinth/ui'
++import { nextTick, ref } from 'vue'
++
++import { login_offline } from '@/helpers/auth'
++
++const { formatMessage } = useVIntl()
++
++const emit = defineEmits<{
++	created: [account: unknown]
++}>()
++
++const modal = ref<InstanceType<typeof NewModal>>()
++const username = ref('')
++const error = ref('')
++const submitting = ref(false)
++
++function show(event?: MouseEvent) {
++	username.value = ''
++	error.value = ''
++	submitting.value = false
++	modal.value?.show(event)
++	void nextTick(() => {
++		document.getElementById('offline-account-username')?.focus()
++	})
++}
++
++async function submit() {
++	if (submitting.value) return
++
++	const name = username.value.trim()
++	if (!name) return
++
++	submitting.value = true
++	error.value = ''
++
++	try {
++		const account = await login_offline(name)
++		modal.value?.hide()
++		emit('created', account)
++	} catch (e) {
++		error.value =
++			typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++	} finally {
++		submitting.value = false
++	}
++}
++
++defineExpose({ show })
++
++const messages = defineMessages({
++	header: {
++		id: 'app.offline-account.header',
++		defaultMessage: 'Add an offline account',
++	},
++	description: {
++		id: 'app.offline-account.description',
++		defaultMessage:
++			'An offline account never contacts Microsoft or Mojang. You can play singleplayer worlds and join servers running in offline mode; servers in online mode will reject it.',
++	},
++	usernameLabel: {
++		id: 'app.offline-account.username-label',
++		defaultMessage: 'Username',
++	},
++	usernamePlaceholder: {
++		id: 'app.offline-account.username-placeholder',
++		defaultMessage: '3 to 16 letters, numbers or underscores',
++	},
++	addButton: {
++		id: 'app.offline-account.add-button',
++		defaultMessage: 'Add account',
++	},
++	genericError: {
++		id: 'app.offline-account.generic-error',
++		defaultMessage: 'Could not add the offline account.',
++	},
++})
++</script>
+diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
+index 94bd13e..cb7319a 100644
+--- a/apps/app-frontend/src/helpers/auth.js
++++ b/apps/app-frontend/src/helpers/auth.js
+@@ -33,6 +33,19 @@ export async function login() {
+ 	return await invoke('plugin:auth|login')
+ }
+ 
++/**
++ * Adds an offline account with the given username and makes it the active one.
++ *
++ * Offline accounts never contact Microsoft or Mojang. They can play
++ * singleplayer worlds and join servers running in offline mode.
++ *
++ * @param {string} username
++ * @returns {Promise<Credential>}
++ */
++export async function login_offline(username) {
++	return await invoke('plugin:auth|login_offline', { username })
++}
++
+ /**
+  * Retrieves the default user
+  * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
+index 8227d94..f4eded6 100644
+--- a/apps/app/src/api/auth.rs
++++ b/apps/app/src/api/auth.rs
+@@ -9,6 +9,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+         .invoke_handler(tauri::generate_handler![
+             check_reachable,
+             login,
++            login_offline,
+             remove_user,
+             get_default_user,
+             set_default_user,
+@@ -86,6 +87,12 @@ pub async fn login<R: Runtime>(
+     Ok(None)
+ }
+ 
++/// Adds an offline account with the given username and makes it active.
++#[tauri::command]
++pub async fn login_offline(username: String) -> Result<Credentials> {
++    Ok(minecraft_auth::login_offline(&username).await?)
++}
++
+ #[tauri::command]
+ pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
+     Ok(minecraft_auth::remove_user(user).await?)
+diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
+index 69545c2..7da46c9 100644
+--- a/packages/app-lib/Cargo.toml
++++ b/packages/app-lib/Cargo.toml
+@@ -48,6 +48,7 @@ image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
+ indicatif = { workspace = true, optional = true }
+ itertools = { workspace = true }
+ json5 = { workspace = true }
++md-5 = { workspace = true }
+ modrinth-content-management = { workspace = true }
+ notify = { workspace = true }
+ notify-debouncer-mini = { workspace = true }
+diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
+index e7195c6..a7fac4a 100644
+--- a/packages/app-lib/src/api/minecraft_auth.rs
++++ b/packages/app-lib/src/api/minecraft_auth.rs
+@@ -47,6 +47,45 @@ pub async fn finish_login(
+     Ok(credentials)
+ }
+ 
++/// Creates an offline account for `username`, or reuses the existing one, and
++/// makes it the active account.
++///
++/// Offline accounts never contact Microsoft or Mojang. They are enough to play
++/// singleplayer worlds and to join servers running in offline mode, and they
++/// are refused by servers in online mode, exactly like offline accounts in
++/// other launchers.
++#[tracing::instrument]
++pub async fn login_offline(username: &str) -> crate::Result<Credentials> {
++    let username = username.trim();
++
++    if !(3..=16).contains(&username.len())
++        || !username
++            .bytes()
++            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
++    {
++        return Err(crate::ErrorKind::InputError(
++            "An offline username must be 3 to 16 characters long and may only \
++             contain letters, numbers and underscores"
++                .to_string(),
++        )
++        .into());
++    }
++
++    let state = State::get().await?;
++    let credentials = Credentials::offline(username);
++    credentials.upsert(&state.pool).await?;
++
++    if let Err(error) =
++        crate::onboarding_checklist::mark_logged_into_minecraft().await
++    {
++        tracing::warn!(
++            "Failed to mark Minecraft login in onboarding checklist: {error}"
++        );
++    }
++
++    Ok(credentials)
++}
++
+ #[tracing::instrument]
+ pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
+     let state = State::get().await?;
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index b835ad4..d97d233 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -6,6 +6,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
+ use dashmap::DashMap;
+ use futures::TryStreamExt;
+ use heck::ToTitleCase;
++use md5::Md5;
+ use p256::ecdsa::signature::Signer;
+ use p256::ecdsa::{Signature, SigningKey, VerifyingKey};
+ use p256::pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding};
+@@ -212,6 +213,34 @@ pub struct Credentials {
+     pub active: bool,
+ }
+ 
++/// Access token handed to Minecraft for offline accounts.
++///
++/// The game only uses this token to talk to Mojang's session server, which an
++/// offline account never does, so the value just has to be non-empty. `0` is
++/// what launchers have traditionally used for offline play.
++const OFFLINE_ACCESS_TOKEN: &str = "0";
++
++/// Marker stored in an offline account's refresh token column.
++///
++/// Microsoft refresh tokens are opaque base64, so this value cannot collide
++/// with a real one, and reusing an existing column means offline accounts need
++/// no database migration.
++const OFFLINE_REFRESH_TOKEN: &str = "modrinth-enhanced:offline-account";
++
++/// Computes the player UUID Minecraft itself derives for an offline player.
++///
++/// This mirrors Java's `UUID.nameUUIDFromBytes("OfflinePlayer:<name>")`, which
++/// is what vanilla servers in offline mode and other launchers use. Matching it
++/// means a world played here keeps the same player data when it is opened from
++/// somewhere else.
++pub fn offline_uuid(username: &str) -> Uuid {
++    let mut bytes: [u8; 16] =
++        Md5::digest(format!("OfflinePlayer:{username}").as_bytes()).into();
++    bytes[6] = (bytes[6] & 0x0f) | 0x30; // Version 3
++    bytes[8] = (bytes[8] & 0x3f) | 0x80; // RFC 4122 variant
++    Uuid::from_bytes(bytes)
++}
++
+ /// An entry in the player profile cache, keyed by player UUID.
+ pub(super) enum ProfileCacheEntry {
+     /// A cached profile that is valid, even though it may be stale.
+@@ -265,12 +294,45 @@ impl OnlineProfileCacheIntent {
+ }
+ 
+ impl Credentials {
++    /// Builds credentials for an offline account with the given username.
++    ///
++    /// Offline accounts hold no Microsoft tokens and have no Mojang profile
++    /// behind them; they exist so the launcher can start the game for
++    /// singleplayer worlds and offline-mode servers without signing in.
++    pub fn offline(username: &str) -> Self {
++        Self {
++            offline_profile: MinecraftProfile {
++                id: offline_uuid(username),
++                name: username.to_owned(),
++                ..MinecraftProfile::default()
++            },
++            access_token: OFFLINE_ACCESS_TOKEN.to_owned(),
++            refresh_token: OFFLINE_REFRESH_TOKEN.to_owned(),
++            // There is nothing to expire. `refresh` returns early for offline
++            // accounts, and a far future date keeps every other expiry check
++            // from doing anything surprising.
++            expires: Utc::now() + Duration::days(365 * 100),
++            active: true,
++        }
++    }
++
++    /// Whether these credentials belong to an offline account.
++    pub fn is_offline(&self) -> bool {
++        self.refresh_token == OFFLINE_REFRESH_TOKEN
++    }
++
+     /// Refreshes the authentication tokens for this user if they are expired, or
+     /// very close to expiration.
+     async fn refresh(
+         &mut self,
+         exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+     ) -> crate::Result<()> {
++        // Offline accounts have no tokens to refresh and nothing to ask
++        // Microsoft about.
++        if self.is_offline() {
++            return Ok(());
++        }
++
+         // Use a margin of 5 minutes to give e.g. Minecraft and potentially
+         // other operations that depend on a fresh token 5 minutes to complete
+         // from now, and deal with some classes of clock skew
+@@ -351,6 +413,12 @@ impl Credentials {
+         &self,
+         cache_intent: OnlineProfileCacheIntent,
+     ) -> Option<Arc<MinecraftProfile>> {
++        // Offline accounts have no Mojang profile, so skip the request that
++        // would only ever fail and fall back to the offline profile.
++        if self.is_offline() {
++            return None;
++        }
++
+         let max_age = cache_intent.max_age();
+         let stale_profile = {
+             let mut profile_cache = PROFILE_CACHE.lock().await;

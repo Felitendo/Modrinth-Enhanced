@@ -1,0 +1,120 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      upstream-ref:
+        description: Upstream tag to build instead of the one in upstream.txt
+        type: string
+        required: false
+  workflow_call:
+    inputs:
+      upstream-ref:
+        description: Upstream tag to build instead of the one in upstream.txt
+        type: string
+        required: false
+    outputs:
+      version:
+        description: Version the app was built as
+        value: ${{ jobs.build.outputs.version }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.upstream-ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  UPSTREAM_REF: ${{ inputs.upstream-ref }}
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+          - name: Windows
+            os: windows-latest
+          - name: macOS
+            os: macos-latest
+
+    steps:
+      - name: Check out Modrinth Enhanced
+        uses: actions/checkout@v4
+
+      # Everything below works on the patched tree in build/upstream, so this
+      # has to come first: a patch that no longer applies fails the build here,
+      # which is exactly the signal we want when upstream has moved.
+      - name: Apply patches
+        shell: bash
+        run: scripts/prepare.sh
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          . scripts/common.sh
+          echo "version=$(app_version)" >> "$GITHUB_OUTPUT"
+          echo "upstream=$UPSTREAM_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: build/upstream/.nvmrc
+
+      - name: Enable Corepack
+        shell: bash
+        run: corepack enable
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Rust
+        shell: bash
+        working-directory: build/upstream
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          if [ "$RUNNER_OS" = macOS ]; then
+            rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          fi
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: build/upstream
+          key: ${{ steps.version.outputs.upstream }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Check the patched sources
+        shell: bash
+        run: scripts/check.sh
+
+      - name: Build
+        shell: bash
+        run: scripts/build.sh
+
+      - name: Check the build output
+        shell: bash
+        run: scripts/check.sh
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: modrinth-enhanced-${{ matrix.name }}
+          path: build/artifacts/*
+          if-no-files-found: error
