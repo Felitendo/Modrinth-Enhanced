@@ -36,15 +36,25 @@ Darwin)
 	# needs FUSE to mount. Plenty of desktops no longer ship FUSE 2, so tell it
 	# to unpack itself instead; on a machine that has FUSE this changes nothing.
 	export APPIMAGE_EXTRACT_AND_RUN=1
+	# Its strip pass fails outright on some distributions, taking the whole
+	# bundle with it and reporting nothing about why. Skipping it was measured
+	# to cost 4KB of the finished 136MB AppImage, which is not worth a build
+	# that only works on some machines.
+	export NO_STRIP=1
 	;;
 esac
+
+# Emptied before the build, not after it: a build that fails halfway would
+# otherwise leave the previous run's installers sitting here, where
+# scripts/check.sh would happily pass them off as this build's output.
+log "Clearing $ARTIFACTS"
+rm -rf "$ARTIFACTS"
+mkdir -p "$ARTIFACTS"
 
 log "Building for $platform"
 (cd "$WORKTREE" && pnpm --filter=@modrinth/app run tauri build "${tauri_args[@]}")
 
 log "Collecting bundles into $ARTIFACTS"
-rm -rf "$ARTIFACTS"
-mkdir -p "$ARTIFACTS"
 
 if [ "$platform" = macos ]; then
 	bundle_dir="$WORKTREE/target/universal-apple-darwin/release/bundle"
