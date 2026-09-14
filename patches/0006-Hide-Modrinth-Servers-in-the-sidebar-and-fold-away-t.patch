@@ -1,0 +1,189 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 13:06:38 +0200
+Subject: [PATCH] Hide Modrinth Servers in the sidebar and fold away the news
+
+Two sidebar preferences, both stored as feature flags so they survive a
+restart without needing a settings migration:
+
+* The Modrinth Servers button in the left sidebar is off by default and
+  can be turned back on under Settings > Features > Sidebar.
+* The news section in the right sidebar collapses by clicking its
+  heading, remembering the state the way the friends list does.
+---
+ apps/app-frontend/src/App.vue                 | 31 +++++++++++++++++--
+ .../ui/settings/display/FeaturesSettings.vue  | 27 ++++++++++++++++
+ .../src/composables/use-app-settings.ts       |  2 ++
+ packages/app-lib/src/state/settings.rs        |  2 ++
+ 4 files changed, 59 insertions(+), 3 deletions(-)
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 33c29ce..4c3663f 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -11,6 +11,7 @@ import {
+ import {
+ 	ArrowBigUpDashIcon,
+ 	ArrowLeftRightIcon,
++	ChevronDownIcon,
+ 	ChevronLeftIcon,
+ 	ChevronRightIcon,
+ 	CompassIcon,
+@@ -370,6 +371,21 @@ const hasPlus = computed(
+ // ad cookie consent flow that only exists to serve it are both switched off.
+ const showAd = computed(() => false)
+ const adConsentAvailable = computed(() => false)
++
++// Whether the news section in the right sidebar is folded away. Kept in the
++// feature flags so it survives a restart, the same way the friends list
++// remembers its collapsed sections.
++const newsCollapsed = computed(() => appSettings.getFeatureFlag('news_collapsed'))
++
++function setNewsCollapsed(collapsed: boolean) {
++	appSettings.featureFlags.news_collapsed = collapsed
++	getSettings()
++		.then((settings) => {
++			settings.feature_flags.news_collapsed = collapsed
++			return setSettings(settings)
++		})
++		.catch(handleError)
++}
+ providePageContext({
+ 	hierarchicalSidebarAvailable: ref(true),
+ 	showAds: showAd,
+@@ -2278,6 +2294,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 				<ImageIcon />
+ 			</NavButton>
+ 			<NavButton
++				v-if="appSettings.getFeatureFlag('show_hosting_in_sidebar')"
+ 				v-tooltip.right="formatMessage(messages.modrinthHosting)"
+ 				to="/hosting/manage"
+ 				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
+@@ -2528,10 +2545,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
+ 					/>
+ 					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
+-						<h3 class="text-base mb-4 text-primary font-medium m-0 text-left w-full">
++						<button
++							class="button-base m-0 mb-4 flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-transparent p-0 text-left text-base font-medium text-primary"
++							:aria-expanded="!newsCollapsed"
++							@click="setNewsCollapsed(!newsCollapsed)"
++						>
+ 							{{ formatMessage(messages.news) }}
+-						</h3>
+-						<div class="space-y-4 flex flex-col items-center w-full">
++							<ChevronDownIcon
++								class="h-5 w-5 shrink-0 transition-transform"
++								:class="{ '-rotate-90': newsCollapsed }"
++							/>
++						</button>
++						<div v-if="!newsCollapsed" class="space-y-4 flex flex-col items-center w-full">
+ 							<NewsArticleCard
+ 								v-for="(item, index) in news"
+ 								:key="`news-${index}`"
+diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+index 1d3e379..54f1c51 100644
+--- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
++++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+@@ -43,6 +43,7 @@ const quickInstances = useQuickInstanceLimit()
+ const queryClient = useQueryClient()
+ 
+ const showJumpInFlag: FeatureFlag = 'worlds_in_home'
++const showHostingFlag: FeatureFlag = 'show_hosting_in_sidebar'
+ 
+ const messages = defineMessages({
+ 	syncAcrossDevicesTitle: {
+@@ -95,6 +96,14 @@ const messages = defineMessages({
+ 		id: 'app.features-settings.show-skin-selector.description',
+ 		defaultMessage: 'Show a button in the left sidebar to open the skin selector.',
+ 	},
++	showHostingTitle: {
++		id: 'app.features-settings.show-hosting.title',
++		defaultMessage: 'Show Modrinth Servers in sidebar',
++	},
++	showHostingDescription: {
++		id: 'app.features-settings.show-hosting.description',
++		defaultMessage: 'Show a button in the left sidebar to manage Modrinth Servers.',
++	},
+ 	quickInstancesTitle: {
+ 		id: 'app.features-settings.quick-instances.title',
+ 		defaultMessage: 'Quick instances in sidebar',
+@@ -125,6 +134,7 @@ type FeaturesSettingsState = {
+ 	showScreenshotsTab: boolean
+ 	showAllScreenshots: boolean
+ 	showSkinSelector: boolean
++	showHosting: boolean
+ 	quickInstanceCount: number
+ 	showJumpIn: boolean
+ }
+@@ -144,6 +154,7 @@ function getFeaturesSettingsState(
+ 		showScreenshotsTab: settings.show_screenshots_tab_in_instances,
+ 		showAllScreenshots: globalSyncedOptions.screenshots,
+ 		showSkinSelector: settings.show_skin_selector_in_sidebar,
++		showHosting: settings.feature_flags[showHostingFlag] ?? DEFAULT_FEATURE_FLAGS[showHostingFlag],
+ 		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
+ 		showJumpIn: settings.feature_flags[showJumpInFlag] ?? DEFAULT_FEATURE_FLAGS[showJumpInFlag],
+ 	}
+@@ -184,6 +195,7 @@ const settingsMutation = useMutation({
+ 			feature_flags: {
+ 				...latestSettings.feature_flags,
+ 				[showJumpInFlag]: value.showJumpIn,
++				[showHostingFlag]: value.showHosting,
+ 			},
+ 		}
+ 
+@@ -206,6 +218,7 @@ const settingsMutation = useMutation({
+ 		appSettings.showScreenshotsTabInInstances = value.showScreenshotsTab
+ 		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
+ 		appSettings.featureFlags[showJumpInFlag] = value.showJumpIn
++		appSettings.featureFlags[showHostingFlag] = value.showHosting
+ 
+ 		if (updateQuickInstanceCount) {
+ 			quickInstances.setLimit(value.quickInstanceCount)
+@@ -366,6 +379,20 @@ onBeforeUnmount(() => {
+ 				/>
+ 			</div>
+ 
++			<div class="flex items-center justify-between gap-4">
++				<div>
++					<h3 class="m-0 text-lg font-semibold text-contrast">
++						{{ formatMessage(messages.showHostingTitle) }}
++					</h3>
++					<p class="m-0 mt-1">{{ formatMessage(messages.showHostingDescription) }}</p>
++				</div>
++				<Toggle
++					id="show-hosting-in-sidebar"
++					v-model="current.showHosting"
++					:aria-label="formatMessage(messages.showHostingTitle)"
++				/>
++			</div>
++
+ 			<div class="flex flex-col gap-2.5">
+ 				<h3 class="m-0 text-lg font-semibold text-contrast">
+ 					{{ formatMessage(messages.quickInstancesTitle) }}
+diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
+index 0d58903..4f0b2aa 100644
+--- a/apps/app-frontend/src/composables/use-app-settings.ts
++++ b/apps/app-frontend/src/composables/use-app-settings.ts
+@@ -24,6 +24,8 @@ export const DEFAULT_FEATURE_FLAGS = {
+ 	friends_pending_collapsed: true,
+ 	dismissed_photosensitivity_filter_warning: false,
+ 	localhost_sign_in: false,
++	show_hosting_in_sidebar: false,
++	news_collapsed: false,
+ }
+ 
+ export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
+diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
+index 20601b8..b02bbe0 100644
+--- a/packages/app-lib/src/state/settings.rs
++++ b/packages/app-lib/src/state/settings.rs
+@@ -88,6 +88,8 @@ pub enum FeatureFlag {
+     FriendsPendingCollapsed,
+     DismissedPhotosensitivityFilterWarning,
+     LocalhostSignIn,
++    ShowHostingInSidebar,
++    NewsCollapsed,
+ }
+ 
+ impl Settings {

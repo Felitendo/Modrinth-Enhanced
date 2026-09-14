@@ -16,7 +16,7 @@ webview, no matter which call site reaches for it.
  2 files changed, 25 insertions(+), 48 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 1d1a9ce..4df835f 100644
+index a2ae0e6..33c29ce 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -366,10 +366,10 @@ const hasPlus = computed(

@@ -4,22 +4,23 @@ Date: Mon, 14 Sep 2026 09:56:18 +0200
 Subject: [PATCH] Rename the app to Modrinth Enhanced
 
 Changes the product name, the binary name, the window title and the
-version label shown in settings. A small "Enhanced" pill is added next
-to the wordmark in the title bar so the fork is recognisable at a
-glance.
+version label shown in settings.
+
+The title bar keeps the plain Modrinth wordmark: a badge next to it
+pushes the width of that bar up, and the name is already visible in the
+window title and in settings.
 
 The bundle identifier is deliberately left as `ModrinthApp` so that
 Modrinth Enhanced keeps using the same data directory as the official
 app and stays a drop-in replacement for it.
 ---
  apps/app-frontend/index.html                                | 2 +-
- apps/app-frontend/src/App.vue                               | 5 +++++
  .../src/components/ui/modal/AppSettingsModal.vue            | 2 +-
  apps/app-frontend/src/locales/en-US/index.json              | 2 +-
  apps/app/tauri.conf.json                                    | 6 +++---
  apps/app/tauri.linux.conf.json                              | 2 +-
  apps/app/tauri.macos.conf.json                              | 2 +-
- 7 files changed, 13 insertions(+), 8 deletions(-)
+ 6 files changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
 index 50867a4..6367788 100644
@@ -34,22 +35,6 @@ index 50867a4..6367788 100644
  
  		<link rel="stylesheet" href="/src/assets/stylesheets/global.scss" />
  	</head>
-diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index a2ae0e6..1d1a9ce 100644
---- a/apps/app-frontend/src/App.vue
-+++ b/apps/app-frontend/src/App.vue
-@@ -2374,6 +2374,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 		<div data-tauri-drag-region class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex">
- 			<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
- 				<TextLogo class="h-7 w-auto shrink-0 text-contrast pointer-events-none" />
-+				<span
-+					data-tauri-drag-region
-+					class="ml-1.5 shrink-0 rounded-full bg-brand-highlight px-1.5 py-0.5 text-[0.625rem] font-bold uppercase leading-none tracking-wide text-brand pointer-events-none"
-+					>Enhanced</span
-+				>
- 				<div data-tauri-drag-region class="ml-2 flex shrink-0 items-center gap-2">
- 					<IconButton
- 						type="outlined"
 diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
 index dd55fe5..0f33d0e 100644
 --- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue

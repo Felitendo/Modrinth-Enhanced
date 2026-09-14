@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Render the Modrinth Enhanced icon set from its vector source.
+"""Render the Modrinth Enhanced icon set from its vector sources.
 
-The source lives in the patched checkout as
-`apps/app/icons/modrinth-enhanced.svg`; this rewrites every generated icon
-next to it. Run it after editing that SVG, then commit the result in
-build/upstream and re-export the patches.
+Two sources live in the patched checkout next to the generated files:
+`apps/app/icons/modrinth-enhanced.svg` for 64px and up, and
+`modrinth-enhanced-small.svg` for everything below that, where the full maze
+no longer resolves. This rewrites every generated icon from them. Run it after
+editing either SVG, then commit the result in build/upstream and re-export the
+patches.
 
 Needs `rsvg-convert` (librsvg). ImageMagick is not used: the ICNS and ICO
 writers below are a few lines each and work the same everywhere, whereas
@@ -26,6 +28,11 @@ ICONS = os.path.join(
     "icons",
 )
 SVG = os.path.join(ICONS, "modrinth-enhanced.svg")
+SVG_SMALL = os.path.join(ICONS, "modrinth-enhanced-small.svg")
+
+# Below this the full mark's rings are thinner than a pixel and smear into each
+# other, so the cropped source is used instead.
+SMALL_MAX = 48
 
 # Every PNG the Tauri bundles reference, and the size it has to be.
 PNGS = {
@@ -64,10 +71,11 @@ ICNS_TYPES = [
 
 
 def render(size, path):
-    """Rasterise the source at exactly `size`, rather than downscaling one
-    large render, so the small sizes stay crisp."""
+    """Rasterise the source for `size` at exactly that size, rather than
+    downscaling one large render, so the small sizes stay crisp."""
+    source = SVG_SMALL if size <= SMALL_MAX else SVG
     subprocess.run(
-        ["rsvg-convert", "-w", str(size), "-h", str(size), SVG, "-o", path],
+        ["rsvg-convert", "-w", str(size), "-h", str(size), source, "-o", path],
         check=True,
     )
 
@@ -114,8 +122,9 @@ def build_icns(cache, path):
 def main():
     if not shutil.which("rsvg-convert"):
         sys.exit("rsvg-convert is required (install librsvg)")
-    if not os.path.isfile(SVG):
-        sys.exit(f"No icon source at {SVG}. Run scripts/prepare.sh first.")
+    for source in (SVG, SVG_SMALL):
+        if not os.path.isfile(source):
+            sys.exit(f"No icon source at {source}. Run scripts/prepare.sh first.")
 
     with tempfile.TemporaryDirectory() as tmp:
         cache = {}
