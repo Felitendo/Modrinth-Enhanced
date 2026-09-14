@@ -1,2 +1,5 @@
 # Everything under build/ is regenerated from upstream.txt plus patches/.
 /build/
+
+# Python bytecode from the helper scripts.
+__pycache__/
