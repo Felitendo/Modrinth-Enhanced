@@ -32,18 +32,18 @@ bar button - so nothing there promises anything.
  4 files changed, 92 insertions(+), 9 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 33c29ce..3be5fe7 100644
+index 532f104..54e3912 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -11,6 +11,7 @@ import {
+@@ -10,6 +10,7 @@ import {
+ } from '@modrinth/api-client'
  import {
- 	ArrowBigUpDashIcon,
  	ArrowLeftRightIcon,
 +	ChevronDownIcon,
  	ChevronLeftIcon,
  	ChevronRightIcon,
  	CompassIcon,
-@@ -257,12 +258,31 @@ const credentials = ref()
+@@ -254,12 +255,31 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
@@ -78,8 +78,8 @@ index 33c29ce..3be5fe7 100644
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -370,6 +390,21 @@ const hasPlus = computed(
- // ad cookie consent flow that only exists to serve it are both switched off.
+@@ -358,6 +378,21 @@ useQuery({
+ // ad and the gradient being drawn above it.
  const showAd = computed(() => false)
  const adConsentAvailable = computed(() => false)
 +
@@ -100,7 +100,7 @@ index 33c29ce..3be5fe7 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -600,6 +635,8 @@ const messages = defineMessages({
+@@ -588,6 +623,8 @@ const messages = defineMessages({
  	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
  	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
  	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
@@ -109,7 +109,7 @@ index 33c29ce..3be5fe7 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2278,6 +2315,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2252,6 +2289,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -117,7 +117,7 @@ index 33c29ce..3be5fe7 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2404,12 +2442,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2378,12 +2416,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			</div>
  			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
  				<IconButton
@@ -136,7 +136,7 @@ index 33c29ce..3be5fe7 100644
  				>
  					<RightArrowIcon />
  				</IconButton>
-@@ -2528,10 +2569,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2502,10 +2543,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">

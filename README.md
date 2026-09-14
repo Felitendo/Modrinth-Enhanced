@@ -14,11 +14,12 @@ works.
 | Patch                                     | What it does                                                                                                                                    |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0001-Rename-the-app-to-Modrinth-Enhanced` | Product name, binary name, window title and version label.                                                                                |
-| `0002-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                      |
+| `0002-Remove-advertising-and-...`          | The sidebar ad slot, both "Upgrade to Modrinth+" prompts and the ad cookie consent prompt. The ad webview is never created.                 |
 | `0003-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embeds, and the playtime and server-play reports the launcher sends to Modrinth. |
 | `0004-Add-offline-accounts`                | A way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                   |
 | `0005-Make-the-sidebars-foldable`          | A switch for the Modrinth Servers button, a news section that folds away, and a title bar button that folds the right sidebar away.         |
 | `0006-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
+| `0007-Sign-in-to-Microsoft-in-the-...`     | Microsoft sign-in happens in your own browser instead of a webview, so your password manager works.                                        |
 
 ### Offline accounts
 
@@ -30,7 +31,20 @@ The player UUID is derived exactly the way Minecraft itself derives it — an MD
 launcher. Offline accounts can play singleplayer and join servers running in offline mode. Servers
 in online mode reject them, as they do in every other launcher.
 
-Microsoft sign-in is untouched and still the default.
+Both sit next to "Sign in to Microsoft" in the account card, and in the "Minecraft required" modal
+you get when pressing Play with no account.
+
+### Microsoft sign-in
+
+Microsoft sign-in opens your own browser rather than a webview inside the launcher, so your
+password manager, autofill and passkeys work, and you can see in the address bar that the page is
+really Microsoft's.
+
+Microsoft cannot hand the result back: the client id the launcher uses is Minecraft's own, whose
+only registered redirect is a fixed page on `login.live.com`, with no loopback address for the
+launcher to listen on. So the browser lands on that page with the code in the address and you copy
+the address into the launcher. The webview is still one click away for anyone the browser does not
+work out for.
 
 ### Ely.by accounts
 
@@ -61,6 +75,13 @@ sidebar" is turned on in settings. Both remember what they were set to across re
 None of the three reach Modrinth. Preference syncing maps a fixed list of named fields in both
 directions and these are not in it, so they are neither sent to your Modrinth account nor
 overwritten by another device.
+
+### Modrinth+
+
+Nothing in the app is gated behind Modrinth+. In upstream it decides whether the ad slot, the
+consent prompt and the two "Upgrade to Modrinth+" prompts are shown, and nothing else — so removing
+the advertising is the whole of it, and there is nothing further to unlock from here. Badges and
+everything else a subscription buys are decided on Modrinth's servers.
 
 ### What is *not* removed
 

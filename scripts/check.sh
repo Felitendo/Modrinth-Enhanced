@@ -47,6 +47,14 @@ check "the Tauri command is registered" \
 	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_offline,'
 check "the frontend can reach it" \
 	contains "$WORKTREE/apps/app-frontend/src/helpers/auth.js" "plugin:auth|login_offline"
+check "it is reachable with no account yet" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue" 'showOfflineAccountModal'
+
+log "Microsoft sign-in"
+check "the browser flow is registered" \
+	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_browser_begin,'
+check "the sign-in button opens it" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'microsoftLoginModal.value?.show'
 
 log "Ely.by accounts"
 check "app-lib can sign in to Ely.by" \
@@ -63,6 +71,12 @@ check "the news section can be collapsed" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
 check "the right sidebar has a fold button" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setSidebarCollapsed(sidebarToggled)'
+
+log "No advertising or upsells"
+check "no Modrinth+ upsell in the app" \
+	missing "$WORKTREE/apps/app-frontend/src/App.vue" "modrinth.plus"
+check "the ad helpers are stubbed" \
+	missing "$WORKTREE/apps/app-frontend/src/helpers/ads.js" "plugin:ads"
 
 log "No telemetry in the sources"
 # Quoted, so that the module names being mentioned in a comment explaining why

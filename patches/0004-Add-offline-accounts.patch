@@ -21,17 +21,25 @@ data when they are opened elsewhere.
 
 Usernames are validated the way Mojang validates them: 3 to 16
 characters of letters, numbers and underscores.
+
+Two places had to be opened up for any of this to be reachable. The
+account card was hidden until a Microsoft account had been added, which
+left offline sign-in unreachable for exactly the people who want it, and
+the "Minecraft required" modal - what you actually hit on pressing Play
+with no account - offered Microsoft and nothing else.
 ---
  Cargo.lock                                    |   1 +
  Cargo.toml                                    |   1 +
- .../src/components/ui/AccountsCard.vue        |  25 ++++
+ apps/app-frontend/src/App.vue                 |  10 +-
+ .../src/components/ui/AccountsCard.vue        |  30 ++++
  .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
+ .../MinecraftRequiredModal.vue                |  26 +++-
  apps/app-frontend/src/helpers/auth.js         |  13 ++
  apps/app/src/api/auth.rs                      |   7 +
  packages/app-lib/Cargo.toml                   |   1 +
  packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
  packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
- 9 files changed, 291 insertions(+)
+ 11 files changed, 327 insertions(+), 5 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
@@ -58,8 +66,29 @@ index a4a779c..a85f576 100644
  modrinth-content-management = { path = "packages/modrinth-content-management" }
  modrinth-log = { path = "packages/modrinth-log" }
  modrinth-util = { path = "packages/modrinth-util" }
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 6e7b27d..532f104 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -2472,10 +2472,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 				/>
+ 				<div id="sidebar-teleport-target" class="sidebar-teleport-content"></div>
+ 				<div class="sidebar-default-content" :class="{ 'sidebar-enabled': sidebarVisible }">
+-					<div
+-						v-show="hasLoggedIntoMinecraft"
+-						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
+-					>
++					<!--
++						Upstream hides this until a Microsoft account has been added, which
++						would leave the offline sign-in below it unreachable for exactly the
++						people who want it.
++					-->
++					<div class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid">
+ 						<h3 class="text-base text-primary font-medium m-0">
+ 							{{ formatMessage(messages.playingAs) }}
+ 						</h3>
 diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index 70cc46e..e695a6d 100644
+index 70cc46e..ebc92c1 100644
 --- a/apps/app-frontend/src/components/ui/AccountsCard.vue
 +++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
 @@ -9,6 +9,10 @@
@@ -115,7 +144,21 @@ index 70cc46e..e695a6d 100644
  const loginDisabled = ref(false)
  const defaultUser = ref<string | undefined>()
  const equippedSkin = ref<Skin | null>(null)
-@@ -247,6 +262,12 @@ async function login() {
+@@ -187,8 +202,13 @@ function setLoginDisabled(value: boolean) {
+ 	loginDisabled.value = value
+ }
+ 
++function showOfflineAccountModal(event?: MouseEvent) {
++	offlineAccountModal.value?.show(event)
++}
++
+ defineExpose({
+ 	refreshValues,
++	showOfflineAccountModal,
+ 	setEquippedSkin,
+ 	setLoginDisabled,
+ 	login,
+@@ -247,6 +267,12 @@ async function login() {
  	loginDisabled.value = false
  }
  
@@ -128,7 +171,7 @@ index 70cc46e..e695a6d 100644
  async function logout(id: string) {
  	await remove_user(id).catch(handleError)
  	await refreshValues()
-@@ -273,6 +294,10 @@ const messages = defineMessages({
+@@ -273,6 +299,10 @@ const messages = defineMessages({
  		id: 'minecraft-account.add-account',
  		defaultMessage: 'Add account',
  	},
@@ -281,6 +324,64 @@ index 0000000..8300e28
 +	},
 +})
 +</script>
+diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+index 73293f5..bbdc517 100644
+--- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
++++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+@@ -43,6 +43,16 @@
+ 					{{ formatMessage(messages.signIn) }}
+ 				</Button>
+ 			</div>
++			<div class="flex flex-col gap-2 border-0 border-t border-solid border-surface-4 pt-5">
++				<p class="m-0 text-sm leading-tight text-secondary">
++					{{ formatMessage(messages.offlineHint) }}
++				</p>
++				<Button @click="addOfflineAccount">
++					<UserIcon />
++					{{ formatMessage(messages.addOfflineAccount) }}
++				</Button>
++			</div>
++
+ 			<p class="m-0 text-center text-sm text-secondary">
+ 				{{ formatMessage(messages.dontHaveAccount) }}
+ 				<a
+@@ -57,7 +67,7 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { MessagesSquareIcon, SpinnerIcon } from '@modrinth/assets'
++import { MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
+ import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+ import { inject, type Ref, ref } from 'vue'
+ 
+@@ -100,6 +110,15 @@ const messages = defineMessages({
+ 		id: 'minecraft-required.get-minecraft',
+ 		defaultMessage: 'Get Minecraft',
+ 	},
++	offlineHint: {
++		id: 'minecraft-required.offline-hint',
++		defaultMessage:
++			'Or play singleplayer and offline-mode servers without an account of any kind.',
++	},
++	addOfflineAccount: {
++		id: 'minecraft-required.add-offline-account',
++		defaultMessage: 'Add offline account',
++	},
+ })
+ 
+ const modal = ref<InstanceType<typeof NewModal>>()
+@@ -127,6 +146,11 @@ async function signIn() {
+ 	}
+ }
+ 
++function addOfflineAccount(event: MouseEvent) {
++	modal.value?.hide()
++	accountsCard.value?.showOfflineAccountModal(event)
++}
++
+ defineExpose({
+ 	show,
+ })
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
 index 94bd13e..cb7319a 100644
 --- a/apps/app-frontend/src/helpers/auth.js

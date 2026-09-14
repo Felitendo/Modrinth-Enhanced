@@ -27,8 +27,9 @@ Signing in on Ely.by's own page would be better than a password form,
 and needs an OAuth application registered with Ely.by; there is none for
 Modrinth Enhanced yet.
 ---
- .../src/components/ui/AccountsCard.vue        |  25 +-
+ .../src/components/ui/AccountsCard.vue        |  30 ++-
  .../src/components/ui/ElyAccountModal.vue     | 166 ++++++++++++++
+ .../MinecraftRequiredModal.vue                |  29 ++-
  apps/app-frontend/src/helpers/auth.js         |  15 ++
  apps/app/src/api/auth.rs                      |  10 +
  packages/app-lib/src/api/minecraft_auth.rs    |  34 +++
@@ -36,12 +37,12 @@ Modrinth Enhanced yet.
  packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
  packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
  packages/app-lib/src/util/mod.rs              |   1 +
- 9 files changed, 551 insertions(+), 6 deletions(-)
+ 10 files changed, 578 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
 diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index e695a6d..3f694db 100644
+index ebc92c1..35c21fa 100644
 --- a/apps/app-frontend/src/components/ui/AccountsCard.vue
 +++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
 @@ -9,6 +9,10 @@
@@ -100,7 +101,22 @@ index e695a6d..3f694db 100644
  const loginDisabled = ref(false)
  const defaultUser = ref<string | undefined>()
  const equippedSkin = ref<Skin | null>(null)
-@@ -262,8 +277,8 @@ async function login() {
+@@ -206,9 +221,14 @@ function showOfflineAccountModal(event?: MouseEvent) {
+ 	offlineAccountModal.value?.show(event)
+ }
+ 
++function showElyAccountModal(event?: MouseEvent) {
++	elyAccountModal.value?.show(event)
++}
++
+ defineExpose({
+ 	refreshValues,
+ 	showOfflineAccountModal,
++	showElyAccountModal,
+ 	setEquippedSkin,
+ 	setLoginDisabled,
+ 	login,
+@@ -267,8 +287,8 @@ async function login() {
  	loginDisabled.value = false
  }
  
@@ -111,7 +127,7 @@ index e695a6d..3f694db 100644
  	await refreshValues()
  	emit('change')
  }
-@@ -298,6 +313,10 @@ const messages = defineMessages({
+@@ -303,6 +323,10 @@ const messages = defineMessages({
  		id: 'minecraft-account.add-offline-account',
  		defaultMessage: 'Add offline account',
  	},
@@ -294,6 +310,70 @@ index 0000000..d909ec3
 +	},
 +})
 +</script>
+diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+index bbdc517..ec939d7 100644
+--- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
++++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+@@ -47,10 +47,16 @@
+ 				<p class="m-0 text-sm leading-tight text-secondary">
+ 					{{ formatMessage(messages.offlineHint) }}
+ 				</p>
+-				<Button @click="addOfflineAccount">
+-					<UserIcon />
+-					{{ formatMessage(messages.addOfflineAccount) }}
+-				</Button>
++				<div class="grid grid-cols-2 gap-2">
++					<Button @click="addElyAccount">
++						<KeyIcon />
++						{{ formatMessage(messages.addElyAccount) }}
++					</Button>
++					<Button @click="addOfflineAccount">
++						<UserIcon />
++						{{ formatMessage(messages.addOfflineAccount) }}
++					</Button>
++				</div>
+ 			</div>
+ 
+ 			<p class="m-0 text-center text-sm text-secondary">
+@@ -67,7 +73,7 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
++import { KeyIcon, MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
+ import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+ import { inject, type Ref, ref } from 'vue'
+ 
+@@ -113,11 +119,15 @@ const messages = defineMessages({
+ 	offlineHint: {
+ 		id: 'minecraft-required.offline-hint',
+ 		defaultMessage:
+-			'Or play singleplayer and offline-mode servers without an account of any kind.',
++			'Or sign in with Ely.by, or play singleplayer and offline-mode servers without an account of any kind.',
++	},
++	addElyAccount: {
++		id: 'minecraft-required.add-ely-account',
++		defaultMessage: 'Ely.by account',
+ 	},
+ 	addOfflineAccount: {
+ 		id: 'minecraft-required.add-offline-account',
+-		defaultMessage: 'Add offline account',
++		defaultMessage: 'Offline account',
+ 	},
+ })
+ 
+@@ -151,6 +161,11 @@ function addOfflineAccount(event: MouseEvent) {
+ 	accountsCard.value?.showOfflineAccountModal(event)
+ }
+ 
++function addElyAccount(event: MouseEvent) {
++	modal.value?.hide()
++	accountsCard.value?.showElyAccountModal(event)
++}
++
+ defineExpose({
+ 	show,
+ })
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
 index cb7319a..57580ff 100644
 --- a/apps/app-frontend/src/helpers/auth.js

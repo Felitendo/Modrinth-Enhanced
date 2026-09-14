@@ -1,0 +1,530 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 14:43:17 +0200
+Subject: [PATCH] Sign in to Microsoft in the player's own browser
+
+The launcher opened Microsoft's sign-in page in a webview of its own,
+which is the one place a player cannot use the tools they use everywhere
+else: no password manager, no autofill, no passkeys, and no way to tell
+by looking that the page is really Microsoft's.
+
+The browser gets all of it. What it cannot do is hand the code back:
+this client id is Minecraft's own, its only registered redirect is a
+fixed page on login.live.com, and no loopback address is registered for
+it, so there is nothing for the launcher to listen on. The browser
+therefore lands on that page with the code in the address, and the
+player copies the address over - which is what the new modal asks for,
+and what `login_browser_finish` reads the code out of.
+
+Every entry point goes through it, since they all end up at
+`AccountsCard.login()`. The webview is still one click away in that
+modal for anyone the browser does not work out for.
+---
+ .../src/components/ui/AccountsCard.vue        |  17 +-
+ .../src/components/ui/MicrosoftLoginModal.vue | 213 ++++++++++++++++++
+ .../MinecraftRequiredModal.vue                |  29 +--
+ apps/app-frontend/src/helpers/auth.js         |  25 ++
+ apps/app/src/api/auth.rs                      |  77 +++++++
+ packages/app-lib/src/api/mod.rs               |  12 +-
+ 6 files changed, 331 insertions(+), 42 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
+
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index 35c21fa..c81603c 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -105,6 +105,7 @@
+ 			</div>
+ 		</div>
+ 	</Accordion>
++	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
+ 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
+ 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
+ </template>
+@@ -133,13 +134,12 @@ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
+ import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
++import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+-import { handleSevereError } from '@/composables/use-error.js'
+ import { trackEvent } from '@/helpers/analytics'
+ import {
+ 	get_default_user,
+-	login as login_flow,
+ 	remove_user,
+ 	set_default_user,
+ 	users,
+@@ -165,6 +165,7 @@ type MinecraftCredential = {
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
++const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+@@ -275,16 +276,8 @@ async function setAccount(account: MinecraftCredential) {
+ 	emit('change')
+ }
+ 
+-async function login() {
+-	loginDisabled.value = true
+-	const loggedIn = await login_flow().catch(handleSevereError)
+-
+-	if (loggedIn) {
+-		await setAccount(loggedIn)
+-	}
+-
+-	trackEvent('AccountLogIn')
+-	loginDisabled.value = false
++function login(event?: MouseEvent) {
++	microsoftLoginModal.value?.show(event)
+ }
+ 
+ async function accountAdded() {
+diff --git a/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
+new file mode 100644
+index 0000000..283b89c
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
+@@ -0,0 +1,213 @@
++<template>
++	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="520px" width="100%">
++		<div class="flex flex-col gap-4">
++			<p class="m-0 leading-tight text-secondary">
++				{{ formatMessage(messages.description) }}
++			</p>
++
++			<ol class="m-0 flex list-decimal flex-col gap-1 pl-5 leading-tight text-secondary">
++				<li>{{ formatMessage(messages.stepSignIn) }}</li>
++				<li>{{ formatMessage(messages.stepCopy) }}</li>
++			</ol>
++
++			<form class="flex flex-col gap-2" @submit.prevent="submit">
++				<label class="font-semibold text-contrast" for="microsoft-login-redirect">
++					{{ formatMessage(messages.addressLabel) }}
++				</label>
++				<Input
++					id="microsoft-login-redirect"
++					v-model="redirect"
++					:icon="LinkIcon"
++					placeholder="https://login.live.com/oauth20_desktop.srf?code=..."
++					:error="!!error"
++					autocapitalize="none"
++					autocorrect="off"
++					:spellcheck="false"
++					class="w-full"
++				/>
++				<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
++			</form>
++
++			<button
++				class="button-base m-0 cursor-pointer border-0 bg-transparent p-0 text-left text-sm text-secondary underline"
++				type="button"
++				:disabled="submitting"
++				@click="useBuiltInWindow"
++			>
++				{{ formatMessage(messages.useBuiltInWindow) }}
++			</button>
++		</div>
++
++		<template #actions>
++			<div class="flex justify-end gap-2">
++				<Button native-type="button" @click="modal?.hide()">
++					<XIcon aria-hidden="true" />
++					{{ formatMessage(commonMessages.cancelButton) }}
++				</Button>
++				<Button
++					native-type="button"
++					:disabled="submitting || opening"
++					@click="openBrowser"
++				>
++					<SpinnerIcon v-if="opening" aria-hidden="true" class="animate-spin" />
++					<ExternalIcon v-else aria-hidden="true" />
++					{{ formatMessage(messages.openAgain) }}
++				</Button>
++				<Button
++					type="colored"
++					color="brand"
++					native-type="button"
++					:disabled="submitting || !redirect.trim()"
++					@click="submit"
++				>
++					<SpinnerIcon v-if="submitting" aria-hidden="true" class="animate-spin" />
++					<LogInIcon v-else aria-hidden="true" />
++					{{ formatMessage(messages.finish) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
++</template>
++
++<script setup lang="ts">
++import { ExternalIcon, LinkIcon, LogInIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
++import {
++	Button,
++	commonMessages,
++	defineMessages,
++	Input,
++	NewModal,
++	useVIntl,
++} from '@modrinth/ui'
++import { ref } from 'vue'
++
++import { handleSevereError } from '@/composables/use-error.js'
++import { login as builtInLogin, login_browser_begin, login_browser_finish } from '@/helpers/auth'
++
++const { formatMessage } = useVIntl()
++
++const emit = defineEmits<{
++	created: [account: unknown]
++}>()
++
++const modal = ref<InstanceType<typeof NewModal>>()
++const redirect = ref('')
++const error = ref('')
++const opening = ref(false)
++const submitting = ref(false)
++let flow: unknown = null
++
++async function show(event?: MouseEvent) {
++	redirect.value = ''
++	error.value = ''
++	submitting.value = false
++	modal.value?.show(event)
++	await openBrowser()
++}
++
++async function openBrowser() {
++	if (opening.value) return
++
++	opening.value = true
++	error.value = ''
++
++	try {
++		flow = await login_browser_begin()
++	} catch (e) {
++		flow = null
++		error.value = messageOf(e, messages.openError)
++	} finally {
++		opening.value = false
++	}
++}
++
++async function submit() {
++	if (submitting.value) return
++
++	const value = redirect.value.trim()
++	if (!value) return
++
++	if (!flow) {
++		error.value = formatMessage(messages.noFlow)
++		return
++	}
++
++	submitting.value = true
++	error.value = ''
++
++	try {
++		const account = await login_browser_finish(value, flow)
++		redirect.value = ''
++		modal.value?.hide()
++		emit('created', account)
++	} catch (e) {
++		error.value = messageOf(e, messages.genericError)
++	} finally {
++		submitting.value = false
++	}
++}
++
++// The window the launcher opens itself, for when the browser will not do.
++async function useBuiltInWindow() {
++	modal.value?.hide()
++
++	const account = await builtInLogin().catch(handleSevereError)
++	if (account) emit('created', account)
++}
++
++function messageOf(e: unknown, fallback: { id: string; defaultMessage: string }) {
++	if (typeof e === 'string') return e
++	return (e as Error)?.message ?? formatMessage(fallback)
++}
++
++defineExpose({ show })
++
++const messages = defineMessages({
++	header: {
++		id: 'app.microsoft-login.header',
++		defaultMessage: 'Sign in to Microsoft',
++	},
++	description: {
++		id: 'app.microsoft-login.description',
++		defaultMessage:
++			'Your browser has opened, so your password manager and passkeys work as they do everywhere else. Microsoft cannot hand the result back to the launcher on its own, so it has to be copied over.',
++	},
++	stepSignIn: {
++		id: 'app.microsoft-login.step-sign-in',
++		defaultMessage: 'Sign in to Microsoft in the browser.',
++	},
++	stepCopy: {
++		id: 'app.microsoft-login.step-copy',
++		defaultMessage:
++			'You will land on a blank page. Copy its whole address from the address bar and paste it below.',
++	},
++	addressLabel: {
++		id: 'app.microsoft-login.address-label',
++		defaultMessage: 'Address the browser finished at',
++	},
++	openAgain: {
++		id: 'app.microsoft-login.open-again',
++		defaultMessage: 'Open browser again',
++	},
++	finish: {
++		id: 'app.microsoft-login.finish',
++		defaultMessage: 'Sign in',
++	},
++	useBuiltInWindow: {
++		id: 'app.microsoft-login.use-built-in-window',
++		defaultMessage: 'Trouble with the browser? Sign in in a window here instead.',
++	},
++	openError: {
++		id: 'app.microsoft-login.open-error',
++		defaultMessage: 'Could not open a browser to sign in with.',
++	},
++	noFlow: {
++		id: 'app.microsoft-login.no-flow',
++		defaultMessage: 'Open the browser again before signing in.',
++	},
++	genericError: {
++		id: 'app.microsoft-login.generic-error',
++		defaultMessage: 'Could not sign in to Microsoft.',
++	},
++})
++</script>
+diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+index ec939d7..b1e5358 100644
+--- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
++++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+@@ -25,10 +25,8 @@
+ 					<MessagesSquareIcon />
+ 					{{ formatMessage(messages.getSupport) }}
+ 				</ButtonLink>
+-				<Button type="colored" color="brand" :disabled="loadingSignIn" @click="signIn">
+-					<SpinnerIcon v-if="loadingSignIn" class="animate-spin" />
++				<Button type="colored" color="brand" @click="signIn">
+ 					<svg
+-						v-else
+ 						width="20"
+ 						height="20"
+ 						viewBox="0 0 20 20"
+@@ -73,15 +71,12 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { KeyIcon, MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
++import { KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
+ import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+ import { inject, type Ref, ref } from 'vue'
+ 
+ import steveImage from '@/assets/steve-look-up-left.webp'
+ import type AccountsCard from '@/components/ui/AccountsCard.vue'
+-import { handleSevereError } from '@/composables/use-error.js'
+-import { trackEvent } from '@/helpers/analytics'
+-import { login as loginFlow, set_default_user } from '@/helpers/auth.js'
+ 
+ const { formatMessage } = useVIntl()
+ const accountsCard = inject('accountsCard') as Ref<InstanceType<typeof AccountsCard> | null>
+@@ -132,28 +127,14 @@ const messages = defineMessages({
+ })
+ 
+ const modal = ref<InstanceType<typeof NewModal>>()
+-const loadingSignIn = ref(false)
+ 
+ function show() {
+ 	modal.value?.show()
+ }
+ 
+-async function signIn() {
+-	loadingSignIn.value = true
+-
+-	try {
+-		const loggedIn = await loginFlow()
+-		if (!loggedIn) return
+-
+-		await set_default_user(loggedIn.profile.id)
+-		await accountsCard.value?.refreshValues()
+-		await trackEvent('AccountLogIn', { source: 'MinecraftRequiredModal' })
+-		modal.value?.hide()
+-	} catch (error) {
+-		handleSevereError(error)
+-	} finally {
+-		loadingSignIn.value = false
+-	}
++function signIn(event: MouseEvent) {
++	modal.value?.hide()
++	accountsCard.value?.login(event)
+ }
+ 
+ function addOfflineAccount(event: MouseEvent) {
+diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
+index 57580ff..c25af95 100644
+--- a/apps/app-frontend/src/helpers/auth.js
++++ b/apps/app-frontend/src/helpers/auth.js
+@@ -33,6 +33,31 @@ export async function login() {
+ 	return await invoke('plugin:auth|login')
+ }
+ 
++/**
++ * Starts a Microsoft sign-in in the default browser.
++ *
++ * Opens the browser and returns the flow to hand back to
++ * {@link login_browser_finish} together with the address the browser ends up
++ * at. Unlike the window the launcher opens itself, the browser has the
++ * player's password manager, autofill and passkeys.
++ *
++ * @returns {Promise<object>} the login flow to finish with
++ */
++export async function login_browser_begin() {
++	return await invoke('plugin:auth|login_browser_begin')
++}
++
++/**
++ * Finishes a browser sign-in.
++ *
++ * @param {string} redirect the address the browser finished at, or the code in it
++ * @param {object} flow the flow returned by {@link login_browser_begin}
++ * @returns {Promise<Credential>}
++ */
++export async function login_browser_finish(redirect, flow) {
++	return await invoke('plugin:auth|login_browser_finish', { redirect, flow })
++}
++
+ /**
+  * Adds an offline account with the given username and makes it the active one.
+  *
+diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
+index dea07b2..5c3648c 100644
+--- a/apps/app/src/api/auth.rs
++++ b/apps/app/src/api/auth.rs
+@@ -2,6 +2,7 @@ use crate::api::Result;
+ use chrono::{Duration, Utc};
+ use tauri::plugin::TauriPlugin;
+ use tauri::{Manager, Runtime, UserAttentionType};
++use tauri_plugin_opener::OpenerExt;
+ use theseus::prelude::*;
+ 
+ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -9,6 +10,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+         .invoke_handler(tauri::generate_handler![
+             check_reachable,
+             login,
++            login_browser_begin,
++            login_browser_finish,
+             login_offline,
+             login_ely,
+             remove_user,
+@@ -88,6 +91,80 @@ pub async fn login<R: Runtime>(
+     Ok(None)
+ }
+ 
++/// Starts a Microsoft sign-in in the player's own browser.
++///
++/// The window the launcher opens for this has no password manager, no
++/// autofill and no passkeys, which makes the launcher the one place a player
++/// cannot sign in the way they sign in everywhere else. Their own browser has
++/// all of it.
++///
++/// What it cannot do is hand the code back. This client id's redirect is a
++/// fixed page on login.live.com - no loopback address is registered for it, so
++/// there is nothing for the launcher to listen on - and the browser lands
++/// there with the code in the address. The player copies that address over,
++/// which is what [`login_browser_finish`] takes.
++#[tauri::command]
++pub async fn login_browser_begin<R: Runtime>(
++    app: tauri::AppHandle<R>,
++) -> Result<MinecraftLoginFlow> {
++    let flow = minecraft_auth::begin_login().await?;
++
++    app.opener()
++        .open_url(&flow.auth_request_uri, None::<String>)
++        .map_err(|error| {
++            theseus::ErrorKind::OtherError(format!(
++                "Could not open a browser to sign in with: {error}"
++            ))
++            .as_error()
++        })?;
++
++    Ok(flow)
++}
++
++/// Finishes a browser sign-in with the address the browser ended up at.
++///
++/// Takes the whole address, since that is what a player can select and copy,
++/// and a bare code as well, since that is what someone who knows what they are
++/// looking at will paste.
++#[tauri::command]
++pub async fn login_browser_finish(
++    redirect: String,
++    flow: MinecraftLoginFlow,
++) -> Result<Credentials> {
++    let redirect = redirect.trim();
++
++    let code = url::Url::parse(redirect)
++        .ok()
++        .and_then(|url| {
++            url.query_pairs()
++                .find(|(key, _)| key == "code")
++                .map(|(_, code)| code.into_owned())
++        })
++        .or_else(|| {
++            // Not a URL, so treat it as the code itself - but only if it looks
++            // like one, rather than sending whatever was in the clipboard.
++            (!redirect.is_empty()
++                && redirect.len() < 2048
++                && redirect.bytes().all(|byte| {
++                    byte.is_ascii_alphanumeric()
++                        || byte == b'.'
++                        || byte == b'-'
++                        || byte == b'_'
++                }))
++            .then(|| redirect.to_owned())
++        })
++        .ok_or_else(|| {
++            theseus::ErrorKind::InputError(
++                "That does not look like the address the browser finished at. \
++                 Copy the whole address out of the address bar."
++                    .to_string(),
++            )
++            .as_error()
++        })?;
++
++    Ok(minecraft_auth::finish_login(&code, flow).await?)
++}
++
+ /// Adds an offline account with the given username and makes it active.
+ #[tauri::command]
+ pub async fn login_offline(username: String) -> Result<Credentials> {
+diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
+index 320112f..743d5e7 100644
+--- a/packages/app-lib/src/api/mod.rs
++++ b/packages/app-lib/src/api/mod.rs
+@@ -28,12 +28,12 @@ pub mod data {
+         InstanceInstallCandidate, InstanceInstallTarget,
+         InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
+         InstanceSyncedOption, InstanceSyncedOptions, InstanceTabVisibility,
+-        JavaVersion, LinkedModpackInfo, MemorySettings, ModLoader,
+-        ModrinthCredentials, OnboardingChecklist, Organization, OwnerType,
+-        ProcessMetadata, Project, ProjectType, ProjectV3, SearchResult,
+-        SearchResults, SearchResultsV3, Settings, SharedInstanceAttachment,
+-        SharedInstanceRole, TeamMember, Theme, User, UserFriend, Version,
+-        WindowSize,
++        JavaVersion, LinkedModpackInfo, MemorySettings, MinecraftLoginFlow,
++        ModLoader, ModrinthCredentials, OnboardingChecklist, Organization,
++        OwnerType, ProcessMetadata, Project, ProjectType, ProjectV3,
++        SearchResult, SearchResults, SearchResultsV3, Settings,
++        SharedInstanceAttachment, SharedInstanceRole, TeamMember, Theme, User,
++        UserFriend, Version, WindowSize,
+     };
+     pub use ariadne::users::UserStatus;
+     pub use modrinth_content_management::{
