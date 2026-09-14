@@ -32,6 +32,10 @@ Darwin)
 	;;
 *)
 	platform=linux
+	# The AppImage is assembled by linuxdeploy, which is itself an AppImage and
+	# needs FUSE to mount. Plenty of desktops no longer ship FUSE 2, so tell it
+	# to unpack itself instead; on a machine that has FUSE this changes nothing.
+	export APPIMAGE_EXTRACT_AND_RUN=1
 	;;
 esac
 
