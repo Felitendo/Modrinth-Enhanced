@@ -52,6 +52,16 @@ check "it is reachable with no account yet" \
 check "the checklist offers the same choice" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" '@login-minecraft="minecraftRequiredModal?.show()"'
 
+# A Tauri command that is not listed in build.rs compiles, ships, and then
+# fails at runtime with "not allowed by ACL". Nothing else here would catch it.
+log "Tauri command permissions"
+while read -r command; do
+	[ -n "$command" ] || continue
+	check "$command is allowed by the ACL" \
+		contains "$WORKTREE/apps/app/build.rs" "\"$command\","
+done < <(grep -A2 '#\[tauri::command\]' "$WORKTREE/apps/app/src/api/auth.rs" |
+	grep -oE 'pub async fn [a-z_]+' | awk '{print $4}' | sort -u)
+
 log "Microsoft sign-in"
 check "the browser flow is registered" \
 	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_browser_begin,'

@@ -31,13 +31,14 @@ Modrinth Enhanced yet.
  .../src/components/ui/ElyAccountModal.vue     | 166 ++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 ++-
  apps/app-frontend/src/helpers/auth.js         |  15 ++
+ apps/app/build.rs                             |   1 +
  apps/app/src/api/auth.rs                      |  10 +
  packages/app-lib/src/api/minecraft_auth.rs    |  34 +++
  packages/app-lib/src/launcher/mod.rs          |  16 ++
  packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
  packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
  packages/app-lib/src/util/mod.rs              |   1 +
- 10 files changed, 578 insertions(+), 13 deletions(-)
+ 11 files changed, 579 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
@@ -400,6 +401,18 @@ index cb7319a..57580ff 100644
  /**
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index f8de273..1fdb8e1 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -15,6 +15,7 @@ fn main() {
+                         "check_reachable",
+                         "login",
+                         "login_offline",
++                        "login_ely",
+                         "remove_user",
+                         "get_default_user",
+                         "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
 index f4eded6..dea07b2 100644
 --- a/apps/app/src/api/auth.rs

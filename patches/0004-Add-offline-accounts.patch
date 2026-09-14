@@ -42,11 +42,12 @@ which offered Microsoft and nothing else:
  .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
  .../MinecraftRequiredModal.vue                |  30 +++-
  apps/app-frontend/src/helpers/auth.js         |  13 ++
+ apps/app/build.rs                             |   1 +
  apps/app/src/api/auth.rs                      |   7 +
  packages/app-lib/Cargo.toml                   |   1 +
  packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
  packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
- 11 files changed, 330 insertions(+), 8 deletions(-)
+ 12 files changed, 331 insertions(+), 8 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
@@ -437,6 +438,18 @@ index 94bd13e..cb7319a 100644
  /**
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index c4becf9..f8de273 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -14,6 +14,7 @@ fn main() {
+                     .commands(&[
+                         "check_reachable",
+                         "login",
++                        "login_offline",
+                         "remove_user",
+                         "get_default_user",
+                         "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
 index 8227d94..f4eded6 100644
 --- a/apps/app/src/api/auth.rs

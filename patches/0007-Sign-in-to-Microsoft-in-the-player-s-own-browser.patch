@@ -24,9 +24,10 @@ modal for anyone the browser does not work out for.
  .../src/components/ui/MicrosoftLoginModal.vue | 213 ++++++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 +--
  apps/app-frontend/src/helpers/auth.js         |  25 ++
+ apps/app/build.rs                             |   2 +
  apps/app/src/api/auth.rs                      |  77 +++++++
  packages/app-lib/src/api/mod.rs               |  12 +-
- 6 files changed, 331 insertions(+), 42 deletions(-)
+ 7 files changed, 333 insertions(+), 42 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 
 diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
@@ -403,6 +404,19 @@ index 57580ff..c25af95 100644
  /**
   * Adds an offline account with the given username and makes it the active one.
   *
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 1fdb8e1..5c797ab 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -14,6 +14,8 @@ fn main() {
+                     .commands(&[
+                         "check_reachable",
+                         "login",
++                        "login_browser_begin",
++                        "login_browser_finish",
+                         "login_offline",
+                         "login_ely",
+                         "remove_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
 index dea07b2..5c3648c 100644
 --- a/apps/app/src/api/auth.rs
