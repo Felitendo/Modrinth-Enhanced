@@ -16,8 +16,8 @@ on:
         description: Build this upstream tag instead of the newest one
         type: string
         required: false
-      force:
-        description: Release even if this version was already released
+      revision:
+        description: Release the current patches again on the upstream release in upstream.txt, as v1.2.3-2, v1.2.3-3, ...
         type: boolean
         default: false
 
@@ -33,30 +33,55 @@ jobs:
     name: Detect
     runs-on: ubuntu-latest
     outputs:
+      upstream: ${{ steps.check.outputs.upstream }}
       tag: ${{ steps.check.outputs.tag }}
       proceed: ${{ steps.check.outputs.proceed }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Find the newest upstream release
+      - name: Decide what to release
         id: check
         env:
           GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.upstream-ref }}
-          FORCE: ${{ inputs.force }}
+          REVISION: ${{ inputs.revision }}
         run: |
           set -euo pipefail
-          tag="${REQUESTED:-$(scripts/latest-upstream.sh)}"
           current="$(tr -d '[:space:]' < upstream.txt)"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "Newest upstream release: $tag (we are on $current)"
-
-          if gh release view "$tag" >/dev/null 2>&1 && [ "$FORCE" != 'true' ]; then
-            echo "$tag has already been released; nothing to do."
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          if [ "$REVISION" = true ]; then
+            # A revision rebuilds what we already ship, not whatever is newest.
+            upstream="${REQUESTED:-$current}"
           else
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            upstream="${REQUESTED:-$(scripts/latest-upstream.sh)}"
           fi
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          echo "Upstream release: $upstream (we are on $current)"
+
+          if ! gh release view "$upstream" >/dev/null 2>&1; then
+            tag="$upstream"
+          elif [ "$REVISION" = true ]; then
+            # The first release of an upstream version is its plain tag, which
+            # counts as revision 1.
+            last="$(
+              git ls-remote --tags --refs origin "$upstream-*" |
+                sed 's#.*refs/tags/##' |
+                awk -v prefix="$upstream-" 'index($0, prefix) == 1 {
+                  n = substr($0, length(prefix) + 1)
+                  if (n ~ /^[0-9]+$/) print n
+                }' |
+                sort -n |
+                tail -1
+            )"
+            tag="$upstream-$(( ${last:-1} + 1 ))"
+          else
+            echo "$upstream has already been released; nothing to do."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "proceed=true" >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag"
 
   build:
     name: Build
@@ -64,7 +89,7 @@ jobs:
     if: needs.detect.outputs.proceed == 'true'
     uses: ./.github/workflows/build.yml
     with:
-      upstream-ref: ${{ needs.detect.outputs.tag }}
+      upstream-ref: ${{ needs.detect.outputs.upstream }}
 
   release:
     name: Release
@@ -75,17 +100,17 @@ jobs:
 
       - name: Record the upstream release we build against
         env:
-          TAG: ${{ needs.detect.outputs.tag }}
+          UPSTREAM: ${{ needs.detect.outputs.upstream }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$TAG" > upstream.txt
+          printf '%s\n' "$UPSTREAM" > upstream.txt
           if git diff --quiet -- upstream.txt; then
-            echo "upstream.txt already points at $TAG"
+            echo "upstream.txt already points at $UPSTREAM"
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m "Track upstream $TAG" -- upstream.txt
+          git commit -m "Track upstream $UPSTREAM" -- upstream.txt
           git push origin HEAD:${{ github.event.repository.default_branch }}
 
       - name: Download installers
@@ -98,11 +123,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.detect.outputs.tag }}
+          UPSTREAM: ${{ needs.detect.outputs.upstream }}
         run: |
           set -euo pipefail
           ls -la artifacts
           notes="$(cat <<EOF
-          Modrinth Enhanced built from [Modrinth App $TAG](https://github.com/modrinth/code/releases/tag/$TAG).
+          Modrinth Enhanced $TAG, built from [Modrinth App $UPSTREAM](https://github.com/modrinth/code/releases/tag/$UPSTREAM).
 
           Same app as upstream, with the patches in \`patches/\` applied:
 
