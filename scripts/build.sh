@@ -41,6 +41,10 @@ Darwin)
 	# to cost 4KB of the finished 136MB AppImage, which is not worth a build
 	# that only works on some machines.
 	export NO_STRIP=1
+	# appimagetool guesses the architecture from every ELF file in the AppDir
+	# and gives up when it finds two, which happens as soon as the GTK plugin
+	# picks up a 32-bit GIO module from a multilib system's /usr/lib32.
+	export ARCH="$(uname -m)"
 	;;
 esac
 
