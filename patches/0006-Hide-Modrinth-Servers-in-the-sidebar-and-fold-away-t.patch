@@ -18,7 +18,7 @@ restart without needing a settings migration:
  4 files changed, 59 insertions(+), 3 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 33c29ce..4c3663f 100644
+index 33c29ce..1cab873 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -11,6 +11,7 @@ import {
@@ -39,7 +39,7 @@ index 33c29ce..4c3663f 100644
 +// remembers its collapsed sections.
 +const newsCollapsed = computed(() => appSettings.getFeatureFlag('news_collapsed'))
 +
-+function setNewsCollapsed(collapsed: boolean) {
++function setNewsCollapsed(collapsed) {
 +	appSettings.featureFlags.news_collapsed = collapsed
 +	getSettings()
 +		.then((settings) => {

@@ -1,0 +1,760 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 13:24:41 +0200
+Subject: [PATCH] Add Ely.by accounts
+
+Ely.by is an alternative Minecraft account system. "Add Ely.by account"
+sits next to the Microsoft and offline options in the account card; the
+account name and password go to authserver.ely.by and nowhere else, and
+a two-factor code is appended to the password after a colon, which is
+Ely.by's own convention.
+
+Minecraft asks Mojang who the player is, so an Ely.by account cannot
+start the game on its own. The authlib-injector agent points those calls
+at Ely.by instead; it is downloaded once and cached, after which such an
+account launches with no network at all.
+
+Like offline accounts, an Ely.by account is a row in `minecraft_users`
+rather than a table of its own, so no migration is needed: the client
+token Ely.by issues alongside the access token lives behind a marker in
+the refresh token column, which is both what renews the pair and what
+identifies the account. The expiry column becomes "check again after" -
+Ely.by does not say when its tokens expire - so the pair is validated
+and, if needed, renewed a few times a day instead of on every read of
+the account list.
+
+Signing in on Ely.by's own page would be better than a password form,
+and needs an OAuth application registered with Ely.by; there is none for
+Modrinth Enhanced yet.
+---
+ .../src/components/ui/AccountsCard.vue        |  25 +-
+ .../src/components/ui/ElyAccountModal.vue     | 166 ++++++++++++++
+ apps/app-frontend/src/helpers/auth.js         |  15 ++
+ apps/app/src/api/auth.rs                      |  10 +
+ packages/app-lib/src/api/minecraft_auth.rs    |  34 +++
+ packages/app-lib/src/launcher/mod.rs          |  16 ++
+ packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
+ packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
+ packages/app-lib/src/util/mod.rs              |   1 +
+ 9 files changed, 551 insertions(+), 6 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
+ create mode 100644 packages/app-lib/src/util/authlib_injector.rs
+
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index e695a6d..3f694db 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -9,6 +9,10 @@
+ 			<SpinnerIcon v-else class="animate-spin" />
+ 			{{ formatMessage(messages.signInToMinecraft) }}
+ 		</Button>
++		<Button @click="elyAccountModal?.show($event)">
++			<KeyIcon />
++			{{ formatMessage(messages.addElyAccount) }}
++		</Button>
+ 		<Button @click="offlineAccountModal?.show($event)">
+ 			<UserIcon />
+ 			{{ formatMessage(messages.addOfflineAccount) }}
+@@ -84,6 +88,13 @@
+ 					<PlusIcon />
+ 					{{ formatMessage(messages.addAccount) }}
+ 				</Button>
++				<Button
++					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
++					@click="elyAccountModal?.show($event)"
++				>
++					<KeyIcon />
++					{{ formatMessage(messages.addElyAccount) }}
++				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="offlineAccountModal?.show($event)"
+@@ -94,11 +105,13 @@
+ 			</div>
+ 		</div>
+ 	</Accordion>
+-	<OfflineAccountModal ref="offlineAccountModal" @created="offlineAccountCreated" />
++	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
++	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
+ </template>
+ 
+ <script setup lang="ts">
+ import {
++	KeyIcon,
+ 	LogInIcon,
+ 	PlusIcon,
+ 	RadioButtonCheckedIcon,
+@@ -119,6 +132,7 @@ import {
+ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
++import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { handleSevereError } from '@/composables/use-error.js'
+@@ -150,6 +164,7 @@ type MinecraftCredential = {
+ 
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
++const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+@@ -262,8 +277,8 @@ async function login() {
+ 	loginDisabled.value = false
+ }
+ 
+-async function offlineAccountCreated() {
+-	// `login_offline` already marks the new account as the active one.
++async function accountAdded() {
++	// Both sign-in paths already mark the new account as the active one.
+ 	await refreshValues()
+ 	emit('change')
+ }
+@@ -298,6 +313,10 @@ const messages = defineMessages({
+ 		id: 'minecraft-account.add-offline-account',
+ 		defaultMessage: 'Add offline account',
+ 	},
++	addElyAccount: {
++		id: 'minecraft-account.add-ely-account',
++		defaultMessage: 'Add Ely.by account',
++	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+ 		defaultMessage: 'Remove account',
+diff --git a/apps/app-frontend/src/components/ui/ElyAccountModal.vue b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
+new file mode 100644
+index 0000000..d909ec3
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
+@@ -0,0 +1,166 @@
++<template>
++	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
++		<div class="flex flex-col gap-4">
++			<p class="m-0 leading-tight text-secondary">
++				{{ formatMessage(messages.description) }}
++			</p>
++
++			<form class="flex flex-col gap-3" @submit.prevent="submit">
++				<div class="flex flex-col gap-2">
++					<label class="font-semibold text-contrast" for="ely-account-username">
++						{{ formatMessage(messages.usernameLabel) }}
++					</label>
++					<Input
++						id="ely-account-username"
++						v-model="username"
++						:icon="UserIcon"
++						:placeholder="formatMessage(messages.usernamePlaceholder)"
++						:error="!!error"
++						autocapitalize="none"
++						autocorrect="off"
++						:spellcheck="false"
++						class="w-full"
++					/>
++				</div>
++
++				<div class="flex flex-col gap-2">
++					<label class="font-semibold text-contrast" for="ely-account-password">
++						{{ formatMessage(messages.passwordLabel) }}
++					</label>
++					<Input
++						id="ely-account-password"
++						v-model="password"
++						type="password"
++						:icon="KeyIcon"
++						:error="!!error"
++						class="w-full"
++					/>
++					<p class="m-0 text-sm leading-tight text-secondary">
++						{{ formatMessage(messages.twoFactorHint) }}
++					</p>
++				</div>
++
++				<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
++			</form>
++		</div>
++
++		<template #actions>
++			<div class="flex justify-end gap-2">
++				<Button native-type="button" @click="modal?.hide()">
++					<XIcon aria-hidden="true" />
++					{{ formatMessage(commonMessages.cancelButton) }}
++				</Button>
++				<Button
++					type="colored"
++					color="brand"
++					native-type="button"
++					:disabled="submitting || !username.trim() || !password"
++					@click="submit"
++				>
++					<SpinnerIcon v-if="submitting" aria-hidden="true" class="animate-spin" />
++					<LogInIcon v-else aria-hidden="true" />
++					{{ formatMessage(messages.signInButton) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
++</template>
++
++<script setup lang="ts">
++import { KeyIcon, LogInIcon, SpinnerIcon, UserIcon, XIcon } from '@modrinth/assets'
++import {
++	Button,
++	commonMessages,
++	defineMessages,
++	Input,
++	NewModal,
++	useVIntl,
++} from '@modrinth/ui'
++import { nextTick, ref } from 'vue'
++
++import { login_ely } from '@/helpers/auth'
++
++const { formatMessage } = useVIntl()
++
++const emit = defineEmits<{
++	created: [account: unknown]
++}>()
++
++const modal = ref<InstanceType<typeof NewModal>>()
++const username = ref('')
++const password = ref('')
++const error = ref('')
++const submitting = ref(false)
++
++function show(event?: MouseEvent) {
++	username.value = ''
++	password.value = ''
++	error.value = ''
++	submitting.value = false
++	modal.value?.show(event)
++	void nextTick(() => {
++		document.getElementById('ely-account-username')?.focus()
++	})
++}
++
++async function submit() {
++	if (submitting.value) return
++
++	const name = username.value.trim()
++	if (!name || !password.value) return
++
++	submitting.value = true
++	error.value = ''
++
++	try {
++		const account = await login_ely(name, password.value)
++		password.value = ''
++		modal.value?.hide()
++		emit('created', account)
++	} catch (e) {
++		error.value =
++			typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++	} finally {
++		submitting.value = false
++	}
++}
++
++defineExpose({ show })
++
++const messages = defineMessages({
++	header: {
++		id: 'app.ely-account.header',
++		defaultMessage: 'Sign in with Ely.by',
++	},
++	description: {
++		id: 'app.ely-account.description',
++		defaultMessage:
++			'Ely.by is an alternative Minecraft account system. Your credentials go to Ely.by and nowhere else; the game is pointed at it with authlib-injector when the instance launches.',
++	},
++	usernameLabel: {
++		id: 'app.ely-account.username-label',
++		defaultMessage: 'Account name or email',
++	},
++	usernamePlaceholder: {
++		id: 'app.ely-account.username-placeholder',
++		defaultMessage: 'Your Ely.by account',
++	},
++	passwordLabel: {
++		id: 'app.ely-account.password-label',
++		defaultMessage: 'Password',
++	},
++	twoFactorHint: {
++		id: 'app.ely-account.two-factor-hint',
++		defaultMessage:
++			'With two-factor authentication on, append your current code to the password, separated by a colon.',
++	},
++	signInButton: {
++		id: 'app.ely-account.sign-in-button',
++		defaultMessage: 'Sign in',
++	},
++	genericError: {
++		id: 'app.ely-account.generic-error',
++		defaultMessage: 'Could not sign in to Ely.by.',
++	},
++})
++</script>
+diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
+index cb7319a..57580ff 100644
+--- a/apps/app-frontend/src/helpers/auth.js
++++ b/apps/app-frontend/src/helpers/auth.js
+@@ -46,6 +46,21 @@ export async function login_offline(username) {
+ 	return await invoke('plugin:auth|login_offline', { username })
+ }
+ 
++/**
++ * Signs in to Ely.by and makes that account the active one.
++ *
++ * Ely.by is an alternative Minecraft account system. The game is pointed at it
++ * with the authlib-injector agent at launch.
++ *
++ * @param {string} username Ely.by account name or email
++ * @param {string} password Ely.by password, with `:code` appended when the
++ *   account has two-factor authentication enabled
++ * @returns {Promise<Credential>}
++ */
++export async function login_ely(username, password) {
++	return await invoke('plugin:auth|login_ely', { username, password })
++}
++
+ /**
+  * Retrieves the default user
+  * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
+index f4eded6..dea07b2 100644
+--- a/apps/app/src/api/auth.rs
++++ b/apps/app/src/api/auth.rs
+@@ -10,6 +10,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+             check_reachable,
+             login,
+             login_offline,
++            login_ely,
+             remove_user,
+             get_default_user,
+             set_default_user,
+@@ -93,6 +94,15 @@ pub async fn login_offline(username: String) -> Result<Credentials> {
+     Ok(minecraft_auth::login_offline(&username).await?)
+ }
+ 
++/// Signs in to Ely.by and makes that account active.
++#[tauri::command]
++pub async fn login_ely(
++    username: String,
++    password: String,
++) -> Result<Credentials> {
++    Ok(minecraft_auth::login_ely(&username, &password).await?)
++}
++
+ #[tauri::command]
+ pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
+     Ok(minecraft_auth::remove_user(user).await?)
+diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
+index a7fac4a..2d18da3 100644
+--- a/packages/app-lib/src/api/minecraft_auth.rs
++++ b/packages/app-lib/src/api/minecraft_auth.rs
+@@ -86,6 +86,40 @@ pub async fn login_offline(username: &str) -> crate::Result<Credentials> {
+     Ok(credentials)
+ }
+ 
++/// Signs in to Ely.by and makes the account the active one.
++///
++/// Ely.by is an alternative account system for Minecraft. The game is pointed
++/// at it with the authlib-injector agent at launch, so such an account can play
++/// singleplayer and join any server that accepts Ely.by.
++#[tracing::instrument(skip(password))]
++pub async fn login_ely(
++    username: &str,
++    password: &str,
++) -> crate::Result<Credentials> {
++    let username = username.trim();
++
++    if username.is_empty() || password.is_empty() {
++        return Err(crate::ErrorKind::InputError(
++            "An Ely.by account name and password are both required".to_string(),
++        )
++        .into());
++    }
++
++    let state = State::get().await?;
++    let credentials = Credentials::ely(username, password).await?;
++    credentials.upsert(&state.pool).await?;
++
++    if let Err(error) =
++        crate::onboarding_checklist::mark_logged_into_minecraft().await
++    {
++        tracing::warn!(
++            "Failed to mark Minecraft login in onboarding checklist: {error}"
++        );
++    }
++
++    Ok(credentials)
++}
++
+ #[tracing::instrument]
+ pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
+     let state = State::get().await?;
+diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
+index b482547..660f63b 100644
+--- a/packages/app-lib/src/launcher/mod.rs
++++ b/packages/app-lib/src/launcher/mod.rs
+@@ -1056,6 +1056,22 @@ pub async fn launch_minecraft(
+         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
+     }
+ 
++    // Minecraft asks Mojang who the player is, and an Ely.by account is not a
++    // Mojang account. authlib-injector is a Java agent that points those calls
++    // at Ely.by instead, and without it such an account cannot start the game.
++    if credentials.is_ely() {
++        let injector = crate::util::authlib_injector::get_authlib_injector(
++            &state.directories,
++        )
++        .await?;
++
++        command.arg(format!(
++            "-javaagent:{}={}",
++            injector.to_string_lossy(),
++            crate::state::ELY_API_ROOT
++        ));
++    }
++
+     command
+         .arg("com.modrinth.theseus.MinecraftLaunch")
+         .arg(version_info.main_class.clone())
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index d97d233..25c6dfb 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -241,6 +241,67 @@ pub fn offline_uuid(username: &str) -> Uuid {
+     Uuid::from_bytes(bytes)
+ }
+ 
++/// Marker stored in front of an Ely.by account's client token.
++///
++/// Ely.by's Yggdrasil flow hands back an access token and a client token, and
++/// renewing the pair needs both. The client token therefore goes in the refresh
++/// token column behind this marker, which both identifies the account as an
++/// Ely.by one and keeps it out of a table of its own.
++const ELY_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:ely:";
++
++/// Ely.by's Yggdrasil server, which answers the same shapes Mojang's used to.
++const ELY_AUTHSERVER: &str = "https://authserver.ely.by";
++
++/// What authlib-injector is handed so the game asks Ely.by rather than Mojang.
++///
++/// The agent resolves the short form to Ely.by's actual API root itself.
++pub const ELY_API_ROOT: &str = "ely.by";
++
++#[derive(Deserialize)]
++struct ElyAuthResponse {
++    #[serde(rename = "accessToken")]
++    access_token: String,
++    #[serde(rename = "clientToken")]
++    client_token: String,
++    #[serde(rename = "selectedProfile")]
++    selected_profile: ElyProfile,
++}
++
++#[derive(Deserialize)]
++struct ElyProfile {
++    id: String,
++    name: String,
++}
++
++/// Reads the error message out of an Ely.by refusal, falling back to the status.
++async fn ely_error(response: Response) -> crate::Error {
++    #[derive(Deserialize)]
++    struct ElyError {
++        #[serde(rename = "errorMessage")]
++        error_message: Option<String>,
++    }
++
++    let status = response.status();
++    let message = response
++        .json::<ElyError>()
++        .await
++        .ok()
++        .and_then(|error| error.error_message)
++        .unwrap_or_else(|| format!("Ely.by refused the request ({status})"));
++
++    crate::ErrorKind::OtherError(message).as_error()
++}
++
++/// Ely.by's Yggdrasil UUIDs come without dashes.
++fn parse_ely_uuid(id: &str) -> crate::Result<Uuid> {
++    Uuid::parse_str(id).map_err(|_| {
++        crate::ErrorKind::OtherError(format!(
++            "Ely.by returned a player id that could not be read: {id}"
++        ))
++        .as_error()
++    })
++}
++
+ /// An entry in the player profile cache, keyed by player UUID.
+ pub(super) enum ProfileCacheEntry {
+     /// A cached profile that is valid, even though it may be stale.
+@@ -321,6 +382,135 @@ impl Credentials {
+         self.refresh_token == OFFLINE_REFRESH_TOKEN
+     }
+ 
++    /// Whether these credentials belong to an Ely.by account.
++    pub fn is_ely(&self) -> bool {
++        self.refresh_token.starts_with(ELY_REFRESH_TOKEN_PREFIX)
++    }
++
++    /// The client token Ely.by issued with the access token, if this is an
++    /// Ely.by account.
++    fn ely_client_token(&self) -> Option<&str> {
++        self.refresh_token.strip_prefix(ELY_REFRESH_TOKEN_PREFIX)
++    }
++
++    /// Signs in to Ely.by with an account name or email and a password.
++    ///
++    /// Ely.by accounts with two-factor authentication expect the current code
++    /// appended to the password with a colon, which is Ely.by's own convention
++    /// and is passed straight through.
++    pub async fn ely(username: &str, password: &str) -> crate::Result<Self> {
++        let client_token = Uuid::new_v4().to_string();
++
++        let response = INSECURE_REQWEST_CLIENT
++            .post(format!("{ELY_AUTHSERVER}/auth/authenticate"))
++            .json(&json!({
++                "username": username,
++                "password": password,
++                "clientToken": client_token,
++                "requestUser": false,
++                "agent": { "name": "Minecraft", "version": 1 },
++            }))
++            .send()
++            .await
++            .map_err(|error| {
++                crate::ErrorKind::OtherError(format!(
++                    "Could not reach Ely.by: {error}"
++                ))
++            })?;
++
++        if !response.status().is_success() {
++            return Err(ely_error(response).await);
++        }
++
++        let auth = response.json::<ElyAuthResponse>().await?;
++
++        Ok(Self {
++            offline_profile: MinecraftProfile {
++                id: parse_ely_uuid(&auth.selected_profile.id)?,
++                name: auth.selected_profile.name,
++                ..MinecraftProfile::default()
++            },
++            access_token: auth.access_token,
++            refresh_token: format!(
++                "{ELY_REFRESH_TOKEN_PREFIX}{}",
++                auth.client_token
++            ),
++            // Ely.by does not say when its token expires. The expiry column is
++            // used as "check again after" instead, so the launcher asks Ely.by
++            // about the token a few times a day rather than on every read of
++            // the account list.
++            expires: Utc::now() + Duration::hours(6),
++            active: true,
++        })
++    }
++
++    /// Renews an Ely.by token pair, returning whether it is now usable.
++    ///
++    /// Ely.by refuses a pair that has been invalidated elsewhere - signing in
++    /// from another launcher does that - and there is no way back from it
++    /// without the password, so the caller is told rather than the launch
++    /// failing on its own later.
++    async fn refresh_ely(&mut self) -> crate::Result<bool> {
++        let Some(client_token) = self.ely_client_token() else {
++            return Ok(false);
++        };
++
++        let response = INSECURE_REQWEST_CLIENT
++            .post(format!("{ELY_AUTHSERVER}/auth/refresh"))
++            .json(&json!({
++                "accessToken": &self.access_token,
++                "clientToken": client_token,
++                "requestUser": false,
++            }))
++            .send()
++            .await;
++
++        let response = match response {
++            Ok(response) => response,
++            // Ely.by being unreachable says nothing about the token. Leave it
++            // alone: an offline launch with a still-valid token works.
++            Err(error) => {
++                tracing::warn!("Could not reach Ely.by to refresh: {error}");
++                return Ok(true);
++            }
++        };
++
++        if response.status().is_server_error() {
++            return Ok(true);
++        }
++
++        if !response.status().is_success() {
++            return Ok(false);
++        }
++
++        let auth = response.json::<ElyAuthResponse>().await?;
++        self.access_token = auth.access_token;
++        self.refresh_token =
++            format!("{ELY_REFRESH_TOKEN_PREFIX}{}", auth.client_token);
++        self.offline_profile = MinecraftProfile {
++            id: parse_ely_uuid(&auth.selected_profile.id)?,
++            name: auth.selected_profile.name,
++            ..MinecraftProfile::default()
++        };
++
++        Ok(true)
++    }
++
++    /// Whether Ely.by still accepts this account's access token.
++    async fn ely_token_is_valid(&self) -> bool {
++        let response = INSECURE_REQWEST_CLIENT
++            .post(format!("{ELY_AUTHSERVER}/auth/validate"))
++            .json(&json!({ "accessToken": &self.access_token }))
++            .send()
++            .await;
++
++        match response {
++            Ok(response) => response.status().is_success(),
++            // Unreachable is not invalid; see `refresh_ely`.
++            Err(_) => true,
++        }
++    }
++
+     /// Refreshes the authentication tokens for this user if they are expired, or
+     /// very close to expiration.
+     async fn refresh(
+@@ -340,6 +530,22 @@ impl Credentials {
+             return Ok(());
+         }
+ 
++        // Ely.by issues its own tokens and renews them at its own endpoint,
++        // so Microsoft is not involved at any point below.
++        if self.is_ely() {
++            if !self.ely_token_is_valid().await && !self.refresh_ely().await? {
++                return Err(crate::ErrorKind::OtherError(
++                    "Ely.by no longer accepts this account's session. Sign in again."
++                        .to_string(),
++                )
++                .into());
++            }
++
++            self.expires = Utc::now() + Duration::hours(6);
++            self.upsert(exec).await?;
++            return Ok(());
++        }
++
+         let oauth_token = oauth_refresh(&self.refresh_token).await?;
+         let (pair, current_date) =
+             DeviceTokenPair::refresh_and_get_device_token(
+@@ -413,9 +619,10 @@ impl Credentials {
+         &self,
+         cache_intent: OnlineProfileCacheIntent,
+     ) -> Option<Arc<MinecraftProfile>> {
+-        // Offline accounts have no Mojang profile, so skip the request that
+-        // would only ever fail and fall back to the offline profile.
+-        if self.is_offline() {
++        // Neither offline nor Ely.by accounts have a Mojang profile, so skip
++        // the request that would only ever fail and fall back to the profile
++        // recorded locally, which already holds the right id and name.
++        if self.is_offline() || self.is_ely() {
+             return None;
+         }
+ 
+diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
+new file mode 100644
+index 0000000..dc099f9
+--- /dev/null
++++ b/packages/app-lib/src/util/authlib_injector.rs
+@@ -0,0 +1,77 @@
++//! Downloads and caches the authlib-injector Java agent.
++//!
++//! Minecraft asks Mojang who a player is. An Ely.by account is not a Mojang
++//! account, so the game has to be told to ask Ely.by instead, and there is no
++//! switch for that: authlib-injector is a Java agent that rewrites the calls
++//! on the way out. Without it an Ely.by account cannot start the game at all.
++
++use std::path::PathBuf;
++
++use crate::state::DirectoryInfo;
++use crate::util::fetch::REQWEST_CLIENT;
++use crate::util::io;
++
++/// The agent's own distribution metadata.
++const LATEST_URL: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";
++
++#[derive(serde::Deserialize)]
++struct LatestArtifact {
++    download_url: String,
++}
++
++/// Returns the path to the agent jar, downloading it once if it is not cached.
++///
++/// The cached copy is reused as it is. The agent is not tied to a game or
++/// launcher version, so there is nothing to keep up to date, and reusing it
++/// means an Ely.by account still launches with no network at all.
++pub async fn get_authlib_injector(
++    directories: &DirectoryInfo,
++) -> crate::Result<PathBuf> {
++    let dir = directories.caches_dir().join("authlib-injector");
++    io::create_dir_all(&dir).await?;
++
++    let jar = dir.join("authlib-injector.jar");
++    if io::metadata(&jar).await.is_ok() {
++        return Ok(jar);
++    }
++
++    tracing::info!("Downloading authlib-injector for an Ely.by launch");
++
++    let latest = REQWEST_CLIENT
++        .get(LATEST_URL)
++        .send()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not reach the authlib-injector distribution: {error}"
++            ))
++        })?
++        .json::<LatestArtifact>()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not read the authlib-injector metadata: {error}"
++            ))
++        })?;
++
++    let bytes = REQWEST_CLIENT
++        .get(&latest.download_url)
++        .send()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not download authlib-injector: {error}"
++            ))
++        })?
++        .bytes()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not read the authlib-injector download: {error}"
++            ))
++        })?;
++
++    io::write(&jar, &bytes).await?;
++
++    Ok(jar)
++}
+diff --git a/packages/app-lib/src/util/mod.rs b/packages/app-lib/src/util/mod.rs
+index 7656b4a..d0e4d5d 100644
+--- a/packages/app-lib/src/util/mod.rs
++++ b/packages/app-lib/src/util/mod.rs
+@@ -1,4 +1,5 @@
+ //! Theseus utility functions
++pub mod authlib_injector;
+ pub mod fetch;
+ pub mod io;
+ pub mod jre;

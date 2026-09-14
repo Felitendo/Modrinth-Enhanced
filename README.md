@@ -1,7 +1,7 @@
 # Modrinth Enhanced
 
 The [Modrinth App](https://github.com/modrinth/code), without advertising, without telemetry, and
-with offline accounts.
+with offline and Ely.by accounts.
 
 Everything else is deliberately left alone. This repository holds no forked source code — only a
 series of patches that are applied to an upstream release tag, built, and published. Whenever
@@ -13,11 +13,13 @@ works.
 
 | Patch                                     | What it does                                                                                                                                    |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0001-Rename-the-app-to-Modrinth-Enhanced` | Product name, binary name, window title, version label, and an "Enhanced" pill next to the wordmark.                                             |
-| `0002-Use-the-Modrinth-Enhanced-icon`      | The Modrinth mark with a sparkle badge, rendered into every icon the bundles need. The vector source ships alongside them.                       |
-| `0003-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                           |
-| `0004-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embed, and the playtime and server-play reports the launcher sends to Modrinth.       |
-| `0005-Add-offline-accounts`                | A second way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                  |
+| `0001-Rename-the-app-to-Modrinth-Enhanced` | Product name, binary name, window title and version label.                                                                                |
+| `0002-Use-the-Modrinth-Enhanced-icon`      | The Modrinth mark with a sparkle badge on a green disc, rendered into every icon the bundles need. Both vector sources ship alongside them. |
+| `0003-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                      |
+| `0004-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embeds, and the playtime and server-play reports the launcher sends to Modrinth. |
+| `0005-Add-offline-accounts`                | A way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                   |
+| `0006-Hide-Modrinth-Servers-...`           | Modrinth Servers off in the sidebar by default, and a news section that folds away and stays folded.                                        |
+| `0007-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
 
 ### Offline accounts
 
@@ -30,6 +32,29 @@ launcher. Offline accounts can play singleplayer and join servers running in off
 in online mode reject them, as they do in every other launcher.
 
 Microsoft sign-in is untouched and still the default.
+
+### Ely.by accounts
+
+"Add Ely.by account" sits in the same account card. It asks for an Ely.by account name or email and
+a password, which go to `authserver.ely.by` and nowhere else. With two-factor authentication on,
+append the current code to the password after a colon, which is Ely.by's own convention.
+
+At launch the game is pointed at Ely.by with
+[authlib-injector](https://github.com/yushijinhun/authlib-injector), downloaded once and cached, so
+such an account can play singleplayer and join any server that accepts Ely.by.
+
+The account is stored in the same table as every other one, marked by the client token Ely.by
+issues; the token pair is checked and renewed against Ely.by a few times a day rather than on every
+read of the account list.
+
+Signing in on Ely.by's own page instead of in this form would be better, and needs an OAuth
+application registered with Ely.by — one has not been registered for Modrinth Enhanced.
+
+### Sidebar and news
+
+Modrinth Servers is hidden from the left sidebar by default and can be switched back on under
+Settings > Features > Sidebar. The news section in the right sidebar folds away by clicking its
+heading and stays that way across restarts.
 
 ### What is *not* removed
 

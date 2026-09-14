@@ -50,6 +50,20 @@ check "the Tauri command is registered" \
 check "the frontend can reach it" \
 	contains "$WORKTREE/apps/app-frontend/src/helpers/auth.js" "plugin:auth|login_offline"
 
+log "Ely.by accounts"
+check "app-lib can sign in to Ely.by" \
+	contains "$WORKTREE/packages/app-lib/src/api/minecraft_auth.rs" 'pub async fn login_ely'
+check "the Tauri command is registered" \
+	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_ely,'
+check "authlib-injector is added at launch" \
+	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'authlib_injector'
+
+log "Sidebar and news"
+check "Modrinth Servers is behind a flag" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" "getFeatureFlag('show_hosting_in_sidebar')"
+check "the news section can be collapsed" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
+
 log "No telemetry in the sources"
 # Quoted, so that the module names being mentioned in a comment explaining why
 # they are gone does not count as importing them.

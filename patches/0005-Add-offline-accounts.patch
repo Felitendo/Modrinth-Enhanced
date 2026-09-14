@@ -22,6 +22,7 @@ data when they are opened elsewhere.
 Usernames are validated the way Mojang validates them: 3 to 16
 characters of letters, numbers and underscores.
 ---
+ Cargo.lock                                    |   1 +
  Cargo.toml                                    |   1 +
  .../src/components/ui/AccountsCard.vue        |  25 ++++
  .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
@@ -30,9 +31,21 @@ characters of letters, numbers and underscores.
  packages/app-lib/Cargo.toml                   |   1 +
  packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
  packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
- 8 files changed, 290 insertions(+)
+ 9 files changed, 291 insertions(+)
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
+diff --git a/Cargo.lock b/Cargo.lock
+index d40a959..95bc842 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -11384,6 +11384,7 @@ dependencies = [
+  "indicatif",
+  "itertools 0.14.0",
+  "json5",
++ "md-5",
+  "modrinth-content-management",
+  "notify",
+  "notify-debouncer-mini",
 diff --git a/Cargo.toml b/Cargo.toml
 index a4a779c..a85f576 100644
 --- a/Cargo.toml
