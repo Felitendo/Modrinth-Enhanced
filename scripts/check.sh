@@ -49,6 +49,8 @@ check "the frontend can reach it" \
 	contains "$WORKTREE/apps/app-frontend/src/helpers/auth.js" "plugin:auth|login_offline"
 check "it is reachable with no account yet" \
 	contains "$WORKTREE/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue" 'showOfflineAccountModal'
+check "the checklist offers the same choice" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" '@login-minecraft="minecraftRequiredModal?.show()"'
 
 log "Microsoft sign-in"
 check "the browser flow is registered" \

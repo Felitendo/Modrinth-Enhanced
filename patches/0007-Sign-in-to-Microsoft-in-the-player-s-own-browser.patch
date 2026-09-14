@@ -303,7 +303,7 @@ index 0000000..283b89c
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index ec939d7..b1e5358 100644
+index 7781cee..341ccdc 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -25,10 +25,8 @@

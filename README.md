@@ -31,8 +31,9 @@ The player UUID is derived exactly the way Minecraft itself derives it — an MD
 launcher. Offline accounts can play singleplayer and join servers running in offline mode. Servers
 in online mode reject them, as they do in every other launcher.
 
-Both sit next to "Sign in to Microsoft" in the account card, and in the "Minecraft required" modal
-you get when pressing Play with no account.
+Both sit next to "Sign in to Microsoft" everywhere an account can be added: the account card, the
+modal you get when pressing Play with no account, and "Sign in to Minecraft" in the getting started
+checklist. Upstream offered Microsoft and nothing else at all three.
 
 ### Microsoft sign-in
 

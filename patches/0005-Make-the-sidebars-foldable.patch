@@ -32,7 +32,7 @@ bar button - so nothing there promises anything.
  4 files changed, 92 insertions(+), 9 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 532f104..54e3912 100644
+index e5c6fd4..a9e3945 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -10,6 +10,7 @@ import {

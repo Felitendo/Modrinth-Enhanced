@@ -22,24 +22,31 @@ data when they are opened elsewhere.
 Usernames are validated the way Mojang validates them: 3 to 16
 characters of letters, numbers and underscores.
 
-Two places had to be opened up for any of this to be reachable. The
-account card was hidden until a Microsoft account had been added, which
-left offline sign-in unreachable for exactly the people who want it, and
-the "Minecraft required" modal - what you actually hit on pressing Play
-with no account - offered Microsoft and nothing else.
+Three places had to be opened up for any of this to be reachable, all of
+which offered Microsoft and nothing else:
+
+* The account card was hidden until a Microsoft account had been added,
+  which left offline sign-in unreachable for exactly the people who want
+  it.
+* The "Minecraft required" modal - what you hit on pressing Play with no
+  account - now lists the alternatives too. It is no longer only about
+  something being required, so it is titled "Sign in to Minecraft".
+* "Sign in to Minecraft" in the getting started checklist went straight
+  to Microsoft. It opens that same modal now, so every way in offers the
+  same choice.
 ---
  Cargo.lock                                    |   1 +
  Cargo.toml                                    |   1 +
- apps/app-frontend/src/App.vue                 |  10 +-
+ apps/app-frontend/src/App.vue                 |  12 +-
  .../src/components/ui/AccountsCard.vue        |  30 ++++
  .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
- .../MinecraftRequiredModal.vue                |  26 +++-
+ .../MinecraftRequiredModal.vue                |  30 +++-
  apps/app-frontend/src/helpers/auth.js         |  13 ++
  apps/app/src/api/auth.rs                      |   7 +
  packages/app-lib/Cargo.toml                   |   1 +
  packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
  packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
- 11 files changed, 327 insertions(+), 5 deletions(-)
+ 11 files changed, 330 insertions(+), 8 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
@@ -67,10 +74,16 @@ index a4a779c..a85f576 100644
  modrinth-log = { path = "packages/modrinth-log" }
  modrinth-util = { path = "packages/modrinth-util" }
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 6e7b27d..532f104 100644
+index 6e7b27d..e5c6fd4 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2472,10 +2472,12 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2467,15 +2467,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 			>
+ 				<OnboardingChecklist
+ 					@create-instance="installationModal?.show()"
+-					@login-minecraft="accounts?.login()"
++					@login-minecraft="minecraftRequiredModal?.show()"
+ 					@login-modrinth="signIn"
  				/>
  				<div id="sidebar-teleport-target" class="sidebar-teleport-content"></div>
  				<div class="sidebar-default-content" :class="{ 'sidebar-enabled': sidebarVisible }">
@@ -325,7 +338,7 @@ index 0000000..8300e28
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 73293f5..bbdc517 100644
+index 73293f5..8e6b275 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -43,6 +43,16 @@
@@ -354,6 +367,24 @@ index 73293f5..bbdc517 100644
  import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
  import { inject, type Ref, ref } from 'vue'
  
+@@ -73,7 +83,7 @@ const accountsCard = inject('accountsCard') as Ref<InstanceType<typeof AccountsC
+ const messages = defineMessages({
+ 	header: {
+ 		id: 'minecraft-required.header',
+-		defaultMessage: 'Minecraft required',
++		defaultMessage: 'Sign in to Minecraft',
+ 	},
+ 	descriptionHeader: {
+ 		id: 'minecraft-required.description-header',
+@@ -82,7 +92,7 @@ const messages = defineMessages({
+ 	description: {
+ 		id: 'minecraft-required.description',
+ 		defaultMessage:
+-			'You need a Microsoft account that owns Minecraft before you can launch and play.',
++			'A Microsoft account that owns Minecraft is what lets you play online and keep your skin.',
+ 	},
+ 	getSupport: {
+ 		id: 'minecraft-required.get-support',
 @@ -100,6 +110,15 @@ const messages = defineMessages({
  		id: 'minecraft-required.get-minecraft',
  		defaultMessage: 'Get Minecraft',
