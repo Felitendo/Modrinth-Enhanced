@@ -39,8 +39,6 @@ check "tauri.conf.json is named Modrinth Enhanced" \
 	contains "$WORKTREE/apps/app/tauri.conf.json" '"productName": "Modrinth Enhanced"'
 check "the window is titled Modrinth Enhanced" \
 	contains "$WORKTREE/apps/app/tauri.conf.json" '"title": "Modrinth Enhanced"'
-check "the icon set was replaced" \
-	test -f "$WORKTREE/apps/app/icons/modrinth-enhanced.svg"
 
 log "Offline accounts"
 check "app-lib exposes login_offline" \

@@ -14,12 +14,11 @@ works.
 | Patch                                     | What it does                                                                                                                                    |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0001-Rename-the-app-to-Modrinth-Enhanced` | Product name, binary name, window title and version label.                                                                                |
-| `0002-Use-the-Modrinth-Enhanced-icon`      | The Modrinth mark with a sparkle badge on a green disc, rendered into every icon the bundles need. Both vector sources ship alongside them. |
-| `0003-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                      |
-| `0004-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embeds, and the playtime and server-play reports the launcher sends to Modrinth. |
-| `0005-Add-offline-accounts`                | A way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                   |
-| `0006-Hide-Modrinth-Servers-...`           | Modrinth Servers off in the sidebar by default, and a news section that folds away and stays folded.                                        |
-| `0007-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
+| `0002-Remove-advertising`                  | The sidebar ad slot, the "Upgrade to Modrinth+" nag and the ad cookie consent prompt. The ad webview is never created.                      |
+| `0003-Remove-telemetry`                    | PostHog analytics, Sentry crash reporting, the Tally survey embeds, and the playtime and server-play reports the launcher sends to Modrinth. |
+| `0004-Add-offline-accounts`                | A way to add a Minecraft account that never contacts Microsoft or Mojang.                                                                   |
+| `0005-Hide-Modrinth-Servers-...`           | Modrinth Servers off in the sidebar by default, and a news section that folds away and stays folded.                                        |
+| `0006-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
 
 ### Offline accounts
 
@@ -101,11 +100,6 @@ cd build/upstream
 cd ../..
 scripts/export-patches.sh           # rewrite patches/ from those commits
 ```
-
-The icons are the one thing that is generated rather than written. Edit
-`build/upstream/apps/app/icons/modrinth-enhanced.svg`, run `scripts/render-icons.py`, and every PNG,
-`.ico` and `.icns` next to it is rewritten from that source; rendering the unchanged source again
-reproduces the current files byte for byte.
 
 Patches are applied with `git am --3way`, so small upstream movements around a hunk resolve by
 themselves. When one genuinely conflicts, `scripts/prepare.sh` stops and leaves the conflict staged
