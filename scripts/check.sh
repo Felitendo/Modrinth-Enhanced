@@ -84,6 +84,27 @@ check "the news section can be collapsed" \
 check "the right sidebar has a fold button" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setSidebarCollapsed(sidebarToggled)'
 
+# tauri.linux.conf.json replaces the whole window list, so an upstream change to
+# the main window would otherwise silently not reach Linux.
+same_linux_window() {
+	node -e '
+		const fs = require("fs")
+		const [base, linux] = process.argv.slice(1).map((p) => JSON.parse(fs.readFileSync(p, "utf8")).app.windows[0])
+		delete linux.transparent
+		const sorted = (o) => JSON.stringify(o, Object.keys(o).sort())
+		process.exit(sorted(base) === sorted(linux) ? 0 : 1)
+	' "$WORKTREE/apps/app/tauri.conf.json" "$WORKTREE/apps/app/tauri.linux.conf.json"
+}
+
+log "Window"
+check "the Linux window is transparent" \
+	contains "$WORKTREE/apps/app/tauri.linux.conf.json" '"transparent": true'
+check "the Linux window otherwise matches upstream" same_linux_window
+check "its corners are rounded" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" "'rounded-window'"
+check "the middle button autoscrolls" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'installAutoscroll()'
+
 log "No advertising or upsells"
 check "no Modrinth+ upsell in the app" \
 	missing "$WORKTREE/apps/app-frontend/src/App.vue" "modrinth.plus"

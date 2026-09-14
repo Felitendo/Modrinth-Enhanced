@@ -20,6 +20,8 @@ works.
 | `0005-Make-the-sidebars-foldable`          | A switch for the Modrinth Servers button, a news section that folds away, and a title bar button that folds the right sidebar away.         |
 | `0006-Add-Ely.by-accounts`                 | Sign in with Ely.by, launched through authlib-injector.                                                                                    |
 | `0007-Sign-in-to-Microsoft-in-the-...`     | Microsoft sign-in happens in your own browser instead of a webview, so your password manager works.                                        |
+| `0008-Round-the-window-corners-on-Linux`   | The undecorated window gets rounded corners on Linux.                                                                                       |
+| `0009-Scroll-with-the-middle-mouse-button` | Middle-click autoscroll on Linux and macOS, as browsers do it on Windows.                                                                   |
 
 ### Offline accounts
 
@@ -76,6 +78,16 @@ sidebar" is turned on in settings. Both remember what they were set to across re
 None of the three reach Modrinth. Preference syncing maps a fixed list of named fields in both
 directions and these are not in it, so they are neither sent to your Modrinth account nor
 overwritten by another device.
+
+### Window
+
+On Linux the window has rounded corners while it floats. Maximized, fullscreen or with native
+decorations turned on, it is square as before. The window is created transparent for this, which
+needs a compositor; without one the corners show black.
+
+A click with the middle mouse button on anything that scrolls starts autoscroll: press and release
+to scroll until the next click, or hold and drag to scroll until you let go. Links and text fields
+keep their middle-click. Windows is left alone, since WebView2 autoscrolls by itself.
 
 ### Modrinth+
 

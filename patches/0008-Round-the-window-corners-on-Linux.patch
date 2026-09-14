@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 19:15:01 +0200
+Subject: [PATCH] Round the window corners on Linux
+
+---
+ apps/app-frontend/src/App.vue                 | 10 +++++++++
+ .../src/assets/stylesheets/global.scss        | 17 ++++++++++++++
+ apps/app-frontend/src/main.js                 |  5 +++++
+ apps/app/tauri.linux.conf.json                | 22 ++++++++++++++++++-
+ 4 files changed, 53 insertions(+), 1 deletion(-)
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index a9e3945..5a32c65 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -529,6 +529,16 @@ watch([os, isFullscreen], ([osName, fullscreen]) => {
+ 	document.documentElement.classList.toggle('mac-traffic-lights', osName === 'MacOS' && !fullscreen)
+ })
+ 
++watch(
++	[os, isMaximized, isFullscreen, () => appSettings.nativeDecorations],
++	([osName, maximized, fullscreen, nativeDecorations]) => {
++		document.documentElement.classList.toggle(
++			'rounded-window',
++			osName === 'Linux' && !nativeDecorations && !maximized && !fullscreen,
++		)
++	},
++)
++
+ const authUnreachableDebug = useDebugLogger('AuthReachableChecker')
+ const authServerQuery = useQuery({
+ 	queryKey: ['authServerReachability'],
+diff --git a/apps/app-frontend/src/assets/stylesheets/global.scss b/apps/app-frontend/src/assets/stylesheets/global.scss
+index a9fa554..ba4da08 100644
+--- a/apps/app-frontend/src/assets/stylesheets/global.scss
++++ b/apps/app-frontend/src/assets/stylesheets/global.scss
+@@ -66,6 +66,23 @@ body {
+ 	overflow: hidden;
+ }
+ 
++// An undecorated window on Linux is transparent (tauri.linux.conf.json), so the
++// page paints its own background and cuts the corners off. clip-path rather
++// than overflow, because overflow does not clip fixed-position modals.
++html.rounded-window,
++html.rounded-window body {
++	background: transparent;
++}
++
++html.rounded-window body {
++	clip-path: inset(0 round 10px);
++}
++
++html.rounded-window #app {
++	height: 100%;
++	background-color: var(--color-raised-bg);
++}
++
+ * {
+ 	box-sizing: border-box;
+ }
+diff --git a/apps/app-frontend/src/main.js b/apps/app-frontend/src/main.js
+index 9607cfb..e7991ef 100644
+--- a/apps/app-frontend/src/main.js
++++ b/apps/app-frontend/src/main.js
+@@ -13,6 +13,11 @@ import i18nDebugPlugin from '@/plugins/i18n-debug'
+ import router from '@/routes'
+ 
+ debugStartup('Frontend entry module evaluated')
++// Round the corners from the first frame on; App.vue squares them again once it
++// knows the window is maximized or natively decorated.
++if (navigator.userAgent.includes('Linux')) {
++	document.documentElement.classList.add('rounded-window')
++}
+ const app = createApp(App)
+ setupErrorReporting(app, router)
+ 
+diff --git a/apps/app/tauri.linux.conf.json b/apps/app/tauri.linux.conf.json
+index 81a368c..68fadf3 100644
+--- a/apps/app/tauri.linux.conf.json
++++ b/apps/app/tauri.linux.conf.json
+@@ -1,3 +1,23 @@
+ {
+-	"mainBinaryName": "ModrinthEnhanced"
++	"mainBinaryName": "ModrinthEnhanced",
++	"app": {
++		"windows": [
++			{
++				"titleBarStyle": "Overlay",
++				"hiddenTitle": true,
++				"fullscreen": false,
++				"height": 800,
++				"resizable": true,
++				"title": "Modrinth Enhanced",
++				"label": "main",
++				"width": 1280,
++				"minHeight": 700,
++				"minWidth": 1100,
++				"visible": false,
++				"zoomHotkeysEnabled": false,
++				"decorations": false,
++				"transparent": true
++			}
++		]
++	}
+ }

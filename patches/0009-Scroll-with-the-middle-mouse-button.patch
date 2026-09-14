@@ -1,0 +1,305 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Mon, 14 Sep 2026 19:17:53 +0200
+Subject: [PATCH] Scroll with the middle mouse button
+
+---
+ apps/app-frontend/src/App.vue                 |   8 +
+ .../src/assets/stylesheets/global.scss        |  44 ++++
+ apps/app-frontend/src/helpers/autoscroll.ts   | 201 ++++++++++++++++++
+ 3 files changed, 253 insertions(+)
+ create mode 100644 apps/app-frontend/src/helpers/autoscroll.ts
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 5a32c65..469ae08 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -123,6 +123,7 @@ import {
+ } from '@/helpers/ads.js'
+ import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
+ import { check_reachable } from '@/helpers/auth.js'
++import { installAutoscroll } from '@/helpers/autoscroll.ts'
+ import { get_user, get_user_many, get_version } from '@/helpers/cache.js'
+ import { gameSettingsQueryOptions } from '@/helpers/game-options'
+ import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
+@@ -589,11 +590,18 @@ onMounted(async () => {
+ 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
+ 	document.querySelector('body').addEventListener('contextmenu', handleContextMenu)
+ 	document.addEventListener('fullscreenchange', handleFullscreenChange)
++	// Chromium, and so WebView2 on Windows, already autoscrolls by itself
++	if (!navigator.userAgent.includes('Windows')) {
++		uninstallAutoscroll = installAutoscroll()
++	}
+ 
+ 	checkUpdates()
+ })
+ 
++let uninstallAutoscroll
++
+ onUnmounted(async () => {
++	uninstallAutoscroll?.()
+ 	document.querySelector('body').removeEventListener('click', handleClick)
+ 	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
+ 	document.querySelector('body').removeEventListener('contextmenu', handleContextMenu)
+diff --git a/apps/app-frontend/src/assets/stylesheets/global.scss b/apps/app-frontend/src/assets/stylesheets/global.scss
+index ba4da08..442f181 100644
+--- a/apps/app-frontend/src/assets/stylesheets/global.scss
++++ b/apps/app-frontend/src/assets/stylesheets/global.scss
+@@ -83,6 +83,50 @@ html.rounded-window #app {
+ 	background-color: var(--color-raised-bg);
+ }
+ 
++// Middle-click autoscroll (helpers/autoscroll.ts)
++html.autoscrolling,
++html.autoscrolling * {
++	cursor: all-scroll !important;
++}
++
++.autoscroll-indicator {
++	position: fixed;
++	z-index: 2147483647;
++	pointer-events: none;
++	width: 32px;
++	height: 32px;
++	border-radius: 50%;
++	color: var(--color-contrast);
++	background-color: var(--color-raised-bg);
++	// A ring instead of a border, which would shrink the space the icon has.
++	box-shadow:
++		0 0 0 1px var(--color-button-bg),
++		0 2px 8px rgba(0, 0, 0, 0.35);
++
++	// Overrides the global `svg { width: 1em; height: 1em }`, which squeezed the
++	// icon into the top left corner.
++	svg {
++		display: block;
++		width: 100%;
++		height: 100%;
++	}
++
++	path {
++		opacity: 0.45;
++		transition:
++			opacity 0.1s,
++			stroke 0.1s;
++	}
++
++	&[data-dir*='n'] [data-dir='n'],
++	&[data-dir*='s'] [data-dir='s'],
++	&[data-dir*='e'] [data-dir='e'],
++	&[data-dir*='w'] [data-dir='w'] {
++		opacity: 1;
++		stroke: var(--color-brand);
++	}
++}
++
+ * {
+ 	box-sizing: border-box;
+ }
+diff --git a/apps/app-frontend/src/helpers/autoscroll.ts b/apps/app-frontend/src/helpers/autoscroll.ts
+new file mode 100644
+index 0000000..1faef8e
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/autoscroll.ts
+@@ -0,0 +1,201 @@
++// Middle-click autoscroll, as browsers on Windows do it. WebKitGTK has none:
++// on Linux the middle button pastes instead.
++//
++// Press and release to keep scrolling until the next click, or press, drag and
++// release to scroll only while the button is held.
++
++const DEAD_ZONE = 12
++// A press shorter than this, without leaving the dead zone, is a click that
++// leaves autoscroll running.
++const CLICK_MS = 300
++
++const INTERACTIVE =
++	'a, button, input, textarea, select, [contenteditable]:not([contenteditable="false"])'
++
++type Axes = { x: boolean; y: boolean }
++
++function scrollableAxes(el: Element): Axes {
++	const style = getComputedStyle(el)
++	const scrolls = (overflow: string) => overflow === 'auto' || overflow === 'scroll'
++	return {
++		x: scrolls(style.overflowX) && el.scrollWidth > el.clientWidth,
++		y: scrolls(style.overflowY) && el.scrollHeight > el.clientHeight,
++	}
++}
++
++function findScrollable(start: Element | null): { el: Element; axes: Axes } | null {
++	for (let el = start; el && el !== document.documentElement; el = el.parentElement) {
++		const axes = scrollableAxes(el)
++		if (axes.x || axes.y) return { el, axes }
++	}
++	return null
++}
++
++function createIndicator(x: number, y: number, axes: Axes): HTMLElement {
++	const chevrons = [
++		axes.y ? '<path data-dir="n" d="M11 10l5-5 5 5"/><path data-dir="s" d="M11 22l5 5 5-5"/>' : '',
++		axes.x ? '<path data-dir="w" d="M10 11l-5 5 5 5"/><path data-dir="e" d="M22 11l5 5-5 5"/>' : '',
++	].join('')
++	const indicator = document.createElement('div')
++	indicator.className = 'autoscroll-indicator'
++	indicator.style.left = `${x - 16}px`
++	indicator.style.top = `${y - 16}px`
++	indicator.innerHTML = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="2" fill="currentColor" stroke="none"/>${chevrons}</svg>`
++	document.body.appendChild(indicator)
++	return indicator
++}
++
++// Pixels per second for a pointer this far from where autoscroll started.
++function speed(distance: number): number {
++	const past = Math.abs(distance) - DEAD_ZONE
++	if (past <= 0) return 0
++	return Math.sign(distance) * Math.min(past ** 1.5 * 1.2, 8000)
++}
++
++export function installAutoscroll(): () => void {
++	let active: {
++		el: Element
++		axes: Axes
++		startX: number
++		startY: number
++		pointerX: number
++		pointerY: number
++		pressedAt: number
++		held: boolean
++		carryX: number
++		carryY: number
++		lastFrame: number
++		frame: number
++		indicator: HTMLElement
++	} | null = null
++	// The mouseup, click and auxclick that belong to a press autoscroll consumed.
++	let swallowButtons = 0
++
++	function stop() {
++		if (!active) return
++		cancelAnimationFrame(active.frame)
++		active.indicator.remove()
++		document.documentElement.classList.remove('autoscrolling')
++		active = null
++	}
++
++	function tick(now: number) {
++		if (!active) return
++		const dt = Math.min(now - active.lastFrame, 100) / 1000
++		active.lastFrame = now
++
++		active.carryX += active.axes.x ? speed(active.pointerX - active.startX) * dt : 0
++		active.carryY += active.axes.y ? speed(active.pointerY - active.startY) * dt : 0
++		const left = Math.trunc(active.carryX)
++		const top = Math.trunc(active.carryY)
++		if (left || top) {
++			active.el.scrollBy({ left, top, behavior: 'instant' })
++			active.carryX -= left
++			active.carryY -= top
++		}
++		active.frame = requestAnimationFrame(tick)
++	}
++
++	function swallow(e: Event) {
++		e.preventDefault()
++		e.stopImmediatePropagation()
++	}
++
++	function onMouseDown(e: MouseEvent) {
++		if (active) {
++			// Any press ends a running autoscroll and does nothing else.
++			swallow(e)
++			stop()
++			swallowButtons = 1 << e.button
++			return
++		}
++		swallowButtons = 0
++		if (e.button !== 1 || !(e.target instanceof Element)) return
++		if (e.target.closest(INTERACTIVE)) return
++
++		const found = findScrollable(e.target)
++		if (!found) return
++
++		swallow(e)
++		swallowButtons = 1 << e.button
++		active = {
++			...found,
++			startX: e.clientX,
++			startY: e.clientY,
++			pointerX: e.clientX,
++			pointerY: e.clientY,
++			pressedAt: performance.now(),
++			held: false,
++			carryX: 0,
++			carryY: 0,
++			lastFrame: performance.now(),
++			frame: 0,
++			indicator: createIndicator(e.clientX, e.clientY, found.axes),
++		}
++		document.documentElement.classList.add('autoscrolling')
++		active.frame = requestAnimationFrame(tick)
++	}
++
++	function onMouseMove(e: MouseEvent) {
++		if (!active) return
++		active.pointerX = e.clientX
++		active.pointerY = e.clientY
++		const dx = e.clientX - active.startX
++		const dy = e.clientY - active.startY
++		if (Math.abs(dx) > DEAD_ZONE || Math.abs(dy) > DEAD_ZONE) {
++			active.held = true
++		}
++
++		// Light up the chevrons for the direction the page is moving in
++		const vertical = active.axes.y && Math.abs(dy) > DEAD_ZONE ? (dy < 0 ? 'n' : 's') : ''
++		const horizontal = active.axes.x && Math.abs(dx) > DEAD_ZONE ? (dx < 0 ? 'w' : 'e') : ''
++		active.indicator.dataset.dir = vertical + horizontal
++	}
++
++	function onMouseUp(e: MouseEvent) {
++		if (!(swallowButtons & (1 << e.button))) return
++		swallow(e)
++		if (
++			active &&
++			e.button === 1 &&
++			(active.held || performance.now() - active.pressedAt > CLICK_MS)
++		) {
++			stop()
++		}
++	}
++
++	function onClick(e: MouseEvent) {
++		if (!(swallowButtons & (1 << e.button))) return
++		swallow(e)
++		swallowButtons &= ~(1 << e.button)
++	}
++
++	function onKeyDown(e: KeyboardEvent) {
++		if (!active) return
++		if (e.key === 'Escape') swallow(e)
++		stop()
++	}
++
++	const listeners: [string, (e: never) => void][] = [
++		['mousedown', onMouseDown],
++		['mousemove', onMouseMove],
++		['mouseup', onMouseUp],
++		['click', onClick],
++		['auxclick', onClick],
++		['keydown', onKeyDown],
++		['wheel', stop],
++		// Capturing on window also sees every element losing focus; only the
++		// window itself losing it matters.
++		['blur', (e: FocusEvent) => e.target === window && stop()],
++	]
++	for (const [type, listener] of listeners) {
++		window.addEventListener(type, listener as EventListener, { capture: true })
++	}
++
++	return () => {
++		stop()
++		for (const [type, listener] of listeners) {
++			window.removeEventListener(type, listener as EventListener, { capture: true })
++		}
++	}
++}
