@@ -77,6 +77,11 @@ cd ../..
 scripts/export-patches.sh           # rewrite patches/ from those commits
 ```
 
+The icons are the one thing that is generated rather than written. Edit
+`build/upstream/apps/app/icons/modrinth-enhanced.svg`, run `scripts/render-icons.py`, and every PNG,
+`.ico` and `.icns` next to it is rewritten from that source; rendering the unchanged source again
+reproduces the current files byte for byte.
+
 Patches are applied with `git am --3way`, so small upstream movements around a hunk resolve by
 themselves. When one genuinely conflicts, `scripts/prepare.sh` stops and leaves the conflict staged
 in `build/upstream` to be resolved with `git am --continue`, after which `scripts/export-patches.sh`

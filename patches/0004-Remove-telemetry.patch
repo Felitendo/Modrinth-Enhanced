@@ -3,7 +3,7 @@ From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
 Date: Mon, 14 Sep 2026 10:23:01 +0200
 Subject: [PATCH] Remove telemetry
 
-Product analytics, crash reporting and the user survey embed are all
+Product analytics, crash reporting and the survey embeds are all
 removed, and the Modrinth analytics endpoints the launcher itself posts
 to are no longer called:
 
@@ -13,9 +13,12 @@ to are no longer called:
   PostHog SDK is no longer part of the bundle at all.
 * `helpers/error-reporting.ts` no longer loads `@sentry/vue`; errors are
   logged locally, as they are in upstream development builds.
-* The third-party Tally embed is dropped from `index.html` and the
-  survey list is no longer fetched, so the popup that carries the
-  signed-in Modrinth user id never appears.
+* The third-party Tally embed is gone. It was loaded from `index.html`
+  on every start for the app's own survey popup, and injected again by
+  the Modrinth Hosting panel in `@modrinth/ui` when a server carries a
+  survey notice. Neither loads it now, and the app no longer fetches the
+  survey list, so the popup that carries the signed-in Modrinth user id
+  never appears.
 * `analytics/playtime` and `analytics/minecraft-server-play` are no
   longer posted from `app-lib`. The latter also removes a Mojang session
   handshake whose only purpose was to authenticate that report.
@@ -38,7 +41,8 @@ for them.
  .../app-frontend/src/locales/en-US/index.json |  2 +-
  apps/app/tauri.conf.json                      |  6 +-
  packages/app-lib/src/api/instance/run.rs      | 83 +++--------------
- 8 files changed, 50 insertions(+), 218 deletions(-)
+ .../layouts/wrapped/hosting/manage/root.vue   |  8 +-
+ 9 files changed, 53 insertions(+), 223 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
 index 6367788..9738bbc 100644
@@ -449,3 +453,22 @@ index 25626c1..d638128 100644
      } else {
          Ok(())
      };
+diff --git a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
+index 9ccd656..065aad6 100644
+--- a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
++++ b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
+@@ -906,11 +906,9 @@ function showSurvey() {
+ }
+ 
+ function loadTallyScript() {
+-	if (document.querySelector('script[src*="tally.so"]')) return
+-	const script = document.createElement('script')
+-	script.src = 'https://tally.so/widgets/embed.js'
+-	script.defer = true
+-	document.head.appendChild(script)
++	// Modrinth Enhanced does not load the third-party Tally embed. Without it
++	// `getTally()` stays undefined and `showSurvey()` above does nothing, so a
++	// survey notice on a hosted server is simply not turned into a popup.
+ }
+ 
+ async function handleInstallationRetry() {
