@@ -1,0 +1,2580 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 09:05:42 +0200
+Subject: [PATCH] Show every player's skin on offline servers
+
+An offline-mode server sends profiles without textures, and the client
+asks nobody else, so everyone there is Steve. The Theseus agent now wraps
+authlib's texture lookups and, for a player the server sent nothing
+usable for, looks the skin up by name: first in a folder of skins put
+there by hand, then Ely.by, then Mojang, with capes from OptiFine. A
+profile that already carries textures is left alone, so an online-mode
+server's signed skins are never second-guessed. Answers are cached, also
+across runs, and the game is never kept waiting on the network for long.
+
+The folder is `player_skins` in the launcher directory: `<name>.png` per
+player, `<name>-slim.png` for slim arms, with `capes/` and `elytras/`
+inside. Settings > Features has the switch, on by default, and a button
+that opens the folder. The switch is a feature flag, so it needs no
+migration and does not sync to Modrinth.
+
+The agent code comes from Noctrinth (https://github.com/Everelsu/Noctrinth).
+---
+ .../ui/settings/display/FeaturesSettings.vue  |  69 ++
+ .../src/composables/use-app-settings.ts       |   1 +
+ apps/app-frontend/src/helpers/utils.js        |   4 +
+ apps/app/build.rs                             |   1 +
+ apps/app/src/api/utils.rs                     |  14 +
+ .../modrinth/theseus/agent/TheseusAgent.java  |  12 +
+ .../modrinth/theseus/agent/skins/Http.java    | 148 ++++
+ .../theseus/agent/skins/LocalSource.java      |  97 +++
+ .../theseus/agent/skins/LocalTextures.java    |  99 +++
+ .../theseus/agent/skins/MojangSource.java     | 148 ++++
+ .../agent/skins/OptiFineCapeSource.java       | 143 ++++
+ .../theseus/agent/skins/SkinHooks.java        | 459 ++++++++++++
+ .../theseus/agent/skins/SkinSource.java       | 706 ++++++++++++++++++
+ .../theseus/agent/skins/SkinSystemSource.java |  27 +
+ .../SessionServiceTransformer.java            | 258 +++++++
+ packages/app-lib/src/launcher/args.rs         |  35 +-
+ packages/app-lib/src/launcher/mod.rs          |  23 +
+ packages/app-lib/src/state/dirs.rs            |   9 +
+ packages/app-lib/src/state/settings.rs        |   1 +
+ 19 files changed, 2253 insertions(+), 1 deletion(-)
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java
+ create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
+
+diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+index ae88550..9a9e8ef 100644
+--- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
++++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+@@ -1,5 +1,7 @@
+ <script setup lang="ts">
++import { FolderOpenIcon } from '@modrinth/assets'
+ import {
++	Button,
+ 	defineMessages,
+ 	injectAuth,
+ 	injectNotificationManager,
+@@ -30,6 +32,7 @@ import {
+ 	set,
+ } from '@/helpers/settings.ts'
+ import { globalSyncedOptionsQueryOptions, syncedOptionsKeys } from '@/helpers/synced-options'
++import { showPlayerSkinsFolder } from '@/helpers/utils.js'
+ import { screenshotKeys } from '@/pages/instance/query-options.ts'
+ import { appSettingsModalContextKey } from '@/providers/app-settings-modal'
+ 
+@@ -44,6 +47,7 @@ const queryClient = useQueryClient()
+ 
+ const showJumpInFlag: FeatureFlag = 'worlds_in_home'
+ const showHostingFlag: FeatureFlag = 'show_hosting_in_sidebar'
++const universalSkinsFlag: FeatureFlag = 'universal_skins'
+ 
+ const messages = defineMessages({
+ 	syncAcrossDevicesTitle: {
+@@ -126,6 +130,32 @@ const messages = defineMessages({
+ 		id: 'app.features-settings.show-jump-in.description',
+ 		defaultMessage: 'Show recently played worlds and instances at the top of the Play page.',
+ 	},
++	skinsTitle: {
++		id: 'app.features-settings.skins.title',
++		defaultMessage: 'Skins',
++	},
++	universalSkinsTitle: {
++		id: 'app.features-settings.universal-skins.title',
++		defaultMessage: 'Show every player’s skin',
++	},
++	universalSkinsDescription: {
++		id: 'app.features-settings.universal-skins.description',
++		defaultMessage:
++			'When a server sends no skin for a player, as offline-mode servers do, look it up by name on Ely.by and then Mojang. Applies from the next game start. Added by Modrinth Enhanced, so it stays on this device and is not synced to your Modrinth account.',
++	},
++	skinsFolderTitle: {
++		id: 'app.features-settings.skins-folder.title',
++		defaultMessage: 'Skins folder',
++	},
++	skinsFolderDescription: {
++		id: 'app.features-settings.skins-folder.description',
++		defaultMessage:
++			'A skin saved here as Steve.png goes on the player named Steve, ahead of any other source. Name it Steve-slim.png for slim arms. Capes and elytras go in the capes and elytras folders inside. Needs the setting above.',
++	},
++	openSkinsFolder: {
++		id: 'app.features-settings.skins-folder.open',
++		defaultMessage: 'Open folder',
++	},
+ })
+ 
+ type FeaturesSettingsState = {
+@@ -136,6 +166,7 @@ type FeaturesSettingsState = {
+ 	showAllScreenshots: boolean
+ 	showSkinSelector: boolean
+ 	showHosting: boolean
++	universalSkins: boolean
+ 	quickInstanceCount: number
+ 	showJumpIn: boolean
+ }
+@@ -156,6 +187,8 @@ function getFeaturesSettingsState(
+ 		showAllScreenshots: globalSyncedOptions.screenshots,
+ 		showSkinSelector: settings.show_skin_selector_in_sidebar,
+ 		showHosting: settings.feature_flags[showHostingFlag] ?? DEFAULT_FEATURE_FLAGS[showHostingFlag],
++		universalSkins:
++			settings.feature_flags[universalSkinsFlag] ?? DEFAULT_FEATURE_FLAGS[universalSkinsFlag],
+ 		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
+ 		showJumpIn: settings.feature_flags[showJumpInFlag] ?? DEFAULT_FEATURE_FLAGS[showJumpInFlag],
+ 	}
+@@ -197,6 +230,7 @@ const settingsMutation = useMutation({
+ 				...latestSettings.feature_flags,
+ 				[showJumpInFlag]: value.showJumpIn,
+ 				[showHostingFlag]: value.showHosting,
++				[universalSkinsFlag]: value.universalSkins,
+ 			},
+ 		}
+ 
+@@ -220,6 +254,7 @@ const settingsMutation = useMutation({
+ 		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
+ 		appSettings.featureFlags[showJumpInFlag] = value.showJumpIn
+ 		appSettings.featureFlags[showHostingFlag] = value.showHosting
++		appSettings.featureFlags[universalSkinsFlag] = value.universalSkins
+ 
+ 		if (updateQuickInstanceCount) {
+ 			quickInstances.setLimit(value.quickInstanceCount)
+@@ -413,6 +448,40 @@ onBeforeUnmount(() => {
+ 		</div>
+ 	</section>
+ 
++	<section class="mt-8 border-0 border-t border-solid border-surface-4 pt-6">
++		<h2 class="m-0 text-xl font-semibold text-contrast">
++			{{ formatMessage(messages.skinsTitle) }}
++		</h2>
++		<div class="mt-4 flex flex-col gap-6">
++			<div class="flex items-center justify-between gap-4">
++				<div>
++					<h3 class="m-0 text-lg font-semibold text-contrast">
++						{{ formatMessage(messages.universalSkinsTitle) }}
++					</h3>
++					<p class="m-0 mt-1">{{ formatMessage(messages.universalSkinsDescription) }}</p>
++				</div>
++				<Toggle
++					id="universal-skins"
++					v-model="current.universalSkins"
++					:aria-label="formatMessage(messages.universalSkinsTitle)"
++				/>
++			</div>
++
++			<div class="flex items-center justify-between gap-4">
++				<div>
++					<h3 class="m-0 text-lg font-semibold text-contrast">
++						{{ formatMessage(messages.skinsFolderTitle) }}
++					</h3>
++					<p class="m-0 mt-1">{{ formatMessage(messages.skinsFolderDescription) }}</p>
++				</div>
++				<Button class="shrink-0" @click="showPlayerSkinsFolder().catch(handleError)">
++					<FolderOpenIcon />
++					{{ formatMessage(messages.openSkinsFolder) }}
++				</Button>
++			</div>
++		</div>
++	</section>
++
+ 	<section class="mt-8 border-0 border-t border-solid border-surface-4 pt-6">
+ 		<h2 class="m-0 text-xl font-semibold text-contrast">
+ 			{{ formatMessage(messages.playPageTitle) }}
+diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
+index 59da62b..5340ad2 100644
+--- a/apps/app-frontend/src/composables/use-app-settings.ts
++++ b/apps/app-frontend/src/composables/use-app-settings.ts
+@@ -27,6 +27,7 @@ export const DEFAULT_FEATURE_FLAGS = {
+ 	show_hosting_in_sidebar: true,
+ 	news_collapsed: false,
+ 	right_sidebar_collapsed: false,
++	universal_skins: true,
+ }
+ 
+ export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
+diff --git a/apps/app-frontend/src/helpers/utils.js b/apps/app-frontend/src/helpers/utils.js
+index f6e99d3..f06e812 100644
+--- a/apps/app-frontend/src/helpers/utils.js
++++ b/apps/app-frontend/src/helpers/utils.js
+@@ -68,6 +68,10 @@ export async function showAppDbBackupsFolder() {
+ 	return await invoke('plugin:utils|show_app_db_backups_folder', {})
+ }
+ 
++export async function showPlayerSkinsFolder() {
++	return await invoke('plugin:utils|show_player_skins_folder', {})
++}
++
+ // Opens an instance's folder in the OS file explorer
+ export async function showInstanceInFolder(instanceId) {
+ 	const fullPath = await get_full_path(instanceId)
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index bedd28f..cc3611c 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -393,6 +393,7 @@ fn main() {
+                         "open_path",
+                         "show_launcher_logs_folder",
+                         "show_app_db_backups_folder",
++                        "show_player_skins_folder",
+                         "progress_bars_list",
+                         "get_opening_command",
+                         "get_image_thumbnail",
+diff --git a/apps/app/src/api/utils.rs b/apps/app/src/api/utils.rs
+index dce771b..4396696 100644
+--- a/apps/app/src/api/utils.rs
++++ b/apps/app/src/api/utils.rs
+@@ -22,6 +22,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
+             open_path,
+             show_launcher_logs_folder,
+             show_app_db_backups_folder,
++            show_player_skins_folder,
+             progress_bars_list,
+             get_opening_command,
+             super::thumbnails::get_image_thumbnail,
+@@ -131,6 +132,19 @@ pub async fn show_app_db_backups_folder<R: Runtime>(
+     Ok(())
+ }
+ 
++/// Opens the folder skins can be put in by hand, making it first if need be.
++#[tauri::command]
++pub async fn show_player_skins_folder<R: Runtime>(
++    app: tauri::AppHandle<R>,
++) -> Result<()> {
++    if let Some(directories) = DirectoryInfo::global_handle_if_ready() {
++        let path = directories.player_skins_dir();
++        tokio::fs::create_dir_all(&path).await?;
++        open_path(app, path).await;
++    }
++    Ok(())
++}
++
+ // Get opening command
+ // For example, if a user clicks on an .mrpack to open the app.
+ // This should be called once and only when the app is done booting up and ready to receive a command
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
+index 9dbf0bc..096071c 100644
+--- a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
+@@ -1,7 +1,9 @@
+ package com.modrinth.theseus.agent;
+ 
++import com.modrinth.theseus.agent.skins.SkinSource;
+ import com.modrinth.theseus.agent.transformers.ClassTransformer;
+ import com.modrinth.theseus.agent.transformers.MinecraftTransformer;
++import com.modrinth.theseus.agent.transformers.SessionServiceTransformer;
+ import java.io.IOException;
+ import java.io.UncheckedIOException;
+ import java.lang.instrument.Instrumentation;
+@@ -49,6 +51,16 @@ public final class TheseusAgent {
+ 
+         final Map<String, ClassTransformer> transformers = new HashMap<>();
+         transformers.put("net/minecraft/client/Minecraft", new MinecraftTransformer());
++        // Only when the launcher asked for it: this one looks skins up by name for
++        // players the server sent none for.
++        if (SkinSource.isEnabled()) {
++            final SessionServiceTransformer sessionService = new SessionServiceTransformer();
++            transformers.put(SessionServiceTransformer.YGGDRASIL_CLASS, sessionService);
++            transformers.put(SessionServiceTransformer.SESSION_SERVICE_CLASS, sessionService);
++
++            // The player's own skin is on screen the moment they spawn.
++            SkinSource.prefetch(System.getProperty("enhanced.skins.self"));
++        }
+ 
+         instrumentation.addTransformer((loader, className, classBeingRedefined, protectionDomain, classData) -> {
+             final ClassTransformer transformer = transformers.get(className);
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
+new file mode 100644
+index 0000000..9fe9023
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
+@@ -0,0 +1,148 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.google.gson.JsonElement;
++import com.google.gson.JsonParser;
++import java.io.ByteArrayOutputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.InputStreamReader;
++import java.io.Reader;
++import java.net.HttpURLConnection;
++import java.net.URL;
++import java.net.URLEncoder;
++import java.nio.charset.Charset;
++
++/** The one way a skin source talks to the network: a GET, with an answer or nothing. */
++final class Http {
++    private static final int CONNECT_TIMEOUT_MS = 4000;
++    private static final int READ_TIMEOUT_MS = 4000;
++
++    private Http() {}
++
++    /**
++     * The JSON at a URL, or null when the source has never heard of whoever was asked about.
++     *
++     * <p>Ely.by says "no such player" with a 204 and Mojang with a 404, and neither has a body to
++     * read. A source that is having trouble instead -- a 5xx, or a rate limit -- is telling us
++     * something else entirely, and throws: that answer is worth nothing, and worth not asking for
++     * again for a moment. See {@link SkinSource}.
++     */
++    static JsonElement getJson(String url) throws Exception {
++        final HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
++        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
++        connection.setReadTimeout(READ_TIMEOUT_MS);
++        connection.setRequestProperty("Accept", "application/json");
++        connection.setRequestProperty("User-Agent", "Modrinth-Enhanced");
++
++        try {
++            final int status = connection.getResponseCode();
++            if (status == 429) {
++                // Being rate limited is not being broken, and the two must not
++                // be answered the same way. Mojang's name lookup is the tight
++                // one, and on a local network every client behind the same
++                // address is spending the same allowance — so it is reached
++                // exactly when several people are playing together, which is
++                // the moment their skins are wanted. Benching it then leaves
++                // the licensed players as Steve for as long as it lasts, and
++                // the source that could not answer for them anyway is the only
++                // one left being asked.
++                throw new RateLimited(url, retryAfterMs(connection));
++            }
++            if (status >= 500) {
++                throw new IOException("asked " + url + " and got " + status);
++            }
++            if (status != HttpURLConnection.HTTP_OK) {
++                SkinSource.debug("Asked " + url + " and got " + status);
++                return null;
++            }
++
++            try (InputStream stream = connection.getInputStream();
++                    Reader reader = new InputStreamReader(stream, Charset.forName("UTF-8"))) {
++                return JsonParser.parseReader(reader);
++            }
++        } finally {
++            connection.disconnect();
++        }
++    }
++
++    /** How long the source asked to be left alone for, or a short guess. */
++    private static long retryAfterMs(HttpURLConnection connection) {
++        final String header = connection.getHeaderField("Retry-After");
++        if (header != null) {
++            try {
++                return Math.max(1000L, Long.parseLong(header.trim()) * 1000L);
++            } catch (NumberFormatException notSeconds) {
++                // A date rather than a count of seconds, which is allowed and
++                // is not worth parsing for this.
++            }
++        }
++
++        return DEFAULT_RETRY_AFTER_MS;
++    }
++
++    /** What a source that would not say when asked is left alone for. */
++    private static final long DEFAULT_RETRY_AFTER_MS = 10 * 1000L;
++
++    /** A source that is well, busy, and said so. */
++    static final class RateLimited extends IOException {
++        private static final long serialVersionUID = 1L;
++
++        final long retryAfterMs;
++
++        RateLimited(String url, long retryAfterMs) {
++            super("asked " + url + " and was told to wait " + retryAfterMs + "ms");
++            this.retryAfterMs = retryAfterMs;
++        }
++    }
++
++    /**
++     * The bytes at a URL, or null when there is nothing there for whoever was asked about.
++     *
++     * <p>The same rules as {@link #getJson}: a 404 is an answer, a 5xx or a rate limit is not.
++     */
++    static byte[] getBytes(String url) throws Exception {
++        final HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
++        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
++        connection.setReadTimeout(READ_TIMEOUT_MS);
++        connection.setRequestProperty("User-Agent", "Modrinth-Enhanced");
++
++        try {
++            final int status = connection.getResponseCode();
++            if (status == 429) {
++                throw new RateLimited(url, retryAfterMs(connection));
++            }
++            if (status >= 500) {
++                throw new IOException("asked " + url + " and got " + status);
++            }
++            if (status != HttpURLConnection.HTTP_OK) {
++                SkinSource.debug("Asked " + url + " and got " + status);
++                return null;
++            }
++
++            try (InputStream stream = connection.getInputStream()) {
++                final ByteArrayOutputStream collected = new ByteArrayOutputStream();
++                final byte[] buffer = new byte[8192];
++                int read;
++                long total = 0;
++                while ((read = stream.read(buffer)) != -1) {
++                    total += read;
++                    if (total > MAX_TEXTURE_BYTES) {
++                        throw new IOException(url + " is larger than a texture has any reason to be");
++                    }
++                    collected.write(buffer, 0, read);
++                }
++                return collected.toByteArray();
++            }
++        } finally {
++            connection.disconnect();
++        }
++    }
++
++    /** What a texture will not be bigger than, so a bad answer cannot be read forever. */
++    private static final long MAX_TEXTURE_BYTES = 2 * 1024 * 1024;
++
++    /** A name as it can be put in a path. */
++    static String encode(String value) throws Exception {
++        return URLEncoder.encode(value, "UTF-8");
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
+new file mode 100644
+index 0000000..eda7ce1
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
+@@ -0,0 +1,97 @@
++package com.modrinth.theseus.agent.skins;
++
++import java.nio.file.DirectoryStream;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.util.LinkedHashMap;
++import java.util.Locale;
++import java.util.Map;
++
++/**
++ * Skins put on disk by hand, for players nothing online has heard of.
++ *
++ * <p>A folder of the launcher's own, one {@code <name>.png} per player, with {@code capes/} and
++ * {@code elytras/} beside it for the rest. It is asked before anything on the network, so it is
++ * also how somebody overrides a skin they do not like, and it costs nothing — no request, no wait.
++ */
++final class LocalSource implements SkinSource.Source {
++    private static final String SKIN = "SKIN";
++
++    private final Path directory;
++
++    LocalSource(Path directory) {
++        this.directory = directory;
++    }
++
++    @Override
++    public Map<String, SkinSource.Texture> textures(String username) throws Exception {
++        final Map<String, SkinSource.Texture> textures = new LinkedHashMap<>();
++
++        put(textures, SKIN, directory, username);
++        put(textures, "CAPE", directory.resolve("capes"), username);
++        put(textures, "ELYTRA", directory.resolve("elytras"), username);
++
++        return textures;
++    }
++
++    private void put(Map<String, SkinSource.Texture> textures, String type, Path folder, String username)
++            throws Exception {
++        final Path file = find(folder, username);
++        if (file == null) {
++            return;
++        }
++
++        final String url = LocalTextures.publish(file);
++        if (url == null) {
++            return;
++        }
++
++        // A skin drawn for the slim model is named for it, since a file on disk
++        // has nobody to ask about which arms it was made for.
++        final Map<String, String> metadata = new LinkedHashMap<>();
++        if (SKIN.equals(type)
++                && file.getFileName().toString().toLowerCase(Locale.ROOT).contains("-slim.")) {
++            metadata.put("model", "slim");
++        }
++
++        textures.put(type, new SkinSource.Texture(url, metadata));
++    }
++
++    /**
++     * The file for this player, if there is one.
++     *
++     * <p>Names are matched without regard to case, because whoever named the file was going by how
++     * the player writes their own name and the server may not agree.
++     */
++    private static Path find(Path folder, String username) throws Exception {
++        if (!Files.isDirectory(folder)) {
++            return null;
++        }
++
++        final String wanted = username.toLowerCase(Locale.ROOT);
++        try (DirectoryStream<Path> files = Files.newDirectoryStream(folder)) {
++            for (final Path file : files) {
++                if (!Files.isRegularFile(file)) {
++                    continue;
++                }
++
++                final String name = file.getFileName().toString().toLowerCase(Locale.ROOT);
++                if (!name.endsWith(".png")) {
++                    continue;
++                }
++
++                final String stem = name.substring(0, name.length() - 4);
++                if (stem.equals(wanted) || stem.equals(wanted + "-slim")) {
++                    return file;
++                }
++            }
++        }
++
++        return null;
++    }
++
++    @Override
++    public String toString() {
++        return directory.toString();
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
+new file mode 100644
+index 0000000..87a6487
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
+@@ -0,0 +1,99 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.sun.net.httpserver.HttpServer;
++import java.io.OutputStream;
++import java.net.InetAddress;
++import java.net.InetSocketAddress;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.security.MessageDigest;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * Hands a file on disk to the game the only way the game will take one: over HTTP.
++ *
++ * <p>Textures reach it as a URL, and every version opens that URL as an {@code HttpURLConnection} —
++ * a {@code file:} one does not even cast. So a file that is meant to be a skin is served from a
++ * socket on the loopback address, which is what every launcher that has had to solve this does,
++ * this one's own Ely.by agent included.
++ *
++ * <p>Each file is served under the digest of what is in it. Replacing a skin therefore changes its
++ * URL, which is what makes the game fetch it again rather than reuse the copy it cached under the
++ * old name.
++ */
++final class LocalTextures {
++    private static final Map<String, Path> SERVED = new ConcurrentHashMap<>();
++
++    private static HttpServer server;
++    private static String origin;
++
++    private LocalTextures() {}
++
++    /** The URL this file can be fetched from, or null if it cannot be served at all. */
++    static synchronized String publish(Path file) throws Exception {
++        final String digest = digest(file);
++        SERVED.put(digest, file);
++
++        if (server == null && !start()) {
++            return null;
++        }
++
++        return origin + "/" + digest + ".png";
++    }
++
++    private static boolean start() {
++        try {
++            server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
++            server.createContext("/", exchange -> {
++                try {
++                    final String name = exchange.getRequestURI().getPath().replace("/", "");
++                    final Path file = SERVED.get(name.endsWith(".png") ? name.substring(0, name.length() - 4) : name);
++                    final byte[] body = file == null ? null : Files.readAllBytes(file);
++
++                    if (body == null) {
++                        exchange.sendResponseHeaders(404, -1);
++                        return;
++                    }
++
++                    exchange.getResponseHeaders().set("Content-Type", "image/png");
++                    exchange.sendResponseHeaders(200, body.length);
++                    try (OutputStream out = exchange.getResponseBody()) {
++                        out.write(body);
++                    }
++                } catch (Throwable t) {
++                    SkinSource.debug("Failed to serve a local skin: " + t);
++                } finally {
++                    exchange.close();
++                }
++            });
++
++            // Its own thread would otherwise keep the game from ever exiting.
++            Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(0), "enhanced-skins-stop"));
++
++            server.start();
++            origin = "http://" + server.getAddress().getAddress().getHostAddress() + ":"
++                    + server.getAddress().getPort();
++            SkinSource.debug("Serving skins from disk at " + origin);
++            return true;
++        } catch (Throwable t) {
++            // No server, no local skins; everything else carries on.
++            SkinSource.debug("Could not serve skins from disk: " + t);
++            server = null;
++            return false;
++        }
++    }
++
++    /** What is in the file, as something that can go in a URL. */
++    private static String digest(Path file) throws Exception {
++        final byte[] hash = MessageDigest.getInstance("SHA-1").digest(Files.readAllBytes(file));
++
++        final StringBuilder hex = new StringBuilder(hash.length * 2);
++        for (final byte b : hash) {
++            hex.append(Character.forDigit((b >> 4) & 0xf, 16));
++            hex.append(Character.forDigit(b & 0xf, 16));
++        }
++
++        return hex.toString();
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java
+new file mode 100644
+index 0000000..d2e0897
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java
+@@ -0,0 +1,148 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.google.gson.JsonElement;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonParser;
++import java.nio.charset.Charset;
++import java.util.Base64;
++import java.util.Collections;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++/**
++ * Mojang's own answer for a name, for the players a skin system does not have.
++ *
++ * <p>Ely.by proxies Mojang for names it has never heard of, which is what covers licensed players
++ * most of the time — but the proxy is not always there, and a licensed player standing in front of
++ * an Ely.by player is exactly the case that goes wrong when it is not. Asking Mojang directly is
++ * two requests: a name buys an id, and an id buys a profile with the same textures payload in it
++ * that a server would have sent.
++ */
++final class MojangSource implements SkinSource.Source {
++    /** What names this one in {@code enhanced.skins.source}. */
++    static final String NAME = "mojang";
++
++    private static final String PROFILES_URL = "https://api.mojang.com/users/profiles/minecraft/";
++    private static final String SESSION_URL = "https://sessionserver.mojang.com/session/minecraft/profile/";
++
++    /** How long a name is taken to still belong to the same account. */
++    private static final long ID_TTL_MS = 30 * 60 * 1000L;
++
++    private static final int MAX_CACHED_IDS = 512;
++
++    private static final Map<String, CachedId> IDS = new ConcurrentHashMap<>();
++
++    private final String profilesUrl;
++    private final String sessionUrl;
++
++    MojangSource() {
++        this(PROFILES_URL, SESSION_URL);
++    }
++
++    /** Both ends are arguments so that a test can stand somewhere else in for them. */
++    MojangSource(String profilesUrl, String sessionUrl) {
++        this.profilesUrl = profilesUrl;
++        this.sessionUrl = sessionUrl;
++    }
++
++    @Override
++    public Map<String, SkinSource.Texture> textures(String username) throws Exception {
++        final String id = id(username);
++        if (id == null) {
++            return Collections.emptyMap();
++        }
++
++        final JsonElement profile = Http.getJson(sessionUrl + Http.encode(id));
++        final String packed = packedTextures(profile);
++        if (packed == null) {
++            return Collections.emptyMap();
++        }
++
++        // The property is the same base64 payload a server sends with a profile:
++        // the textures sit one level in, under "textures".
++        final String decoded = new String(Base64.getDecoder().decode(packed), Charset.forName("UTF-8"));
++        final JsonElement payload = JsonParser.parseString(decoded);
++        if (payload == null || !payload.isJsonObject()) {
++            return Collections.emptyMap();
++        }
++
++        return SkinSource.readTextures(payload.getAsJsonObject().get("textures"));
++    }
++
++    /**
++     * The id behind a name, from memory where possible.
++     *
++     * <p>Every skin here costs two requests, and the first of them answers with something that
++     * hardly ever changes. Remembering it means a skin that is looked at again — which is what
++     * happens every time somebody walks back into view — costs one.
++     */
++    private String id(String username) throws Exception {
++        final long now = System.currentTimeMillis();
++        final CachedId cached = IDS.get(username);
++        if (cached != null && cached.expiresAt > now) {
++            return cached.id;
++        }
++
++        final String id = string(Http.getJson(profilesUrl + Http.encode(username)), "id");
++
++        // Remembered either way. A name Mojang has never heard of is every
++        // player on an account system of their own, and every one of them would
++        // otherwise cost a request here each time they are looked at.
++        if (IDS.size() >= MAX_CACHED_IDS) {
++            IDS.values().removeIf(entry -> entry.expiresAt <= now);
++            if (IDS.size() >= MAX_CACHED_IDS) {
++                IDS.clear();
++            }
++        }
++        IDS.put(username, new CachedId(id, now + ID_TTL_MS));
++
++        return id;
++    }
++
++    /** The value of the {@code textures} property, or null if the profile carries none. */
++    private static String packedTextures(JsonElement profile) {
++        if (profile == null || !profile.isJsonObject()) {
++            return null;
++        }
++
++        final JsonElement properties = profile.getAsJsonObject().get("properties");
++        if (properties == null || !properties.isJsonArray()) {
++            return null;
++        }
++
++        for (final JsonElement element : properties.getAsJsonArray()) {
++            if (element.isJsonObject() && "textures".equals(string(element, "name"))) {
++                return string(element, "value");
++            }
++        }
++
++        return null;
++    }
++
++    private static String string(JsonElement object, String key) {
++        if (object == null || !object.isJsonObject()) {
++            return null;
++        }
++
++        final JsonObject json = object.getAsJsonObject();
++        final JsonElement value = json.get(key);
++        return value != null && value.isJsonPrimitive() ? value.getAsString() : null;
++    }
++
++    @Override
++    public String toString() {
++        return NAME;
++    }
++
++    private static final class CachedId {
++        /** Null for a name Mojang has never heard of. */
++        final String id;
++
++        final long expiresAt;
++
++        CachedId(String id, long expiresAt) {
++            this.id = id;
++            this.expiresAt = expiresAt;
++        }
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java
+new file mode 100644
+index 0000000..b7d5823
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java
+@@ -0,0 +1,143 @@
++package com.modrinth.theseus.agent.skins;
++
++import java.awt.image.BufferedImage;
++import java.io.ByteArrayInputStream;
++import java.io.ByteArrayOutputStream;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.util.Collections;
++import java.util.LinkedHashMap;
++import java.util.Locale;
++import java.util.Map;
++import javax.imageio.ImageIO;
++
++/**
++ * OptiFine's capes, which a great many players have and nothing else knows about.
++ *
++ * <p>Answered by name, which is what makes it usable at all on a world opened to LAN: there the
++ * server is in offline mode and everybody's id is derived from their name rather than being the one
++ * Mojang issued, so anything that looks players up by id finds nobody.
++ *
++ * <p>This source has no skins, and could not take part before — the chain took the first source to
++ * answer anything, so a cape would have arrived in place of a skin. Answers are merged a texture at
++ * a time now, which is what a cape-only source needs. See {@link SkinSource}.
++ */
++final class OptiFineCapeSource implements SkinSource.Source {
++    /** What names this one in {@code enhanced.skins.source}. */
++    static final String NAME = "optifine";
++
++    private static final String CAPES_URL = "http://s.optifine.net/capes/";
++
++    /**
++     * The shape OptiFine serves, and the shape Minecraft reads.
++     *
++     * <p>OptiFine's capes are 46 by 22 and the game's are 64 by 32, laid out so that the smaller one
++     * is the top left corner of the larger. Handing the game the URL as it comes would put the cape
++     * on backwards and half off the player, so it is redrawn onto a canvas of the size the game
++     * expects and served from disk. Larger capes are the same picture at a multiple of that size,
++     * so the canvas grows by the same multiple.
++     */
++    private static final int OPTIFINE_WIDTH = 46;
++
++    private static final int OPTIFINE_HEIGHT = 22;
++    private static final int VANILLA_WIDTH = 64;
++    private static final int VANILLA_HEIGHT = 32;
++
++    private final String capesUrl;
++    private final Path directory;
++
++    OptiFineCapeSource(Path directory) {
++        this(CAPES_URL, directory);
++    }
++
++    /** The end is an argument so that a test can stand somewhere else in for it. */
++    OptiFineCapeSource(String capesUrl, Path directory) {
++        this.capesUrl = capesUrl;
++        this.directory = directory;
++    }
++
++    @Override
++    public Map<String, SkinSource.Texture> textures(String username) throws Exception {
++        final byte[] original = Http.getBytes(capesUrl + Http.encode(username) + ".png");
++        if (original == null || original.length == 0) {
++            return Collections.emptyMap();
++        }
++
++        final Path file = convert(original, username);
++        if (file == null) {
++            return Collections.emptyMap();
++        }
++
++        final String url = LocalTextures.publish(file);
++        if (url == null) {
++            return Collections.emptyMap();
++        }
++
++        final Map<String, SkinSource.Texture> textures = new LinkedHashMap<>();
++        textures.put("CAPE", new SkinSource.Texture(url, Collections.<String, String>emptyMap()));
++        return textures;
++    }
++
++    /**
++     * The cape redrawn at the size the game expects, written where it can be served from.
++     *
++     * <p>Null when the picture is not one: a cape that cannot be read is not worth a crash, and the
++     * player simply has no cape, which is what they had a moment ago.
++     */
++    private Path convert(byte[] original, String username) throws Exception {
++        final BufferedImage source = ImageIO.read(new ByteArrayInputStream(original));
++        if (source == null || source.getWidth() <= 0 || source.getHeight() <= 0) {
++            SkinSource.debug("OptiFine sent something that is not a picture for " + username);
++            return null;
++        }
++
++        final BufferedImage cape = onVanillaCanvas(source);
++
++        Files.createDirectories(directory);
++        final Path file = directory.resolve(username.toLowerCase(Locale.ROOT) + ".png");
++
++        // Through bytes rather than straight to the file, so that a write that
++        // fails halfway cannot leave half a cape behind for the next run to
++        // read as a whole one.
++        final ByteArrayOutputStream encoded = new ByteArrayOutputStream();
++        ImageIO.write(cape, "PNG", encoded);
++        Files.write(file, encoded.toByteArray());
++
++        return file;
++    }
++
++    /** The picture on a canvas of the size the game reads, at the same scale it arrived in. */
++    private static BufferedImage onVanillaCanvas(BufferedImage source) {
++        // A cape twice OptiFine's size is drawn on a canvas twice the game's.
++        // Worked from the width because that is the side that differs most, and
++        // rounded up so a picture between two scales is never cropped.
++        final int scale = Math.max(1, (source.getWidth() + OPTIFINE_WIDTH - 1) / OPTIFINE_WIDTH);
++        final int width = Math.max(VANILLA_WIDTH * scale, source.getWidth());
++        final int height = Math.max(VANILLA_HEIGHT * scale, source.getHeight());
++
++        if (width == source.getWidth() && height == source.getHeight()) {
++            // Already the shape the game wants — some capes are served that way.
++            return source;
++        }
++
++        final BufferedImage canvas = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
++        final java.awt.Graphics2D graphics = canvas.createGraphics();
++        try {
++            graphics.drawImage(source, 0, 0, null);
++        } finally {
++            graphics.dispose();
++        }
++
++        return canvas;
++    }
++
++    /** Whether a picture of this size is one of OptiFine's rather than the game's own. */
++    static boolean isOptiFineShape(int width, int height) {
++        return width * OPTIFINE_HEIGHT == height * OPTIFINE_WIDTH;
++    }
++
++    @Override
++    public String toString() {
++        return NAME;
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java
+new file mode 100644
+index 0000000..0132001
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java
+@@ -0,0 +1,459 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.google.gson.JsonElement;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonParser;
++import java.lang.reflect.Constructor;
++import java.lang.reflect.Method;
++import java.nio.charset.StandardCharsets;
++import java.util.Base64;
++import java.util.HashMap;
++import java.util.Map;
++
++/**
++ * The code {@link com.modrinth.theseus.agent.transformers.SessionServiceTransformer} calls from the
++ * end of the authlib methods a skin can go missing in.
++ *
++ * <p>Everything here is reflective on purpose. The agent is compiled against nothing from the game,
++ * and authlib has changed this corner more than once: what used to be a {@code Map} keyed by
++ * texture type is a {@code MinecraftProfileTextures} record from 1.20.2 on, and the client that
++ * used to ask for textures now asks for the property they are packed in. Every shape arrives here
++ * as {@code Object}, and whichever one came in is the one that goes back out.
++ */
++public final class SkinHooks {
++    private static final String TEXTURE_CLASS = "com.mojang.authlib.minecraft.MinecraftProfileTexture";
++    private static final String TEXTURE_TYPE_CLASS = TEXTURE_CLASS + "$Type";
++    private static final String PROPERTY_CLASS = "com.mojang.authlib.properties.Property";
++
++    /** What a packed textures payload calls the player it is for. */
++    private static final String PROFILE_NAME = "profileName";
++
++    /**
++     * The signature state to claim for textures we resolved ourselves.
++     *
++     * <p>Not the honest-looking {@code UNSIGNED}: from 1.20.2 the client asks
++     * for a player's skin as either trusted or not, and throws away an untrusted
++     * one — {@code PlayerSkin.secure} is exactly {@code signatureState ==
++     * SIGNED}, and a skin without it is replaced by Steve before it is ever
++     * drawn. What the state answers is whether these textures can be trusted,
++     * and these came from the skin system the launcher was told to use rather
++     * than from the server, so they can. It says nothing about chat signing,
++     * which has a key of its own.
++     */
++    private static final String SIGNED_CONSTANT = "SIGNED";
++
++    private SkinHooks() {}
++
++    /**
++     * Fills in textures the server did not send.
++     *
++     * <p>Called with whatever authlib was about to return. A profile that already carries textures
++     * is handed straight back — this only ever speaks for players nobody else answered for, so an
++     * online-mode server's signed skins are never second-guessed.
++     */
++    public static Object fillTextures(Object result, Object profile) {
++        try {
++            if (!SkinSource.isEnabled() || profile == null || hasTextures(result)) {
++                return result;
++            }
++
++            final String name = profileName(profile);
++            final Map<String, SkinSource.Texture> textures = SkinSource.lookup(name);
++            if (textures.isEmpty()) {
++                return result;
++            }
++
++            final Object filled = build(result == null ? null : result.getClass(), loaderOf(profile), textures);
++            if (filled != null) {
++                SkinSource.debug("Filled in textures for " + name);
++                return filled;
++            }
++        } catch (Throwable t) {
++            // Whatever this is, it is not worth taking the game down with it.
++            SkinSource.debug("Failed to fill in textures: " + t);
++        }
++
++        return result;
++    }
++
++    /**
++     * Stands in for textures authlib refused to hand over.
++     *
++     * <p>A profile carrying textures signed by an account system this client does not have the key
++     * for — an Ely.by player seen by a licensed one, or the other way about — does not come back
++     * empty: {@code getTextures} throws, and the game reads that as no skin at all. The player is
++     * no less real for it, so they get the same lookup by name as one the server said nothing
++     * about.
++     *
++     * <p>{@code expected} is the type the call site is going to cast this to, which is all there is
++     * to go on when the failure left no instance to copy the shape from. Nothing to offer means the
++     * original failure is passed on exactly as it was thrown.
++     */
++    public static Object recoverTextures(Throwable failure, Object profile, Class<?> expected) {
++        try {
++            if (SkinSource.isEnabled() && profile != null) {
++                final String name = profileName(profile);
++                final Map<String, SkinSource.Texture> textures = SkinSource.lookup(name);
++
++                final Object filled = textures.isEmpty() ? null : build(expected, loaderOf(profile), textures);
++                if (filled != null) {
++                    SkinSource.debug("Filled in textures for " + name + " after " + failure);
++                    return filled;
++                }
++            }
++        } catch (Throwable t) {
++            SkinSource.debug("Failed to fill in textures after " + failure + ": " + t);
++        }
++
++        throw sneakyThrow(failure);
++    }
++
++    /**
++     * Gives the client a textures property to unpack for a profile that arrived without one.
++     *
++     * <p>From 1.20.2 the client asks for the property first and only unpacks it if there was one,
++     * so a profile from an offline server — no property at all — never reaches {@link
++     * #unpackTextures}, which is where a lookup belongs. This puts an empty one in its way instead,
++     * naming the player it is for, and no lookup happens here: this is called while the client is
++     * deciding what to draw, and the unpacking is what runs off the main thread.
++     */
++    public static Object packTextures(Object result, Object profile) {
++        try {
++            if (result != null || !SkinSource.isEnabled() || profile == null) {
++                return result;
++            }
++
++            final String name = profileName(profile);
++            if (name == null) {
++                return result;
++            }
++
++            final Object property = buildProperty(loaderOf(profile), name);
++            if (property != null) {
++                return property;
++            }
++        } catch (Throwable t) {
++            SkinSource.debug("Failed to stand in for a missing textures property: " + t);
++        }
++
++        return result;
++    }
++
++    /**
++     * Fills in textures the property did not yield.
++     *
++     * <p>Which covers more than the empty property {@link #packTextures} makes: authlib drops
++     * textures whose signature it cannot check and textures hosted anywhere but Mojang's own
++     * domains, so an Ely.by player's skin arrives here as nothing at all on a licensed client. The
++     * name is read back out of the property, which carries it whether the payload came from a
++     * server or from us.
++     */
++    public static Object unpackTextures(Object result, Object property) {
++        try {
++            if (!SkinSource.isEnabled() || result == null || hasTextures(result)) {
++                return result;
++            }
++
++            final String name = payloadName(propertyValue(property));
++            if (name == null) {
++                return result;
++            }
++
++            final Map<String, SkinSource.Texture> textures = SkinSource.lookup(name);
++            final Object filled = textures.isEmpty() ? null : build(result.getClass(), loaderOf(result), textures);
++            if (filled != null) {
++                SkinSource.debug("Filled in textures for " + name);
++                return filled;
++            }
++        } catch (Throwable t) {
++            SkinSource.debug("Failed to fill in unpacked textures: " + t);
++        }
++
++        return result;
++    }
++
++    /** An empty textures property naming the player it stands for. */
++    private static Object buildProperty(ClassLoader loader, String name) throws Exception {
++        final Class<?> propertyClass = Class.forName(PROPERTY_CLASS, false, loader);
++
++        Constructor<?> canonical = null;
++        for (final Constructor<?> candidate : propertyClass.getDeclaredConstructors()) {
++            final Class<?>[] parameters = candidate.getParameterTypes();
++            if (parameters.length < 2 || parameters.length > 3) {
++                continue;
++            }
++
++            boolean strings = true;
++            for (final Class<?> parameter : parameters) {
++                strings &= parameter == String.class;
++            }
++
++            // The shortest one that takes only strings: name and value, without a
++            // signature there is nothing to put in.
++            if (strings && (canonical == null || parameters.length < canonical.getParameterTypes().length)) {
++                canonical = candidate;
++            }
++        }
++
++        if (canonical == null) {
++            return null;
++        }
++
++        final Object[] arguments = new Object[canonical.getParameterTypes().length];
++        arguments[0] = "textures";
++        arguments[1] = emptyPayload(name);
++
++        canonical.setAccessible(true);
++        return canonical.newInstance(arguments);
++    }
++
++    /** The payload a server would have sent, with the textures left out. */
++    private static String emptyPayload(String name) {
++        final JsonObject payload = new JsonObject();
++        payload.addProperty(PROFILE_NAME, name);
++        payload.add("textures", new JsonObject());
++
++        return Base64.getEncoder().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
++    }
++
++    /** The {@code value} of a property, whichever accessor this authlib gave it. */
++    private static String propertyValue(Object property) {
++        if (property == null) {
++            return null;
++        }
++
++        for (final String accessor : new String[] {"value", "getValue"}) {
++            try {
++                final Object value = property.getClass().getMethod(accessor).invoke(property);
++                if (value instanceof String) {
++                    return (String) value;
++                }
++            } catch (Throwable ignored) {
++                // Try the next one.
++            }
++        }
++
++        return null;
++    }
++
++    /** The name a packed textures payload was made for. */
++    private static String payloadName(String packed) {
++        if (packed == null) {
++            return null;
++        }
++
++        try {
++            final String decoded = new String(Base64.getDecoder().decode(packed), StandardCharsets.UTF_8);
++            final JsonElement payload = JsonParser.parseString(decoded);
++            if (payload == null || !payload.isJsonObject()) {
++                return null;
++            }
++
++            final JsonElement name = payload.getAsJsonObject().get(PROFILE_NAME);
++            return name != null && name.isJsonPrimitive() ? name.getAsString() : null;
++        } catch (Throwable t) {
++            // Not a payload, then; there is no name to be had.
++            return null;
++        }
++    }
++
++    private static ClassLoader loaderOf(Object object) {
++        return object.getClass().getClassLoader();
++    }
++
++    /** Builds whichever shape of the API {@code shape} belongs to, or null for neither. */
++    private static Object build(Class<?> shape, ClassLoader loader, Map<String, SkinSource.Texture> textures)
++            throws Exception {
++        if (shape == null) {
++            return null;
++        }
++
++        return shape.isAssignableFrom(HashMap.class)
++                ? buildMap(loader, textures)
++                : buildTexturesObject(shape, loader, textures);
++    }
++
++    /**
++     * Throws what it is given, whatever it is.
++     *
++     * <p>The declared throws is erased, so the compiler lets a checked exception through without
++     * this method having to admit to it — which is what passing a failure on untouched needs.
++     */
++    @SuppressWarnings("unchecked")
++    private static <T extends Throwable> RuntimeException sneakyThrow(Throwable failure) throws T {
++        throw (T) failure;
++    }
++
++    private static boolean hasTextures(Object result) throws Exception {
++        if (result == null) {
++            return false;
++        }
++
++        if (result instanceof Map) {
++            return !((Map<?, ?>) result).isEmpty();
++        }
++
++        // The record shape: a component per texture, all null when there are none.
++        for (final Method method : result.getClass().getMethods()) {
++            if (method.getParameterTypes().length == 0
++                    && TEXTURE_CLASS.equals(method.getReturnType().getName())
++                    && method.invoke(result) != null) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private static String profileName(Object profile) {
++        // `getName` on every authlib a launcher meets; `name` covers the record
++        // form, in case that is where GameProfile ends up too.
++        for (final String accessor : new String[] {"getName", "name"}) {
++            try {
++                final Object name = profile.getClass().getMethod(accessor).invoke(profile);
++                if (name instanceof String) {
++                    return (String) name;
++                }
++            } catch (Throwable ignored) {
++                // Try the next one.
++            }
++        }
++
++        return null;
++    }
++
++    /** The pre-1.20.2 shape: a map keyed by {@code MinecraftProfileTexture.Type}. */
++    private static Object buildMap(ClassLoader loader, Map<String, SkinSource.Texture> textures) throws Exception {
++        final Class<?> typeClass = Class.forName(TEXTURE_TYPE_CLASS, false, loader);
++        final Map<Object, Object> filled = new HashMap<>();
++
++        for (final Map.Entry<String, SkinSource.Texture> entry : textures.entrySet()) {
++            final Object type = enumConstant(typeClass, entry.getKey());
++            final Object texture = buildTexture(loader, entry.getValue());
++            if (type != null && texture != null) {
++                filled.put(type, texture);
++            }
++        }
++
++        return filled.isEmpty() ? null : filled;
++    }
++
++    /**
++     * The 1.20.2+ shape: a record of skin, cape, elytra and a signature state.
++     *
++     * <p>Built from the class authlib itself deals in — the one it was returning, or the one the
++     * call site is about to cast to — so the record it hands back is the one that class expects,
++     * and the components are filled in their declared order, which for a record's canonical
++     * constructor is the order they are written in.
++     */
++    private static Object buildTexturesObject(
++            Class<?> texturesClass, ClassLoader loader, Map<String, SkinSource.Texture> textures) throws Exception {
++        Constructor<?> canonical = null;
++        for (final Constructor<?> candidate : texturesClass.getDeclaredConstructors()) {
++            if (canonical == null || candidate.getParameterTypes().length > canonical.getParameterTypes().length) {
++                canonical = candidate;
++            }
++        }
++        if (canonical == null) {
++            return null;
++        }
++
++        final Class<?>[] parameters = canonical.getParameterTypes();
++        final Object[] arguments = new Object[parameters.length];
++        final String[] order = {"SKIN", "CAPE", "ELYTRA"};
++        int textureIndex = 0;
++
++        for (int i = 0; i < parameters.length; i++) {
++            final Class<?> parameter = parameters[i];
++            if (TEXTURE_CLASS.equals(parameter.getName())) {
++                final SkinSource.Texture texture =
++                        textureIndex < order.length ? textures.get(order[textureIndex]) : null;
++                arguments[i] = texture == null ? null : buildTexture(loader, texture);
++                textureIndex++;
++            } else if (parameter.isEnum()) {
++                arguments[i] = enumConstant(parameter, SIGNED_CONSTANT);
++                if (arguments[i] == null) {
++                    final Object[] constants = parameter.getEnumConstants();
++                    arguments[i] = constants.length > 0 ? constants[0] : null;
++                }
++            } else if (parameter.isPrimitive()) {
++                // Nothing sensible to say about it; a default keeps the call legal.
++                arguments[i] = defaultValue(parameter);
++            }
++        }
++
++        if (textureIndex == 0) {
++            return null;
++        }
++
++        canonical.setAccessible(true);
++        return canonical.newInstance(arguments);
++    }
++
++    private static Object buildTexture(ClassLoader loader, SkinSource.Texture texture) throws Exception {
++        final Class<?> textureClass = Class.forName(TEXTURE_CLASS, false, loader);
++
++        Constructor<?> withMetadata = null;
++        Constructor<?> withUrl = null;
++        for (final Constructor<?> candidate : textureClass.getDeclaredConstructors()) {
++            final Class<?>[] parameters = candidate.getParameterTypes();
++            if (parameters.length == 2 && parameters[0] == String.class && parameters[1] == Map.class) {
++                withMetadata = candidate;
++            } else if (parameters.length == 1 && parameters[0] == String.class) {
++                withUrl = candidate;
++            }
++        }
++
++        if (withMetadata != null) {
++            withMetadata.setAccessible(true);
++            // Slim arms and the like ride along in here.
++            return withMetadata.newInstance(texture.url, texture.metadata.isEmpty() ? null : texture.metadata);
++        }
++        if (withUrl != null) {
++            withUrl.setAccessible(true);
++            return withUrl.newInstance(texture.url);
++        }
++
++        return null;
++    }
++
++    private static Object enumConstant(Class<?> enumClass, String name) {
++        final Object[] constants = enumClass.getEnumConstants();
++        if (constants == null) {
++            return null;
++        }
++
++        for (final Object constant : constants) {
++            if (constant instanceof Enum && ((Enum<?>) constant).name().equals(name)) {
++                return constant;
++            }
++        }
++
++        return null;
++    }
++
++    private static Object defaultValue(Class<?> primitive) {
++        if (primitive == boolean.class) {
++            return Boolean.FALSE;
++        }
++        if (primitive == char.class) {
++            return (char) 0;
++        }
++        if (primitive == long.class) {
++            return 0L;
++        }
++        if (primitive == float.class) {
++            return 0f;
++        }
++        if (primitive == double.class) {
++            return 0d;
++        }
++        if (primitive == byte.class) {
++            return (byte) 0;
++        }
++        if (primitive == short.class) {
++            return (short) 0;
++        }
++        return 0;
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java
+new file mode 100644
+index 0000000..24e7da6
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java
+@@ -0,0 +1,706 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.google.gson.JsonElement;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonParser;
++import java.nio.charset.StandardCharsets;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.nio.file.Paths;
++import java.nio.file.StandardCopyOption;
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Locale;
++import java.util.Map;
++import java.util.Set;
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.FutureTask;
++import java.util.concurrent.LinkedBlockingQueue;
++import java.util.concurrent.ThreadPoolExecutor;
++import java.util.concurrent.TimeUnit;
++import java.util.concurrent.TimeoutException;
++
++/**
++ * Looks a player's textures up by name, for players the server did not supply any for.
++ *
++ * <p>Servers running in offline mode hand out profiles with no {@code textures} property at all, so
++ * every player renders as Steve no matter whose account they are on. The launcher points this at a
++ * skin system that answers by name — Ely.by by default, which serves its own users' skins — with
++ * Mojang itself behind it for the licensed players Ely.by has never heard of.
++ *
++ * <p>Disabled unless the launcher sets {@code enhanced.skins.source}. Its value is a list
++ * separated by commas: the base URL of anything serving {@code /textures/{name}}, or the word
++ * {@code mojang} for Mojang's own name lookup. The first one that has heard of the player wins,
++ * which is how a private skin server can sit in front of the public one — but they are all asked
++ * at once rather than in turn, because the game does not wait for ever and the player who needs
++ * the source at the end of the list is the one who would never be reached in time. See {@link
++ * #PER_SOURCE_WAIT_MS}.
++ */
++public final class SkinSource {
++    private static final String SOURCE_PROPERTY = "enhanced.skins.source";
++    private static final String LOCAL_PROPERTY = "enhanced.skins.local";
++    private static final String CACHE_PROPERTY = "enhanced.skins.cache";
++    private static final String DEBUG_PROPERTY = "modrinth.debugAgent";
++
++    /** Minecraft's own limit on how long a name can be. */
++    private static final int MAX_NAME_LENGTH = 16;
++
++    /**
++     * How long an answer is current for.
++     *
++     * <p>Short, because changing a skin and rejoining to see it is how everyone does it, and an
++     * answer older than that is the only thing standing in the way. Going stale is not the same as
++     * being useless, though — see {@link #KEEP_MS}.
++     */
++    private static final long FRESH_MS = 15 * 1000L;
++
++    /**
++     * The same, for a name nothing had a skin for.
++     *
++     * <p>Longer: whoever this is has no skin anywhere right now, and the lookup that found nothing
++     * is the expensive one to repeat.
++     */
++    private static final long FRESH_MISS_MS = 60 * 1000L;
++
++    /**
++     * How long a stale answer is still worth handing over.
++     *
++     * <p>The game asks when a player comes into view, and it asks on the thread that is waiting to
++     * draw them — two threads for the whole game on the older versions. Making it wait on the
++     * network is what puts Steve on screen for a second every time somebody walks back into
++     * render distance, or every time a death drops the world and every player in it. So anything
++     * remembered is handed over at once and looked at again behind the game's back: the skin on
++     * screen is at worst one sighting out of date, and there is no pause before it appears.
++     */
++    private static final long KEEP_MS = 30 * 60 * 1000L;
++
++    /**
++     * The longest the game is ever made to wait on a name nothing is known about.
++     *
++     * <p>Each source has its own timeouts, and a bad minute on the network can put them end to end:
++     * a source that will not connect, then one that will not answer, is ten seconds of a frozen
++     * frame on the older versions. Past this the lookup is left running on its own and the player
++     * is Steve for one sighting — by the next one the answer is in.
++     */
++    private static final long FIRST_WAIT_MS = 5 * 1000L;
++
++    /**
++     * The longest any one source is waited on before the answer of the one after it will do.
++     *
++     * <p>Preferring an earlier source cannot mean waiting on it without end: a skin system that
++     * proxies Mojang for the players it does not have of its own answers for a licensed player
++     * most of the time and hangs or fails the rest of it, and every second of that is spent
++     * against {@link #FIRST_WAIT_MS}. Past this, whoever else has answered is the answer, and the
++     * slow one is still remembered for the sighting after this.
++     */
++    private static final long PER_SOURCE_WAIT_MS = 3 * 1000L;
++
++    /**
++     * The longest a source is given once nobody else has answered either.
++     *
++     * <p>Reached only when the quick pass over them all came back with nothing, and by then
++     * whoever asked has their answer — an empty one — and is not waiting on this. What it is for is
++     * the remembering: a source that was merely slow still gets to say what it knows, and the next
++     * time this player is looked at the answer is already in. Long enough for any source to have
++     * hit a timeout of its own; it is not a substitute for one.
++     */
++    private static final long LATE_WAIT_MS = 20 * 1000L;
++
++    /**
++     * How long a source that failed is left out of the next lookups.
++     *
++     * <p>Only ever when somebody else can answer. A source that is down stays down for longer than
++     * one player walks into view, and asking it again for every one of them costs a connection and
++     * a wait each time — while the source that could have answered is the one being kept waiting.
++     */
++    private static final long UNHEALTHY_MS = 60 * 1000L;
++
++    /** A bound on the cache, so a busy server cannot grow it without end. */
++    private static final int MAX_CACHED_NAMES = 512;
++
++    /**
++     * How old an answer written to disk may be and still be worth reading back.
++     *
++     * <p>Generous, because reading one is what makes the first sighting of a session instant, and
++     * it is only ever handed over as something to look at again — never as the last word.
++     */
++    private static final long DISK_TTL_MS = 24 * 60 * 60 * 1000L;
++
++    /** How often the file on disk is rewritten while the game is running. */
++    private static final long SAVE_EVERY_MS = 60 * 1000L;
++
++    private static final List<Source> SOURCES = parseSources(System.getProperty(SOURCE_PROPERTY));
++    private static final boolean DEBUG = Boolean.getBoolean(DEBUG_PROPERTY);
++
++    private static final Map<String, CachedTextures> CACHE = new ConcurrentHashMap<>();
++
++    /** Sources that have just failed, and until when they are left alone. */
++    private static final Map<Source, Long> UNHEALTHY_UNTIL = new ConcurrentHashMap<>();
++
++    /** Names a refresh is already running for, so a crowd cannot ask twice over. */
++    private static final Set<String> IN_FLIGHT = ConcurrentHashMap.newKeySet();
++
++    /**
++     * Where the looking-again happens.
++     *
++     * <p>Daemon threads, because none of this is worth holding the game open at the end; a bounded
++     * queue and a silent discard, because a refresh that cannot be run right now is one the next
++     * sighting will ask for again anyway.
++     */
++    private static final ExecutorService REFRESHERS = new ThreadPoolExecutor(
++            0,
++            8,
++            30L,
++            TimeUnit.SECONDS,
++            new LinkedBlockingQueue<>(64),
++            runnable -> {
++                final Thread thread = new Thread(runnable, "enhanced-skins");
++                thread.setDaemon(true);
++                return thread;
++            },
++            // Refused rather than dropped, so whoever asked knows to do it itself.
++            new ThreadPoolExecutor.AbortPolicy());
++
++    /**
++     * Where the sources are asked, kept apart from the looking-again above.
++     *
++     * <p>A lookup waits on the sources it started, so running both on the same threads would have
++     * a queue full of lookups waiting for the sources behind them in it. Everything here is a
++     * socket waiting for an answer, which is why there can be a good few of them.
++     */
++    private static final ExecutorService LOOKUPS = new ThreadPoolExecutor(
++            0,
++            16,
++            30L,
++            TimeUnit.SECONDS,
++            new LinkedBlockingQueue<>(64),
++            runnable -> {
++                final Thread thread = new Thread(runnable, "enhanced-skins-source");
++                thread.setDaemon(true);
++                return thread;
++            },
++            new ThreadPoolExecutor.AbortPolicy());
++
++    /** When the file on disk was last written, and whether it is behind what is in memory. */
++    private static volatile long lastSaved;
++
++    private static volatile boolean dirty;
++
++    static {
++        restore();
++        if (cacheFile() != null) {
++            Runtime.getRuntime().addShutdownHook(new Thread(SkinSource::save, "enhanced-skins-save"));
++        }
++    }
++
++    private SkinSource() {}
++
++    public static boolean isEnabled() {
++        return !SOURCES.isEmpty();
++    }
++
++    /** Somewhere textures can be asked for by name. */
++    interface Source {
++        /** What this source has for the name, or an empty map if it has never heard of them. */
++        Map<String, Texture> textures(String username) throws Exception;
++    }
++
++    /**
++     * The textures the skin system has for this name, keyed by {@code SKIN} / {@code CAPE}.
++     *
++     * <p>Never throws and never returns null: a name we cannot resolve, for any reason, is an empty
++     * map and the caller leaves the profile as it was.
++     */
++    public static Map<String, Texture> lookup(String username) {
++        if (SOURCES.isEmpty() || !isPlausibleName(username)) {
++            return Collections.emptyMap();
++        }
++
++        final long now = System.currentTimeMillis();
++        final CachedTextures cached = CACHE.get(username);
++        if (cached != null && cached.usableUntil > now) {
++            if (cached.freshUntil <= now) {
++                // Old enough to be worth another look, not old enough to make
++                // anyone wait for it.
++                refreshLater(username);
++            }
++            return cached.textures;
++        }
++
++        return fetchWithin(username);
++    }
++
++    /**
++     * Asks about a name nobody has asked about before, without letting the game wait for ever.
++     *
++     * <p>The work runs on this class's own threads rather than the caller's, so that giving up on
++     * it is possible at all: what is abandoned here still finishes, and is still written down.
++     */
++    private static Map<String, Texture> fetchWithin(String username) {
++        final FutureTask<Map<String, Texture>> task = new FutureTask<>(() -> fetch(username));
++        try {
++            REFRESHERS.execute(task);
++        } catch (Throwable rejected) {
++            // Every thread is busy; there is nowhere to run this but here.
++            task.run();
++        }
++
++        try {
++            return task.get(FIRST_WAIT_MS, TimeUnit.MILLISECONDS);
++        } catch (TimeoutException slow) {
++            debug("Gave up waiting on " + username + "; the lookup is still going");
++        } catch (Throwable t) {
++            debug("Failed to look up " + username + ": " + t);
++        }
++
++        return Collections.emptyMap();
++    }
++
++    /**
++     * Looks a name up before anything asks about it.
++     *
++     * <p>The launcher names the player who is signing in, and their own skin is the one the game
++     * wants first and most visibly — their arm is on screen the moment they spawn. Warming it here
++     * means that first sighting is not the one that has to wait.
++     */
++    public static void prefetch(String username) {
++        if (SOURCES.isEmpty() || !isPlausibleName(username)) {
++            return;
++        }
++
++        refreshLater(username);
++    }
++
++    /** Asks every source at once, and remembers what the first one to know answered. */
++    private static Map<String, Texture> fetch(String username) {
++        final List<Source> asked = healthy();
++        final List<FutureTask<Map<String, Texture>>> answers = new ArrayList<>(asked.size());
++
++        for (final Source source : asked) {
++            final FutureTask<Map<String, Texture>> answer = new FutureTask<>(() -> ask(source, username));
++            answers.add(answer);
++
++            try {
++                LOOKUPS.execute(answer);
++            } catch (Throwable rejected) {
++                // Every thread is busy; there is nowhere to run this but here.
++                answer.run();
++            }
++        }
++
++        // Quickly first, so that one source taking its time cannot keep the
++        // answer another one already has from the player waiting to be drawn.
++        Map<String, Texture> textures = collect(username, asked, answers, PER_SOURCE_WAIT_MS);
++
++        // Then patiently, for what was only slow. Whoever asked has long since
++        // been answered — the game waits no longer than FIRST_WAIT_MS — so this
++        // costs nobody anything and is what gets remembered.
++        //
++        // Run even when something was found, because a partial answer is now a
++        // thing that can happen: the skin arrived and the cape is still coming.
++        // Sources that have already finished return at once, so the wait is
++        // only ever for the ones that had not.
++        final Map<String, Texture> patient = collect(username, asked, answers, LATE_WAIT_MS);
++        if (patient.size() > textures.size()) {
++            textures = patient;
++        }
++
++        store(username, textures, System.currentTimeMillis());
++        return textures;
++    }
++
++    /**
++     * What the sources have between them, waiting no longer than {@code wait} on any one of them.
++     *
++     * <p>Taken a texture at a time rather than an answer at a time. A player's skin and their cape
++     * do not have to come from the same place, and often cannot: a cape service knows nothing about
++     * skins, so a whole-answer rule would either hide it behind whoever answered first or let it
++     * replace the skin with nothing. Each kind goes to the first source listed that has it, which
++     * keeps the meaning the order always had — a skin server put in front of another still speaks
++     * for a player they both know — and lets a source that only knows capes take part at all.
++     *
++     * <p>Asked in the order they were listed however they finish.
++     */
++    private static Map<String, Texture> collect(
++            String username, List<Source> asked, List<FutureTask<Map<String, Texture>>> answers, long wait) {
++        final Map<String, Texture> merged = new LinkedHashMap<>();
++
++        for (int i = 0; i < answers.size(); i++) {
++            Map<String, Texture> answer = Collections.emptyMap();
++            try {
++                answer = answers.get(i).get(wait, TimeUnit.MILLISECONDS);
++            } catch (TimeoutException slow) {
++                // Left running. Being slow is not being wrong, so this is not
++                // held against the source: only a failure is.
++                debug("Gave up waiting on " + asked.get(i) + " for " + username);
++            } catch (Throwable t) {
++                debug("Failed to look up " + username + " at " + asked.get(i) + ": " + t);
++            }
++
++            for (final Map.Entry<String, Texture> texture : answer.entrySet()) {
++                // Absent rather than replaced: the first source listed that has
++                // this kind is the one that keeps it.
++                if (!merged.containsKey(texture.getKey())) {
++                    merged.put(texture.getKey(), texture.getValue());
++                }
++            }
++        }
++
++        return merged.isEmpty() ? Collections.emptyMap() : Collections.unmodifiableMap(merged);
++    }
++
++    /** What one source has for a name, or nothing at all if it could not say. */
++    private static Map<String, Texture> ask(Source source, String username) {
++        try {
++            return source.textures(username);
++        } catch (Http.RateLimited busy) {
++            // Asked too often rather than unwell. Left alone only for as long
++            // as it asked to be, which is usually seconds — being benched for a
++            // minute at a time would mean never being asked again while a
++            // server is busy enough to have hit the limit in the first place.
++            debug("Rate limited by " + source + " for " + username + ": " + busy.getMessage());
++            markUnhealthy(source, busy.retryAfterMs);
++            return Collections.emptyMap();
++        } catch (Throwable t) {
++            // A skin is not worth interrupting the game over, whatever went
++            // wrong; another source may still know them.
++            debug("Failed to look up textures for " + username + " at " + source + ": " + t);
++            markUnhealthy(source, UNHEALTHY_MS);
++            return Collections.emptyMap();
++        }
++    }
++
++    /** The sources worth asking right now, which is all of them unless one is failing. */
++    private static List<Source> healthy() {
++        final long now = System.currentTimeMillis();
++        final List<Source> healthy = new ArrayList<>(SOURCES.size());
++
++        for (final Source source : SOURCES) {
++            final Long until = UNHEALTHY_UNTIL.get(source);
++            if (until == null || until <= now) {
++                healthy.add(source);
++            }
++        }
++
++        // Nobody is well: ask anyway, since the alternative is answering for
++        // nobody at all until one of them recovers unasked.
++        return healthy.isEmpty() ? SOURCES : healthy;
++    }
++
++    private static void markUnhealthy(Source source, long forMs) {
++        UNHEALTHY_UNTIL.put(source, System.currentTimeMillis() + forMs);
++    }
++
++    private static void refreshLater(String username) {
++        if (!IN_FLIGHT.add(username)) {
++            // Somebody is already on it.
++            return;
++        }
++
++        try {
++            REFRESHERS.execute(() -> {
++                try {
++                    fetch(username);
++                    // On this thread rather than the game's, and rarely: whoever
++                    // else is asking is waiting to draw somebody.
++                    if (dirty && System.currentTimeMillis() - lastSaved > SAVE_EVERY_MS) {
++                        save();
++                    }
++                } finally {
++                    IN_FLIGHT.remove(username);
++                }
++            });
++        } catch (Throwable t) {
++            IN_FLIGHT.remove(username);
++            debug("Could not look " + username + " up in the background: " + t);
++        }
++    }
++
++    /**
++     * Reads the {@code {"SKIN": {"url": ..., "metadata": {...}}}} shape Mojang's own profile
++     * endpoint uses, which the skin systems answering by name mirror.
++     */
++    static Map<String, Texture> readTextures(JsonElement payload) {
++        if (payload == null || !payload.isJsonObject()) {
++            return Collections.emptyMap();
++        }
++
++        final Map<String, Texture> textures = new LinkedHashMap<>();
++        for (final Map.Entry<String, JsonElement> entry :
++                payload.getAsJsonObject().entrySet()) {
++            if (!entry.getValue().isJsonObject()) {
++                continue;
++            }
++
++            final JsonObject texture = entry.getValue().getAsJsonObject();
++            final JsonElement url = texture.get("url");
++            if (url == null || !url.isJsonPrimitive()) {
++                continue;
++            }
++
++            final Map<String, String> metadata = new LinkedHashMap<>();
++            final JsonElement rawMetadata = texture.get("metadata");
++            if (rawMetadata != null && rawMetadata.isJsonObject()) {
++                for (final Map.Entry<String, JsonElement> meta :
++                        rawMetadata.getAsJsonObject().entrySet()) {
++                    if (meta.getValue().isJsonPrimitive()) {
++                        metadata.put(meta.getKey(), meta.getValue().getAsString());
++                    }
++                }
++            }
++
++            textures.put(entry.getKey().toUpperCase(Locale.ROOT), new Texture(url.getAsString(), metadata));
++        }
++
++        return textures;
++    }
++
++    private static void store(String username, Map<String, Texture> textures, long now) {
++        if (CACHE.size() >= MAX_CACHED_NAMES) {
++            CACHE.values().removeIf(entry -> entry.usableUntil <= now);
++            if (CACHE.size() >= MAX_CACHED_NAMES) {
++                CACHE.clear();
++            }
++        }
++
++        CACHE.put(
++                username,
++                new CachedTextures(
++                        textures, now, now + (textures.isEmpty() ? FRESH_MISS_MS : FRESH_MS), now + KEEP_MS));
++
++        if (!textures.isEmpty()) {
++            dirty = true;
++        }
++    }
++
++    private static Path cacheFile() {
++        final String configured = System.getProperty(CACHE_PROPERTY);
++        return configured == null || configured.trim().isEmpty() ? null : Paths.get(configured.trim());
++    }
++
++    /**
++     * Reads back what the last run knew.
++     *
++     * <p>Everything read is stale on arrival, by design: it goes on screen the moment somebody is
++     * looked at and is checked again behind the game's back. That is the difference between a
++     * session that starts with everyone as Steve for a second and one that does not.
++     */
++    private static void restore() {
++        final Path file = cacheFile();
++        if (file == null) {
++            return;
++        }
++
++        try {
++            if (!Files.isRegularFile(file)) {
++                return;
++            }
++
++            final JsonElement root =
++                    JsonParser.parseString(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
++            if (root == null || !root.isJsonObject()) {
++                return;
++            }
++
++            final long now = System.currentTimeMillis();
++            for (final Map.Entry<String, JsonElement> entry :
++                    root.getAsJsonObject().entrySet()) {
++                if (!entry.getValue().isJsonObject()) {
++                    continue;
++                }
++
++                final JsonObject remembered = entry.getValue().getAsJsonObject();
++                final JsonElement savedAt = remembered.get("savedAt");
++                if (savedAt == null || !savedAt.isJsonPrimitive() || now - savedAt.getAsLong() > DISK_TTL_MS) {
++                    continue;
++                }
++
++                final Map<String, Texture> textures = readTextures(remembered.get("textures"));
++                if (!textures.isEmpty()) {
++                    CACHE.put(entry.getKey(), new CachedTextures(textures, savedAt.getAsLong(), 0L, now + KEEP_MS));
++                }
++            }
++
++            debug("Remembered " + CACHE.size() + " skins from the last run");
++        } catch (Throwable t) {
++            debug("Could not read back what was remembered: " + t);
++        }
++    }
++
++    /** Writes what is worth remembering, whole, over what was there. */
++    private static synchronized void save() {
++        final Path file = cacheFile();
++        if (file == null) {
++            return;
++        }
++
++        try {
++            final JsonObject root = new JsonObject();
++            for (final Map.Entry<String, CachedTextures> entry : CACHE.entrySet()) {
++                // A name nothing had a skin for is not worth carrying over: it
++                // costs a lookup either way, and it may not be true tomorrow.
++                if (entry.getValue().textures.isEmpty()) {
++                    continue;
++                }
++
++                final JsonObject remembered = new JsonObject();
++                remembered.addProperty("savedAt", entry.getValue().savedAt);
++                remembered.add("textures", asJson(entry.getValue().textures));
++                root.add(entry.getKey(), remembered);
++            }
++
++            final Path parent = file.getParent();
++            if (parent != null) {
++                Files.createDirectories(parent);
++            }
++
++            // Through a temporary file, so a game that dies mid-write leaves the
++            // last good one behind rather than half of this one.
++            final Path partial = file.resolveSibling(file.getFileName() + ".part");
++            Files.write(partial, root.toString().getBytes(StandardCharsets.UTF_8));
++            Files.move(partial, file, StandardCopyOption.REPLACE_EXISTING);
++
++            lastSaved = System.currentTimeMillis();
++            dirty = false;
++        } catch (Throwable t) {
++            debug("Could not write down what was looked up: " + t);
++        }
++    }
++
++    /** The same shape that is read back, and the one the skin systems answer in. */
++    private static JsonObject asJson(Map<String, Texture> textures) {
++        final JsonObject json = new JsonObject();
++        for (final Map.Entry<String, Texture> entry : textures.entrySet()) {
++            final JsonObject texture = new JsonObject();
++            texture.addProperty("url", entry.getValue().url);
++
++            if (!entry.getValue().metadata.isEmpty()) {
++                final JsonObject metadata = new JsonObject();
++                for (final Map.Entry<String, String> value :
++                        entry.getValue().metadata.entrySet()) {
++                    metadata.addProperty(value.getKey(), value.getValue());
++                }
++                texture.add("metadata", metadata);
++            }
++
++            json.add(entry.getKey(), texture);
++        }
++
++        return json;
++    }
++
++    /**
++     * Whether this is worth spending a request on.
++     *
++     * <p>Anything a server can hand out fits. Mojang's own names are letters, digits and
++     * underscores, but an offline server hands out whatever it was given and account systems of
++     * their own are looser — Ely.by allows a dash, among others — so the only names turned away
++     * here are the ones that could not be asked about safely: empty, over-long, or carrying a path
++     * separator or a control character.
++     */
++    private static boolean isPlausibleName(String username) {
++        if (username == null || username.isEmpty() || username.length() > MAX_NAME_LENGTH) {
++            return false;
++        }
++
++        for (int i = 0; i < username.length(); i++) {
++            final char c = username.charAt(i);
++            if (c < ' ' || c == 127 || c == '/' || c == '\\' || Character.isWhitespace(c)) {
++                return false;
++            }
++        }
++
++        return true;
++    }
++
++    /**
++     * Reads the sources out of what the launcher passed, in the order it listed them.
++     *
++     * <p>The folder of skins put there by hand comes before all of them, so that dropping a file
++     * in it settles the matter for that player whatever any skin system has to say.
++     */
++    static List<Source> parseSources(String configured) {
++        final List<Source> sources = new ArrayList<>();
++
++        final String local = System.getProperty(LOCAL_PROPERTY);
++        if (local != null && !local.trim().isEmpty()) {
++            sources.add(new LocalSource(Paths.get(local.trim())));
++        }
++
++        if (configured == null || configured.trim().isEmpty()) {
++            return Collections.unmodifiableList(sources);
++        }
++
++        for (String entry : configured.split(",")) {
++            entry = entry.trim();
++            while (entry.endsWith("/")) {
++                entry = entry.substring(0, entry.length() - 1);
++            }
++
++            if (entry.isEmpty()) {
++                continue;
++            }
++
++            if (MojangSource.NAME.equalsIgnoreCase(entry)) {
++                sources.add(new MojangSource());
++            } else if (OptiFineCapeSource.NAME.equalsIgnoreCase(entry)) {
++                // Kept beside the cache rather than among the skins put there by
++                // hand: these are fetched and converted, and nobody chose them.
++                sources.add(new OptiFineCapeSource(convertedTexturesDir()));
++            } else {
++                sources.add(new SkinSystemSource(entry));
++            }
++        }
++
++        return Collections.unmodifiableList(sources);
++    }
++
++    /** Where textures this agent had to redraw before the game could read them are kept. */
++    private static Path convertedTexturesDir() {
++        final String cache = System.getProperty(CACHE_PROPERTY);
++        final Path beside = cache == null || cache.trim().isEmpty()
++                ? Paths.get(System.getProperty("java.io.tmpdir"), "enhanced-skins")
++                : Paths.get(cache.trim()).toAbsolutePath().getParent();
++
++        return (beside == null ? Paths.get(".") : beside).resolve("converted-textures");
++    }
++
++    static void debug(String message) {
++        if (DEBUG) {
++            System.out.println("[enhanced-skins] " + message);
++        }
++    }
++
++    /** One texture as the skin system describes it. */
++    public static final class Texture {
++        public final String url;
++        public final Map<String, String> metadata;
++
++        Texture(String url, Map<String, String> metadata) {
++            this.url = url;
++            this.metadata = metadata;
++        }
++    }
++
++    private static final class CachedTextures {
++        final Map<String, Texture> textures;
++
++        /** When this was looked up, which is what goes on disk and ages it there. */
++        final long savedAt;
++
++        /** Until when this is the answer, and until when it is still an answer. */
++        final long freshUntil;
++
++        final long usableUntil;
++
++        CachedTextures(Map<String, Texture> textures, long savedAt, long freshUntil, long usableUntil) {
++            this.textures = textures;
++            this.savedAt = savedAt;
++            this.freshUntil = freshUntil;
++            this.usableUntil = usableUntil;
++        }
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java
+new file mode 100644
+index 0000000..d40db99
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java
+@@ -0,0 +1,27 @@
++package com.modrinth.theseus.agent.skins;
++
++import com.google.gson.JsonElement;
++import java.util.Map;
++
++/**
++ * A skin system that answers by name at {@code /textures/{name}} — the convention Ely.by's
++ * {@code skinsystem} serves and the one anybody hosting their own tends to follow.
++ */
++final class SkinSystemSource implements SkinSource.Source {
++    private final String baseUrl;
++
++    SkinSystemSource(String baseUrl) {
++        this.baseUrl = baseUrl;
++    }
++
++    @Override
++    public Map<String, SkinSource.Texture> textures(String username) throws Exception {
++        final JsonElement payload = Http.getJson(baseUrl + "/textures/" + Http.encode(username));
++        return SkinSource.readTextures(payload);
++    }
++
++    @Override
++    public String toString() {
++        return baseUrl;
++    }
++}
+diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
+new file mode 100644
+index 0000000..b64057e
+--- /dev/null
++++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
+@@ -0,0 +1,258 @@
++package com.modrinth.theseus.agent.transformers;
++
++import java.util.ArrayList;
++import org.objectweb.asm.Opcodes;
++import org.objectweb.asm.Type;
++import org.objectweb.asm.tree.ClassNode;
++import org.objectweb.asm.tree.FrameNode;
++import org.objectweb.asm.tree.InsnList;
++import org.objectweb.asm.tree.InsnNode;
++import org.objectweb.asm.tree.LabelNode;
++import org.objectweb.asm.tree.LdcInsnNode;
++import org.objectweb.asm.tree.MethodInsnNode;
++import org.objectweb.asm.tree.MethodNode;
++import org.objectweb.asm.tree.TryCatchBlockNode;
++import org.objectweb.asm.tree.TypeInsnNode;
++import org.objectweb.asm.tree.VarInsnNode;
++
++/**
++ * Gives the game somewhere to get a skin from when the server sent none it can use.
++ *
++ * <p>Offline-mode servers hand out profiles without a {@code textures} property, and the client
++ * never asks anyone about it — it renders whatever the profile carried, which is why everyone is
++ * Steve there. Worse, a profile that <em>does</em> carry textures signed by an account system this
++ * client does not have the key for — an Ely.by player seen by a licensed one, or the other way
++ * about — makes authlib throw rather than return, and the game treats that as no skin at all.
++ *
++ * <p>So {@code getTextures} is renamed aside and a wrapper of the same name put in its place: what
++ * it returns still goes through {@link com.modrinth.theseus.agent.skins.SkinHooks}, and what it
++ * throws does too, with the throw passed on untouched if the lookup has nothing better to offer.
++ * Wrapping rather than rewriting the body also keeps the original's stack map frames out of it —
++ * the only frame here is the one on the handler, and this writes it itself.
++ *
++ * <p>Every way the game has asked is covered. {@code getTextures} was a method on the Yggdrasil
++ * service until 1.20.2 and a default method on the {@code MinecraftSessionService} interface after
++ * it — and from 1.20.2 the client stopped calling it at all, asking instead for the profile's
++ * textures property and then for the textures inside it, which is why those two are wrapped as
++ * well.
++ */
++public final class SessionServiceTransformer extends ClassNodeTransformer {
++    /** Where {@code getTextures} lived up to 1.20.1. */
++    public static final String YGGDRASIL_CLASS = "com/mojang/authlib/yggdrasil/YggdrasilMinecraftSessionService";
++
++    /** Where it lives from 1.20.2 on, as a default method nothing in the game calls any more. */
++    public static final String SESSION_SERVICE_CLASS = "com/mojang/authlib/minecraft/MinecraftSessionService";
++
++    private static final String GAME_PROFILE = "Lcom/mojang/authlib/GameProfile;";
++    private static final String PROPERTY = "Lcom/mojang/authlib/properties/Property;";
++    private static final String THROWABLE = "java/lang/Throwable";
++    private static final String HOOKS_CLASS = "com/modrinth/theseus/agent/skins/SkinHooks";
++
++    private static final String HOOK_DESC = "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
++    private static final String RECOVER_HOOK = "recoverTextures";
++    private static final String RECOVER_DESC =
++            "(Ljava/lang/Throwable;Ljava/lang/Object;Ljava/lang/Class;)Ljava/lang/Object;";
++
++    /**
++     * What to wrap, and with what.
++     *
++     * <p>{@code getTextures} is the whole story up to 1.20.1. From 1.20.2 the client stopped
++     * calling it and asks the two halves it is made of instead — the profile's textures property,
++     * and the textures inside that property — so both of those are wrapped too. The hook is handed
++     * whatever the method returned and the method's first argument, which is the profile in two
++     * cases and the property in the third.
++     */
++    private static final Wrap[] WRAPS = {
++        new Wrap("getTextures", GAME_PROFILE, "fillTextures", true),
++        new Wrap("getPackedTextures", GAME_PROFILE, "packTextures", false),
++        new Wrap("unpackTextures", PROPERTY, "unpackTextures", false),
++    };
++
++    /** One method to wrap. */
++    private static final class Wrap {
++        final String method;
++        final String firstArgument;
++        final String hook;
++
++        /** Whether a throw is worth a lookup of its own, or is only ever passed on. */
++        final boolean recovers;
++
++        Wrap(String method, String firstArgument, String hook, boolean recovers) {
++            this.method = method;
++            this.firstArgument = firstArgument;
++            this.hook = hook;
++            this.recovers = recovers;
++        }
++
++        /** What the original is renamed to. The {@code $} keeps it out of a second pass. */
++        String wrappedName() {
++            return method + "$enhancedOriginal";
++        }
++    }
++
++    @Override
++    protected boolean transform(ClassNode classNode) {
++        boolean transformed = false;
++
++        for (final MethodNode method : new ArrayList<>(classNode.methods)) {
++            final Wrap wrap = wrapFor(method);
++            if (wrap == null) {
++                continue;
++            }
++
++            // Already ours: this is the wrapper, from a pass that has been here
++            // before. Wrapping it again would only add a hop.
++            if (declares(classNode, wrap.wrappedName(), method.desc)) {
++                continue;
++            }
++
++            wrap(classNode, wrap, method, Type.getArgumentTypes(method.desc), Type.getReturnType(method.desc));
++            transformed = true;
++        }
++
++        return transformed;
++    }
++
++    /** The wrap this method is one of, or null if it is not one of them. */
++    private static Wrap wrapFor(MethodNode method) {
++        // An abstract declaration has no body to wrap, and whoever implements it
++        // is where the wrapping has to happen instead.
++        if ((method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_STATIC)) != 0) {
++            return null;
++        }
++
++        if (Type.getReturnType(method.desc).getSort() != Type.OBJECT) {
++            return null;
++        }
++
++        final Type[] arguments = Type.getArgumentTypes(method.desc);
++        if (arguments.length == 0) {
++            return null;
++        }
++
++        for (final Wrap wrap : WRAPS) {
++            if (wrap.method.equals(method.name) && wrap.firstArgument.equals(arguments[0].getDescriptor())) {
++                return wrap;
++            }
++        }
++
++        return null;
++    }
++
++    private static boolean declares(ClassNode classNode, String name, String desc) {
++        for (final MethodNode method : classNode.methods) {
++            if (name.equals(method.name) && desc.equals(method.desc)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    private void wrap(ClassNode classNode, Wrap what, MethodNode original, Type[] arguments, Type returnType) {
++        final boolean isInterface = (classNode.access & Opcodes.ACC_INTERFACE) != 0;
++        final MethodNode wrapper = new MethodNode(
++                Opcodes.ASM9,
++                original.access,
++                original.name,
++                original.desc,
++                original.signature,
++                original.exceptions.toArray(new String[0]));
++
++        original.name = what.wrappedName();
++        original.access |= Opcodes.ACC_SYNTHETIC;
++
++        final LabelNode start = new LabelNode();
++        final LabelNode end = new LabelNode();
++        final LabelNode handler = what.recovers ? new LabelNode() : null;
++        if (handler != null) {
++            wrapper.tryCatchBlocks.add(new TryCatchBlockNode(start, end, handler, THROWABLE));
++        }
++
++        final InsnList code = wrapper.instructions;
++        code.add(start);
++
++        // Call what used to be here, with the arguments exactly as they came in.
++        code.add(new VarInsnNode(Opcodes.ALOAD, 0));
++        int slot = 1;
++        for (final Type argument : arguments) {
++            code.add(new VarInsnNode(argument.getOpcode(Opcodes.ILOAD), slot));
++            slot += argument.getSize();
++        }
++        code.add(new MethodInsnNode(
++                isInterface ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL,
++                classNode.name,
++                what.wrappedName(),
++                original.desc,
++                isInterface));
++
++        // What it answered, together with what it was asked about: the profile,
++        // or the property the textures were meant to be inside.
++        code.add(new VarInsnNode(Opcodes.ALOAD, 1));
++        code.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOKS_CLASS, what.hook, HOOK_DESC, false));
++        code.add(new TypeInsnNode(Opcodes.CHECKCAST, returnType.getInternalName()));
++        code.add(end);
++        code.add(new InsnNode(Opcodes.ARETURN));
++
++        if (handler != null) {
++            code.add(handler);
++            if (needsStackMap(classNode)) {
++                // Nothing in the wrapper writes to a local, so the handler sees
++                // exactly what the method was called with.
++                code.add(new FrameNode(
++                        Opcodes.F_FULL, slot, entryLocals(classNode, arguments, slot), 1, new Object[] {THROWABLE}));
++            }
++            code.add(new VarInsnNode(Opcodes.ALOAD, 1));
++            // The shape to build, for a failure that left us nothing to copy it from.
++            code.add(new LdcInsnNode(returnType));
++            code.add(new MethodInsnNode(Opcodes.INVOKESTATIC, HOOKS_CLASS, RECOVER_HOOK, RECOVER_DESC, false));
++            code.add(new TypeInsnNode(Opcodes.CHECKCAST, returnType.getInternalName()));
++            code.add(new InsnNode(Opcodes.ARETURN));
++        }
++
++        // Recomputed on the way out; these only have to be legal.
++        wrapper.maxLocals = slot;
++        wrapper.maxStack = slot + 2;
++
++        classNode.methods.add(wrapper);
++    }
++
++    /** The frame the wrapper starts with: {@code this}, then the arguments. */
++    private static Object[] entryLocals(ClassNode classNode, Type[] arguments, int slots) {
++        final Object[] locals = new Object[slots];
++        locals[0] = classNode.name;
++
++        int slot = 1;
++        for (final Type argument : arguments) {
++            locals[slot] = frameType(argument);
++            // A long or a double takes two slots, and only the first is named.
++            for (int i = 1; i < argument.getSize(); i++) {
++                locals[slot + i] = Opcodes.TOP;
++            }
++            slot += argument.getSize();
++        }
++
++        return locals;
++    }
++
++    private static Object frameType(Type type) {
++        switch (type.getSort()) {
++            case Type.BOOLEAN:
++            case Type.BYTE:
++            case Type.CHAR:
++            case Type.SHORT:
++            case Type.INT:
++                return Opcodes.INTEGER;
++            case Type.FLOAT:
++                return Opcodes.FLOAT;
++            case Type.LONG:
++                return Opcodes.LONG;
++            case Type.DOUBLE:
++                return Opcodes.DOUBLE;
++            case Type.ARRAY:
++                return type.getDescriptor();
++            default:
++                return type.getInternalName();
++        }
++    }
++}
+diff --git a/packages/app-lib/src/launcher/args.rs b/packages/app-lib/src/launcher/args.rs
+index a482f66..76bedc7 100644
+--- a/packages/app-lib/src/launcher/args.rs
++++ b/packages/app-lib/src/launcher/args.rs
+@@ -17,12 +17,34 @@ use dunce::canonicalize;
+ use itertools::Itertools;
+ use std::io::{BufRead, BufReader, ErrorKind};
+ use std::net::SocketAddr;
+-use std::{collections::HashMap, path::Path};
++use std::{
++    collections::HashMap,
++    path::{Path, PathBuf},
++};
+ use uuid::Uuid;
+ 
+ // Replaces the space separator with a newline character, as to not split the arguments
+ const TEMPORARY_REPLACE_CHAR: &str = "\n";
+ 
++/// Where the agent in `theseus.jar` looks a skin up when the server sent none.
++///
++/// Ely.by answers by name for its own players, Mojang for the licensed players
++/// Ely.by does not know, and OptiFine only has capes. Each kind of texture goes
++/// to the first source listed that has one, and the player skins folder comes
++/// before all of them.
++pub const SKIN_SOURCES: &str = "https://skinsystem.ely.by,mojang,optifine";
++
++/// What the agent needs to look skins up. Without it the agent leaves skins
++/// exactly as vanilla has them.
++pub struct SkinLookup<'a> {
++    /// Whose skin the game wants first, so it can be fetched ahead of time.
++    pub player_name: &'a str,
++    /// Skins put there by hand, asked before anything on the network.
++    pub local_dir: PathBuf,
++    /// Where answers are kept between runs.
++    pub cache_file: PathBuf,
++}
++
+ pub fn get_class_paths(
+     libraries_path: &Path,
+     libraries: &[Library],
+@@ -124,6 +146,7 @@ pub fn get_jvm_arguments(
+     quick_play_version: QuickPlayVersion,
+     log_config: Option<&LoggingConfiguration>,
+     ipc_addr: SocketAddr,
++    skins: Option<&SkinLookup>,
+ ) -> crate::Result<Vec<String>> {
+     let mut parsed_arguments = Vec::new();
+ 
+@@ -202,6 +225,16 @@ pub fn get_jvm_arguments(
+         ]);
+     }
+ 
++    // Ahead of the instance's own arguments, so a `-D` of its own still wins.
++    if let Some(skins) = skins {
++        parsed_arguments.extend_from_slice(&[
++            format!("-Denhanced.skins.source={SKIN_SOURCES}"),
++            format!("-Denhanced.skins.self={}", skins.player_name),
++            format!("-Denhanced.skins.local={}", skins.local_dir.display()),
++            format!("-Denhanced.skins.cache={}", skins.cache_file.display()),
++        ]);
++    }
++
+     for arg in custom_args {
+         if !arg.is_empty() {
+             parsed_arguments.push(arg);
+diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
+index 660f63b..b6055bb 100644
+--- a/packages/app-lib/src/launcher/mod.rs
++++ b/packages/app-lib/src/launcher/mod.rs
+@@ -1015,6 +1015,28 @@ pub async fn launch_minecraft(
+ 
+     let rpc_server = RpcServerBuilder::new().launch().await?;
+ 
++    // On unless switched off: an offline-mode server leaves everyone as Steve
++    // otherwise.
++    let skins = if crate::state::Settings::get(&state.pool)
++        .await?
++        .feature_flags
++        .get(&crate::state::FeatureFlag::UniversalSkins)
++        .copied()
++        .unwrap_or(true)
++    {
++        let local_dir = state.directories.player_skins_dir();
++        // Made up front, so whoever looks for somewhere to put a skin finds it.
++        io::create_dir_all(&local_dir).await?;
++
++        Some(args::SkinLookup {
++            player_name: &credentials.offline_profile.name,
++            local_dir,
++            cache_file: state.directories.caches_dir().join("player_skins.json"),
++        })
++    } else {
++        None
++    };
++
+     command.args(
+         args::get_jvm_arguments(
+             args.get(&d::minecraft::ArgumentType::Jvm)
+@@ -1041,6 +1063,7 @@ pub async fn launch_minecraft(
+                 .as_ref()
+                 .and_then(|x| x.get(&LoggingSide::Client)),
+             rpc_server.address(),
++            skins.as_ref(),
+         )?
+         .into_iter(),
+     );
+diff --git a/packages/app-lib/src/state/dirs.rs b/packages/app-lib/src/state/dirs.rs
+index f3416bb..d1a5246 100644
+--- a/packages/app-lib/src/state/dirs.rs
++++ b/packages/app-lib/src/state/dirs.rs
+@@ -14,6 +14,7 @@ pub const LAUNCHER_LOGS_FOLDER_NAME: &str = "launcher_logs";
+ pub const INSTANCES_FOLDER_NAME: &str = "profiles";
+ pub const METADATA_FOLDER_NAME: &str = "meta";
+ pub const SYNCED_OPTIONS_FOLDER_NAME: &str = "synced-options";
++pub const PLAYER_SKINS_FOLDER_NAME: &str = "player_skins";
+ 
+ #[derive(Debug)]
+ pub struct DirectoryInfo {
+@@ -160,6 +161,13 @@ impl DirectoryInfo {
+         self.config_dir.join(SYNCED_OPTIONS_FOLDER_NAME)
+     }
+ 
++    /// Skins put there by hand: `<name>.png` per player, `<name>-slim.png` for
++    /// the slim model, with `capes/` and `elytras/` beside them.
++    #[inline]
++    pub fn player_skins_dir(&self) -> PathBuf {
++        self.config_dir.join(PLAYER_SKINS_FOLDER_NAME)
++    }
++
+     /// Gets the logs dir for a given instance path
+     #[inline]
+     pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
+@@ -276,6 +284,7 @@ impl DirectoryInfo {
+                     INSTANCES_FOLDER_NAME,
+                     METADATA_FOLDER_NAME,
+                     SYNCED_OPTIONS_FOLDER_NAME,
++                    PLAYER_SKINS_FOLDER_NAME,
+                 ];
+ 
+                 struct MovePath {
+diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
+index 2fd0d87..673dfaa 100644
+--- a/packages/app-lib/src/state/settings.rs
++++ b/packages/app-lib/src/state/settings.rs
+@@ -91,6 +91,7 @@ pub enum FeatureFlag {
+     ShowHostingInSidebar,
+     NewsCollapsed,
+     RightSidebarCollapsed,
++    UniversalSkins,
+ }
+ 
+ impl Settings {
