@@ -1,7 +1,7 @@
 # Modrinth Enhanced
 
 The [Modrinth App](https://github.com/modrinth/code), without advertising, without telemetry, and
-with offline and Ely.by accounts, skins for every player and a skin browser.
+with offline and Ely.by accounts, a skins browser and tons of fixes for Linux.
 
 Everything else is deliberately left alone. This repository holds no forked source code — only a
 series of patches that are applied to an upstream release tag, built, and published. Whenever
