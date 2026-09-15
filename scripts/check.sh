@@ -59,8 +59,20 @@ while read -r command; do
 	[ -n "$command" ] || continue
 	check "$command is allowed by the ACL" \
 		contains "$WORKTREE/apps/app/build.rs" "\"$command\","
-done < <(grep -A2 '#\[tauri::command\]' "$WORKTREE/apps/app/src/api/auth.rs" |
+done < <(grep -h -A2 '#\[tauri::command\]' \
+	"$WORKTREE/apps/app/src/api/auth.rs" "$WORKTREE/apps/app/src/api/ely_skins.rs" \
+	"$WORKTREE/apps/app/src/api/crash_analysis.rs" "$WORKTREE/apps/app/src/api/skin_browser.rs" |
 	grep -oE 'pub async fn [a-z_]+' | awk '{print $4}' | sort -u)
+
+# Listing a command in build.rs is not enough either: the main window only
+# reaches a plugin whose default permission is in its capabilities.
+log "Plugin permissions"
+while read -r plugin; do
+	[ -n "$plugin" ] || continue
+	check "$plugin is granted to the main window" \
+		contains "$WORKTREE/apps/app/capabilities/plugins.json" "\"$plugin:default\""
+done < <(grep -A1 '\.plugin($' "$WORKTREE/apps/app/build.rs" |
+	grep -oE '^ *"[a-z-]+",$' | tr -d ' ",' | sort -u)
 
 log "Microsoft sign-in"
 check "the browser flow is registered" \
@@ -75,6 +87,46 @@ check "the Tauri command is registered" \
 	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_ely,'
 check "authlib-injector is added at launch" \
 	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'authlib_injector'
+
+log "Ely.by skins"
+check "the frontend can tell an Ely.by account" \
+	contains "$WORKTREE/packages/app-lib/src/state/minecraft_auth.rs" 'serialize_field("ely"'
+check "the plugin is registered" \
+	contains "$WORKTREE/apps/app/src/main.rs" 'api::ely_skins::init()'
+check "the skin page changes skins on Ely.by" \
+	contains "$WORKTREE/apps/app-frontend/src/pages/Skins.vue" 'wearElySkin'
+
+log "Skins on offline servers"
+check "the agent fills in missing skins" \
+	contains "$WORKTREE/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java" 'SessionServiceTransformer'
+check "the launcher turns it on" \
+	contains "$WORKTREE/packages/app-lib/src/launcher/args.rs" 'enhanced.skins.source'
+check "the skins folder can be opened" \
+	contains "$WORKTREE/apps/app/build.rs" '"show_player_skins_folder",'
+
+log "Another copy of a running instance"
+check "a running instance can start again" \
+	contains "$WORKTREE/packages/app-lib/src/api/instance/run.rs" 'pub async fn run_additional'
+check "each copy has a console" \
+	contains "$WORKTREE/apps/app-frontend/src/pages/instance/logs/index.vue" 'ProcessConsole'
+check "log events say which copy" \
+	contains "$WORKTREE/apps/app-frontend/src/generated/app-events/LogPayload.ts" 'process_uuid'
+
+log "Crash explanation"
+check "the rules are there" \
+	contains "$WORKTREE/packages/app-lib/src/api/crash_analysis.rs" 'pub async fn analyze_instance'
+check "the plugin is registered" \
+	contains "$WORKTREE/apps/app/src/main.rs" 'api::crash_analysis::init()'
+check "the Logs tab shows it" \
+	contains "$WORKTREE/apps/app-frontend/src/pages/instance/logs/index.vue" '<CrashDiagnosis'
+
+log "Skin browser"
+check "Ely.by's catalogue can be browsed" \
+	contains "$WORKTREE/packages/app-lib/src/api/skin_browser.rs" 'pub async fn ely_catalogue'
+check "skin sites open in a window" \
+	contains "$WORKTREE/apps/app/src/api/skin_browser.rs" 'pub async fn skin_browser_open_site'
+check "the skin page has a Browse tab" \
+	contains "$WORKTREE/apps/app-frontend/src/pages/Skins.vue" '<SkinBrowser'
 
 log "Sidebar and news"
 check "Modrinth Servers is behind a flag" \
