@@ -1,0 +1,1448 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 08:49:07 +0200
+Subject: [PATCH] Manage Ely.by skins from the skin page
+
+An Ely.by account got the Microsoft skin page, which can do nothing with
+it. It now gets the account's skins on Ely.by in the same grid: pick one
+and apply it, add one from a file (which uploads it to the account),
+switch one between the wide and slim model, or delete it.
+
+Ely.by has no API for this. Its skin system only reads and its OAuth
+scopes stop at account info, so the website's own calls are the only way,
+and they want the website's session. The launcher makes them from a hidden
+window on ely.by and reads each call's outcome back from the window's
+address fragment, since a remote page cannot answer over IPC. The website
+only shows itself when a call is refused for want of a session: the page
+asks the player to sign in there, opens the sign-in, and makes the change
+once they have. The window is destroyed after every call and its cookies
+keep the sign-in, where a hidden window left open would keep the launcher
+running after its main window is closed.
+
+Reads - the account's catalogue, the worn skin, the textures - go through
+Rust, because ely.by sends no CORS headers.
+
+The website calls and the fallback Steve texture come from Noctrinth
+(https://github.com/Everelsu/Noctrinth).
+---
+ .../src/components/ui/skin/ElySkinModal.vue   | 148 ++++++
+ .../src/helpers/ely-fallback-skin.ts          |   3 +
+ apps/app-frontend/src/helpers/ely_skins.ts    |  77 +++
+ apps/app-frontend/src/pages/Skins.vue         | 464 +++++++++++++++++-
+ apps/app/build.rs                             |  17 +
+ apps/app/capabilities/plugins.json            |   3 +-
+ apps/app/src/api/ely_skins.rs                 | 368 ++++++++++++++
+ apps/app/src/api/mod.rs                       |   1 +
+ apps/app/src/main.rs                          |   1 +
+ packages/app-lib/src/api/ely_skins.rs         | 127 +++++
+ packages/app-lib/src/api/mod.rs               |   1 +
+ packages/app-lib/src/state/minecraft_auth.rs  |   4 +-
+ 12 files changed, 1201 insertions(+), 13 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
+ create mode 100644 apps/app-frontend/src/helpers/ely-fallback-skin.ts
+ create mode 100644 apps/app-frontend/src/helpers/ely_skins.ts
+ create mode 100644 apps/app/src/api/ely_skins.rs
+ create mode 100644 packages/app-lib/src/api/ely_skins.rs
+
+diff --git a/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue b/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
+new file mode 100644
+index 0000000..382ad1c
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
+@@ -0,0 +1,148 @@
++<!--
++	Adding an Ely.by skin, or switching one between the two models.
++
++	Narrower than EditSkinModal: Ely.by has no capes, and a skin's texture cannot
++	be swapped out there - a different texture is a different skin.
++-->
++<template>
++	<NewModal ref="modal">
++		<template #title>
++			<span class="text-lg font-extrabold text-contrast">
++				{{ formatMessage(mode === 'edit' ? messages.editTitle : messages.addTitle) }}
++			</span>
++		</template>
++
++		<div class="flex flex-col gap-6 md:flex-row">
++			<div class="h-[25rem] w-[16rem] min-w-[16rem] flex-shrink-0 md:self-center">
++				<SkinPreviewRenderer
++					:variant="variant"
++					:texture-src="texture"
++					framing="modal"
++					:initial-rotation="Math.PI / 8"
++					class="h-full w-full"
++				/>
++			</div>
++
++			<div class="flex w-full min-w-52 flex-col gap-4">
++				<section>
++					<h2 class="m-0 mb-2 text-base font-semibold">
++						{{ formatMessage(messages.armStyle) }}
++					</h2>
++					<RadioButtons v-model="variant" :items="['CLASSIC', 'SLIM']" class="!flex-row flex-wrap">
++						<template #default="{ item }">
++							{{ formatMessage(item === 'CLASSIC' ? messages.wide : messages.slim) }}
++						</template>
++					</RadioButtons>
++				</section>
++				<p v-if="mode === 'edit'" class="m-0 leading-tight text-secondary">
++					{{ formatMessage(messages.textureLocked) }}
++				</p>
++			</div>
++		</div>
++
++		<template #actions>
++			<div class="flex justify-end gap-2">
++				<Button type="outlined" @click="hide">
++					<XIcon />
++					{{ formatMessage(commonMessages.cancelButton) }}
++				</Button>
++				<Button type="colored" color="brand" :disabled="!changed" @click="save">
++					<CheckIcon v-if="mode === 'new'" />
++					<SaveIcon v-else />
++					{{ formatMessage(mode === 'new' ? messages.add : messages.save) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
++</template>
++
++<script setup lang="ts">
++import { CheckIcon, SaveIcon, XIcon } from '@modrinth/assets'
++import {
++	Button,
++	commonMessages,
++	defineMessages,
++	NewModal,
++	RadioButtons,
++	SkinPreviewRenderer,
++	useVIntl,
++} from '@modrinth/ui'
++import { computed, ref, useTemplateRef } from 'vue'
++
++import type { SkinModel } from '@/helpers/skins.ts'
++
++const emit = defineEmits<{
++	save: [slim: boolean]
++}>()
++
++const { formatMessage } = useVIntl()
++
++const messages = defineMessages({
++	addTitle: {
++		id: 'app.skins.ely.modal.add-title',
++		defaultMessage: 'Adding an Ely.by skin',
++	},
++	editTitle: {
++		id: 'app.skins.ely.modal.edit-title',
++		defaultMessage: 'Editing an Ely.by skin',
++	},
++	armStyle: {
++		id: 'app.skins.ely.modal.arm-style',
++		defaultMessage: 'Arm style',
++	},
++	wide: {
++		id: 'app.skins.ely.modal.arm-style-wide',
++		defaultMessage: 'Wide',
++	},
++	slim: {
++		id: 'app.skins.ely.modal.arm-style-slim',
++		defaultMessage: 'Slim',
++	},
++	textureLocked: {
++		id: 'app.skins.ely.modal.texture-locked',
++		defaultMessage:
++			'Ely.by keeps a texture and its skin together, so the texture cannot be swapped out. Add the new texture as another skin instead.',
++	},
++	add: {
++		id: 'app.skins.ely.modal.add',
++		defaultMessage: 'Add skin',
++	},
++	save: {
++		id: 'app.skins.ely.modal.save',
++		defaultMessage: 'Save skin',
++	},
++})
++
++const modal = useTemplateRef<InstanceType<typeof NewModal>>('modal')
++const mode = ref<'new' | 'edit'>('new')
++const texture = ref('')
++const variant = ref<SkinModel>('CLASSIC')
++const original = ref<SkinModel>('CLASSIC')
++
++// Adding is always a change. Editing is one once the model differs.
++const changed = computed(() => mode.value === 'new' || variant.value !== original.value)
++
++function open(
++	event: MouseEvent | undefined,
++	nextMode: 'new' | 'edit',
++	nextTexture: string,
++	model: SkinModel,
++) {
++	mode.value = nextMode
++	texture.value = nextTexture
++	// Ely.by only has the two models.
++	variant.value = model === 'SLIM' ? 'SLIM' : 'CLASSIC'
++	original.value = variant.value
++	modal.value?.show(event)
++}
++
++function hide() {
++	modal.value?.hide()
++}
++
++function save() {
++	if (changed.value) emit('save', variant.value === 'SLIM')
++}
++
++defineExpose({ open, hide })
++</script>
+diff --git a/apps/app-frontend/src/helpers/ely-fallback-skin.ts b/apps/app-frontend/src/helpers/ely-fallback-skin.ts
+new file mode 100644
+index 0000000..4c47bde
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/ely-fallback-skin.ts
+@@ -0,0 +1,3 @@
++/** Steve, for an Ely.by account without a skin of its own. Taken from Noctrinth. */
++export const ELY_FALLBACK_SKIN =
++	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAE5klEQVR4Xu1aMWsUQRgVVJCAoIIgglaJBG2UGIKCOU0hJHZKijRBsAnaWSjaiNjESgtTpT0bmxQWNvkJ+U9n3ube8ubNt7e5xOzdxX3wmNmZb/fmvflmdtm9M2dqcOfmxR44N325KFnn8ecXDwbSrzdxoODO7auleNTdgHfP5hKeKgNUsJff1zqZeBJ9fr2Jg4vW9Ef5Xxiga9+XAkRWLYFTYYDOuGYDxIMU6psf2r6tL54OA3wPUEIkBFeVfr2Jg4r2DRGk2OWZSwnZ7tcbO2hqU9j0tQtJyjMLlGqCnqPX0WtEcSh9PI0jGiBIIVpX8V7yvEg04/z6aPPxNA4V4QNm2/ar5d7vD+u9P1/eFOWvt2tF2/2ZK1ksyGO2aZ0msM3H0zg4IB2oziSEQjCEUzyJvkhUdE3WGc9jH0/j0IGxxC0M4iACQoHnj76WolEHcIwYtOGc6Fo0NDJoLAzwGaIgJWf89eO7BTUDlBTlM6/7gxqCYx9P4+BAUHLmeQ//8XKxfKDBre390nzBpRtTSQxvecwEvaYb4Mc+nsbBpzYV7yaghGiYwJKiaZCey+vpk+Gt61MJ2e7jGTke3vvaUy4sLBScnZ0t6PEZ9vbK5aHGog19fn2nXy7Dzk6vZLebLNHiN44LHxCF0wiPz7AvUsWrCSdhgO5H+B0PHxo+oKNkwEkbMLW7mxkwVhlwoktgX3S0BI6cAU/mt3sgfhzl04c/S7KNJan957a2EurMYFCl+P7Aq+LBpF2FiuCSbPv0KaWfUwcKPKwB2g9isOc3NwuWgvpCmZbeHsUnIr2N7S4ehOiNjQPSAI2rwyCBnh3eD0LI2Y8fC6Je/nC/9DaPdxPcrEwQ2T3ImNAAPacOgwRWGaB1iiHrBHl8IoyiVISnuJPi1QRlHVwgj6M27SNdUDLjZoDOfmRAtva7B5scyQ1Vy4h6juvN4Ab4DEeG6LGndGlAX4gb4PGeIaX4/rHe4nTH1zYVrfHF5luHyABfBoP6KYr0FNZZ9dgo3s+NRKkRkQFad70ZKKxKYJ0BGKSKKTJAZ5TZ0Bfk8aEBEh8ZoEaoASg9xvVm8PRW4UqPIylIxVG4i2OMxyUGiHjE6Ky6OBqgRniM682wsrLSA31zczLOqaIiM1Sgx5YGiGgVD6pYFxeZ4P2uNwMebzudTiJqdXU1E4oYj0Vdl4gapplDIyjMY3T5aAwyscoAzQw3QGNdbwY+41OcC6TwKA51NYDUZcSSM+rxvtcwhu0qxkWCfmv0GNfbokWLFi1atJgc4AVoFf3xmU+dSUyLFi1atGjRokVT8FdpQ39c1XeE+/S3QB4+dnADhv68bgbwTc+hX3GNGm7AUTOAj7qaARNpwLEyYL+uGTCWS0Df/vpLTu/TfsZkHzODbwS6JDKOGocRyWzwPjD5wqsGDDJB20YNNwClG6D9dQaUH0uqBLsho4YLdJHer22FAXXf9+uoWdI3xt8bVPGfGOjieRy1aR/p3/b9Q4d/8FCiz8fTOKoE+2xrv8arGL3f687vt8Kxui1GAuuWgNINGCRc+1j38TQOF4gyMiAyB4xS3YW7AUofT+Pw9PeZ1vZomURr3EUOygofT+Pgl2QKrKJ/bifrxFcJHxsD+LlcRQ3z/4LIABfsx9rm42kc0f8GVCCFR3GoQ0jVPuBZEfX5eIbFX3srPNN8aUvJAAAAAElFTkSuQmCC'
+diff --git a/apps/app-frontend/src/helpers/ely_skins.ts b/apps/app-frontend/src/helpers/ely_skins.ts
+new file mode 100644
+index 0000000..a0eb40d
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/ely_skins.ts
+@@ -0,0 +1,77 @@
++/**
++ * Ely.by skins for the skin page.
++ *
++ * Reads go to Ely.by through Rust, since ely.by sends no CORS headers. Changes
++ * run on the website in a hidden window and come back as an outcome, where
++ * `signed_out` means the website wants the player signed in there first.
++ */
++import { arrayBufferToBase64 } from '@modrinth/utils'
++import { invoke } from '@tauri-apps/api/core'
++
++export interface ElyUploadedSkin {
++	id: number
++	skin_url: string
++	is_slim: boolean
++}
++
++export type ElyOutcome =
++	| { status: 'done' }
++	| { status: 'signed_out' }
++	| { status: 'failed'; message: string }
++
++export async function listElySkins(username: string): Promise<ElyUploadedSkin[]> {
++	return await invoke('plugin:ely-skins|ely_list_skins', { username })
++}
++
++export async function getElyCurrentSkinUrl(username: string): Promise<string | null> {
++	return await invoke('plugin:ely-skins|ely_current_skin_url', { username })
++}
++
++const textures = new Map<string, Promise<string>>()
++
++/**
++ * A texture as a data URL, which a canvas can draw without being tainted.
++ *
++ * Catalogue textures are named after their contents and cached. A cape lives at
++ * the player's name and can change, so it is not.
++ */
++export function getElyTexture(url: string, cache = true): Promise<string> {
++	const key = url.replace(/^https?:/, '')
++	const cached = cache ? textures.get(key) : undefined
++	if (cached) return cached
++
++	const texture = invoke<number[]>('plugin:ely-skins|ely_get_texture', { url }).then(
++		(bytes) => `data:image/png;base64,${arrayBufferToBase64(new Uint8Array(bytes))}`,
++	)
++
++	if (cache) {
++		textures.set(key, texture)
++		texture.catch(() => textures.delete(key))
++	}
++
++	return texture
++}
++
++/** Shows the website's sign-in. Resolves to whether the player signed in. */
++export async function signInToEly(): Promise<boolean> {
++	return await invoke('plugin:ely-skins|ely_sign_in')
++}
++
++export async function wearElySkin(skinId: number): Promise<ElyOutcome> {
++	return await invoke('plugin:ely-skins|ely_wear_skin', { skinId })
++}
++
++/** Uploads a PNG to the account's catalogue and wears it. */
++export async function uploadElySkin(texture: Uint8Array): Promise<ElyOutcome> {
++	return await invoke('plugin:ely-skins|ely_upload_skin', {
++		texture: arrayBufferToBase64(texture),
++	})
++}
++
++export async function setElySkinModel(skinId: number, slim: boolean): Promise<ElyOutcome> {
++	return await invoke('plugin:ely-skins|ely_edit_skin', { skinId, slim })
++}
++
++export async function removeElySkin(skinId: number): Promise<ElyOutcome> {
++	return await invoke('plugin:ely-skins|ely_remove_skin', { skinId })
++}
+diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
+index 8240b8b..bcd79ec 100644
+--- a/apps/app-frontend/src/pages/Skins.vue
++++ b/apps/app-frontend/src/pages/Skins.vue
+@@ -4,6 +4,7 @@ import {
+ 	EditIcon,
+ 	EyeIcon,
+ 	InfoIcon,
++	LogInIcon,
+ 	RotateCounterClockwiseIcon,
+ 	ShirtIcon,
+ 	SpinnerIcon,
+@@ -31,14 +32,29 @@ import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch }
+ import EarsModIcon from '@/assets/skins/ears-mod.png'
+ import type AccountsCard from '@/components/ui/AccountsCard.vue'
+ import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
++import ElySkinModal from '@/components/ui/skin/ElySkinModal.vue'
+ import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
+ import { useAppSettings } from '@/composables/use-app-settings.ts'
+ import { handleSevereError } from '@/composables/use-error.js'
+ import { trackEvent } from '@/helpers/analytics'
+ import { check_reachable, get_default_user, login as login_flow, users } from '@/helpers/auth'
+ import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
+-import type { Cape, Skin, SkinTextureUrl } from '@/helpers/skins.ts'
++import { ELY_FALLBACK_SKIN } from '@/helpers/ely-fallback-skin'
+ import {
++	type ElyOutcome,
++	type ElyUploadedSkin,
++	getElyCurrentSkinUrl,
++	getElyTexture,
++	listElySkins,
++	removeElySkin,
++	setElySkinModel,
++	signInToEly,
++	uploadElySkin,
++	wearElySkin,
++} from '@/helpers/ely_skins'
++import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
++import {
++	determineModelType,
+ 	equip_skin,
+ 	filterDefaultSkins,
+ 	filterSavedSkins,
+@@ -200,6 +216,27 @@ const messages = defineMessages({
+ 		id: 'app.skins.sign-in.button',
+ 		defaultMessage: 'Sign in to Microsoft',
+ 	},
++	elySkinsEmpty: {
++		id: 'app.skins.ely.empty',
++		defaultMessage: 'No skins on your Ely.by account yet. Skins you add here are uploaded to it.',
++	},
++	elySignInTitle: {
++		id: 'app.skins.ely.sign-in.title',
++		defaultMessage: 'Sign in to the Ely.by website',
++	},
++	elySignInDescription: {
++		id: 'app.skins.ely.sign-in.description',
++		defaultMessage:
++			'Only the Ely.by website can change skins, so it needs you signed in there once. A window opens for it and closes by itself when you are done.',
++	},
++	elySignInButton: {
++		id: 'app.skins.ely.sign-in.button',
++		defaultMessage: 'Sign in',
++	},
++	elyFailedTitle: {
++		id: 'app.skins.ely.failed.title',
++		defaultMessage: 'Ely.by did not take the change',
++	},
+ })
+ 
+ const editSkinModal = useTemplateRef('editSkinModal')
+@@ -335,10 +372,12 @@ const skinTexture = computedAsync(async () => {
+ const capeTexture = computed(() => currentCape.value?.texture)
+ const skinVariant = computed(() => selectedSkin.value?.variant)
+ const skinNametag = computed(() => (appSettings.hideNametagSkinsPage ? undefined : username.value))
+-const isSkinManagementReadOnly = computed(
+-	() =>
+-		!!currentUser.value &&
+-		(offline.value || (authServerQuery.isError.value && !authServerQuery.isLoading.value)),
++const isSkinManagementReadOnly = computed(() =>
++	// Mojang's auth server has nothing to do with an Ely.by account.
++	elyAccount.value
++		? offline.value || elyBusy.value
++		: !!currentUser.value &&
++			(offline.value || (authServerQuery.isError.value && !authServerQuery.isLoading.value)),
+ )
+ const hasPendingSkinChange = computed(
+ 	() => !skinsMatch(selectedSkin.value, originalSelectedSkin.value),
+@@ -861,7 +900,8 @@ function isSkinFileDrag(event: DragEvent) {
+ }
+ 
+ function isPositionOverAddSkinButton(position: { x: number; y: number }) {
+-	const element = skinSectionList.value?.getAddSkinButtonElement()
++	// Only one of the two grids is mounted at a time.
++	const element = (skinSectionList.value ?? elySkinSectionList.value)?.getAddSkinButtonElement()
+ 
+ 	if (!element) {
+ 		return false
+@@ -973,6 +1013,11 @@ async function setupAddSkinDragDropListener() {
+ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+ 	if (isSkinManagementReadOnly.value) return
+ 
++	if (elyAccount.value) {
++		await openElyAdd(new Uint8Array(buffer))
++		return
++	}
++
+ 	const fakeEvent = new MouseEvent('click')
+ 	const originalSkinTexUrl = `data:image/png;base64,` + arrayBufferToBase64(buffer)
+ 	try {
+@@ -987,6 +1032,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+ 	}
+ }
+ 
++/*
++ * Ely.by accounts. Ely.by keeps an account's skins in its public catalogue and
++ * has no API to change one, so the grid shows that catalogue, and changes are
++ * made on the website from a hidden window (see helpers/ely_skins.ts).
++ */
++const elyAccount = computed(() => (currentUser.value?.ely ? currentUser.value : undefined))
++const elyUsername = computed<string | undefined>(() => elyAccount.value?.profile?.name)
++
++const elyEditModal = useTemplateRef<InstanceType<typeof ElySkinModal>>('elyEditModal')
++const elySkinSectionList = useTemplateRef<VirtualSkinSectionListExpose>('elySkinSectionList')
++const elySignInModal = ref()
++const elyDeleteModal = ref()
++
++const elyCatalogue = ref<ElyUploadedSkin[]>([])
++const elyTextures = ref<Record<number, string>>({})
++const elyWornUrl = ref<string | null>(null)
++const elyWornTexture = ref('')
++const elyWornModel = ref<SkinModel>('CLASSIC')
++const elyCape = ref<string | undefined>()
++const elyLoading = ref(false)
++const elyBusy = ref(false)
++const elyPending = ref<Skin | null>(null)
++/** The texture waiting in the add dialog. */
++const elyNewTexture = ref<Uint8Array | null>(null)
++const elyEditing = ref<Skin | null>(null)
++const elyToDelete = ref<Skin | null>(null)
++/** The change to make again once the player has signed in to the website. */
++let elyRetry: (() => Promise<void>) | null = null
++
++/** Ely.by hands out the same address over http and https. */
++function sameElyUrl(a?: string | null, b?: string | null) {
++	return !!a && !!b && a.replace(/^https?:/, '') === b.replace(/^https?:/, '')
++}
++
++const elySkins = computed<Skin[]>(() =>
++	elyCatalogue.value.map((skin) => ({
++		// Previews are kept by key, so the key changes once the texture is in.
++		texture_key: `ely:${skin.id}:${elyTextures.value[skin.id] ? 'loaded' : 'pending'}`,
++		variant: skin.is_slim ? 'SLIM' : 'CLASSIC',
++		texture: elyTextures.value[skin.id] ?? ELY_FALLBACK_SKIN,
++		source: 'custom_external',
++		is_equipped: sameElyUrl(skin.skin_url, elyWornUrl.value),
++	})),
++)
++
++const elyPreviewTexture = computed(
++	() => elyPending.value?.texture ?? (elyWornTexture.value || ELY_FALLBACK_SKIN),
++)
++const elyPreviewVariant = computed(() => elyPending.value?.variant ?? elyWornModel.value)
++
++function elyId(skin: Skin) {
++	return Number(skin.texture_key.split(':')[1])
++}
++
++function isElySkinSelected(skin: Skin) {
++	return elyPending.value ? elyPending.value.texture_key === skin.texture_key : skin.is_equipped
++}
++
++function isElySkinActive(skin: Skin) {
++	return !!elyPending.value && skin.is_equipped
++}
++
++function selectElySkin(skin: Skin) {
++	if (isSkinManagementReadOnly.value) return
++	elyPending.value = skin.is_equipped ? null : skin
++}
++
++async function loadAccountSkins() {
++	if (elyAccount.value) {
++		await loadElySkins()
++	} else {
++		await loadCapes()
++		await loadSkins()
++	}
++}
++
++async function loadElySkins() {
++	const name = elyUsername.value
++	if (!name) return
++
++	elyLoading.value = true
++	try {
++		const [catalogue, worn] = await Promise.all([listElySkins(name), getElyCurrentSkinUrl(name)])
++		elyCatalogue.value = catalogue
++		elyWornUrl.value = worn
++	} catch (error) {
++		handleError(error as Error)
++	} finally {
++		elyLoading.value = false
++	}
++
++	void loadElyWorn(name)
++
++	// Tiles fill in as their textures arrive.
++	for (const skin of elyCatalogue.value) {
++		if (elyTextures.value[skin.id]) continue
++		getElyTexture(skin.skin_url)
++			.then((texture) => {
++				elyTextures.value = { ...elyTextures.value, [skin.id]: texture }
++			})
++			.catch(() => {})
++	}
++}
++
++async function loadElyWorn(name: string) {
++	const worn = elyWornUrl.value
++	const listed = elyCatalogue.value.find((skin) => sameElyUrl(skin.skin_url, worn))
++
++	try {
++		elyWornTexture.value = worn ? await getElyTexture(worn) : ELY_FALLBACK_SKIN
++		// Ely.by's own flag decides the model in game. A skin worn from someone
++		// else's catalogue is not listed, so its texture has to tell.
++		elyWornModel.value = listed
++			? listed.is_slim
++				? 'SLIM'
++				: 'CLASSIC'
++			: worn
++				? await determineModelType(elyWornTexture.value)
++				: 'CLASSIC'
++	} catch {
++		elyWornTexture.value = ELY_FALLBACK_SKIN
++	}
++
++	elyCape.value = await getElyTexture(
++		`https://skinsystem.ely.by/cloaks/${encodeURIComponent(name)}.png`,
++		false,
++	).catch(() => undefined)
++}
++
++/**
++ * Makes a change on the website. When the website wants the player signed in
++ * first, asks for that and makes the change again once they are.
++ */
++async function runOnEly(change: () => Promise<ElyOutcome>, after: () => Promise<void>) {
++	elyBusy.value = true
++	try {
++		const outcome = await change()
++		if (outcome.status === 'signed_out') {
++			elyRetry = () => runOnEly(change, after)
++			elySignInModal.value?.show()
++		} else if (outcome.status === 'failed') {
++			addNotification({
++				type: 'error',
++				title: formatMessage(messages.elyFailedTitle),
++				text: outcome.message,
++			})
++		} else {
++			await after()
++		}
++	} catch (error) {
++		handleError(error as Error)
++	} finally {
++		elyBusy.value = false
++	}
++}
++
++async function signInToElyAndRetry() {
++	const retry = elyRetry
++	elyRetry = null
++
++	elyBusy.value = true
++	try {
++		if ((await signInToEly()) && retry) {
++			await retry()
++		}
++	} catch (error) {
++		handleError(error as Error)
++	} finally {
++		elyBusy.value = false
++	}
++}
++
++function sleep(ms: number) {
++	return new Promise((resolve) => setTimeout(resolve, ms))
++}
++
++/** Ely.by's skin system takes a few seconds to show what the website changed. */
++async function waitForElyWorn(isDone: (worn: string | null) => boolean) {
++	const name = elyUsername.value
++	if (!name) return
++
++	for (let attempt = 0; attempt < 15; attempt++) {
++		const worn = await getElyCurrentSkinUrl(name).catch(() => elyWornUrl.value)
++		if (isDone(worn)) return
++		await sleep(1500)
++	}
++}
++
++/** The catalogue listing lags behind a model change the same way. */
++async function waitForElyModel(id: number, slim: boolean) {
++	const name = elyUsername.value
++	if (!name) return
++
++	for (let attempt = 0; attempt < 10; attempt++) {
++		const catalogue = await listElySkins(name).catch(() => [])
++		if (catalogue.find((skin) => skin.id === id)?.is_slim === slim) return
++		await sleep(1500)
++	}
++}
++
++function applyElySkin() {
++	const skin = elyPending.value
++	if (!skin || isSkinManagementReadOnly.value) return
++
++	const id = elyId(skin)
++	const target = elyCatalogue.value.find((entry) => entry.id === id)?.skin_url
++	void runOnEly(
++		() => wearElySkin(id),
++		async () => {
++			await waitForElyWorn((worn) => sameElyUrl(worn, target))
++			elyPending.value = null
++			await loadElySkins()
++		},
++	)
++}
++
++async function openElyAdd(bytes: Uint8Array) {
++	const texture = `data:image/png;base64,${arrayBufferToBase64(bytes)}`
++	const model = await determineModelType(texture).catch(() => 'CLASSIC' as const)
++
++	elyNewTexture.value = bytes
++	elyEditing.value = null
++	elyEditModal.value?.open(undefined, 'new', texture, model)
++}
++
++function editElySkin(skin: Skin, event: MouseEvent) {
++	if (isSkinManagementReadOnly.value) return
++
++	elyNewTexture.value = null
++	elyEditing.value = skin
++	elyEditModal.value?.open(event, 'edit', skin.texture, skin.variant)
++}
++
++function changeElyModel(id: number, slim: boolean) {
++	return runOnEly(
++		() => setElySkinModel(id, slim),
++		async () => {
++			await waitForElyModel(id, slim)
++			if (elyPending.value && elyId(elyPending.value) === id) {
++				elyPending.value = null
++			}
++			await loadElySkins()
++		},
++	)
++}
++
++function saveElyModal(slim: boolean) {
++	const bytes = elyNewTexture.value
++	const editing = elyEditing.value
++	elyNewTexture.value = null
++	elyEditing.value = null
++	elyEditModal.value?.hide()
++
++	if (editing) {
++		void changeElyModel(elyId(editing), slim)
++		return
++	}
++
++	if (!bytes) return
++
++	const before = elyWornUrl.value
++	void runOnEly(
++		() => uploadElySkin(bytes),
++		async () => {
++			await waitForElyWorn((worn) => !!worn && !sameElyUrl(worn, before))
++			elyPending.value = null
++			await loadElySkins()
++
++			// Ely.by picks the model itself when a texture arrives.
++			const uploaded = elyCatalogue.value.find((skin) => sameElyUrl(skin.skin_url, elyWornUrl.value))
++			if (uploaded && uploaded.is_slim !== slim) {
++				await changeElyModel(uploaded.id, slim)
++			}
++		},
++	)
++}
++
++function confirmDeleteElySkin(skin: Skin) {
++	if (isSkinManagementReadOnly.value) return
++
++	elyToDelete.value = skin
++	elyDeleteModal.value?.show()
++}
++
++function deleteElySkin() {
++	const skin = elyToDelete.value
++	elyToDelete.value = null
++	if (!skin) return
++
++	const id = elyId(skin)
++	void runOnEly(
++		() => removeElySkin(id),
++		async () => {
++			if (elyPending.value && elyId(elyPending.value) === id) {
++				elyPending.value = null
++			}
++			// The listing still has it for a while.
++			elyCatalogue.value = elyCatalogue.value.filter((entry) => entry.id !== id)
++		},
++	)
++}
++
+ watch(
+ 	() => selectedSkin.value?.cape_id,
+ 	() => {},
+@@ -1045,8 +1392,8 @@ async function checkUserChanges() {
+ 		if (defaultId !== currentUserId.value) {
+ 			await accountsCard.value?.refreshValues()
+ 			await loadCurrentUser()
+-			await loadCapes()
+-			await loadSkins()
++			elyPending.value = null
++			await loadAccountSkins()
+ 		}
+ 	} catch (error) {
+ 		if (currentUser.value && error instanceof Error) {
+@@ -1055,8 +1402,8 @@ async function checkUserChanges() {
+ 	}
+ }
+ 
+-await Promise.all([loadCapes(), loadCurrentUser()])
+-await loadSkins()
++await loadCurrentUser()
++await loadAccountSkins()
+ </script>
+ 
+ <template>
+@@ -1081,8 +1428,29 @@ await loadSkins()
+ 		:proceed-label="formatMessage(commonMessages.deleteLabel)"
+ 		@proceed="deleteSkin"
+ 	/>
++	<ElySkinModal ref="elyEditModal" @save="saveElyModal" />
++	<ConfirmModal
++		ref="elySignInModal"
++		:title="formatMessage(messages.elySignInTitle)"
++		:description="formatMessage(messages.elySignInDescription)"
++		:proceed-label="formatMessage(messages.elySignInButton)"
++		:proceed-icon="LogInIcon"
++		:danger="false"
++		@proceed="signInToElyAndRetry"
++	/>
++	<ConfirmModal
++		ref="elyDeleteModal"
++		:title="formatMessage(messages.deleteSkinTitle)"
++		:description="formatMessage(messages.deleteSkinDescription)"
++		:proceed-label="formatMessage(commonMessages.deleteLabel)"
++		@proceed="deleteElySkin"
++	/>
+ 
+-	<div class="skin-layout box-border grow p-4" :class="{ 'pb-40': !currentUser }">
++	<div
++		v-if="!elyAccount"
++		class="skin-layout box-border grow p-4"
++		:class="{ 'pb-40': !currentUser }"
++	>
+ 		<div class="sticky top-6 self-start p-2 pt-0">
+ 			<h1 class="m-0 text-2xl font-bold flex items-center gap-2">
+ 				{{ formatMessage(appMessages.skinSelectorLabel) }}
+@@ -1260,6 +1628,80 @@ await loadSkins()
+ 			/>
+ 		</div>
+ 	</div>
++	<div v-else class="skin-layout box-border grow p-4">
++		<div class="sticky top-6 self-start p-2 pt-0">
++			<h1 class="m-0 text-2xl font-bold flex items-center gap-2">
++				{{ formatMessage(appMessages.skinSelectorLabel) }}
++				<SpinnerIcon v-if="elyBusy" class="size-5 animate-spin text-secondary" />
++			</h1>
++			<div
++				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
++			>
++				<SkinPreviewRenderer
++					:texture-src="elyPreviewTexture"
++					:variant="elyPreviewVariant"
++					:cape-src="elyCape"
++					:nametag="appSettings.hideNametagSkinsPage ? undefined : elyUsername"
++					:initial-rotation="Math.PI / 8"
++				>
++					<template v-if="elyPending" #nametag-badge>
++						<div
++							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
++						>
++							<EyeIcon class="size-5 shrink-0" />
++							{{ formatMessage(messages.previewingBadge) }}
++						</div>
++					</template>
++					<template #subtitle>
++						<div
++							v-if="elyPending"
++							class="flex w-full flex-wrap items-center justify-center gap-1.5"
++						>
++							<Button type="base" size="lg" :disabled="elyBusy" @click="elyPending = null">
++								<RotateCounterClockwiseIcon />
++								{{ formatMessage(commonMessages.resetButton) }}
++							</Button>
++							<Button
++								type="colored"
++								color="brand"
++								size="lg"
++								:disabled="isSkinManagementReadOnly"
++								@click="applyElySkin"
++							>
++								<SpinnerIcon v-if="elyBusy" class="animate-spin" />
++								<CheckIcon v-else />
++								{{ formatMessage(messages.applyButton) }}
++							</Button>
++						</div>
++					</template>
++				</SkinPreviewRenderer>
++			</div>
++		</div>
++
++		<div class="pt-2">
++			<p v-if="!elyLoading && !elyCatalogue.length" class="m-0 mb-4 text-secondary">
++				{{ formatMessage(messages.elySkinsEmpty) }}
++			</p>
++			<VirtualSkinSectionList
++				ref="elySkinSectionList"
++				:saved-skins="elySkins"
++				:default-skin-sections="[]"
++				:capes="[]"
++				:is-skin-selected="isElySkinSelected"
++				:is-skin-active="isElySkinActive"
++				:is-add-skin-button-drag-active="isAddSkinButtonDragActive"
++				:read-only="isSkinManagementReadOnly"
++				@select="selectElySkin"
++				@edit="editElySkin"
++				@delete="confirmDeleteElySkin"
++				@add-skin="openAddSkinFileBrowser"
++				@add-skin-dragenter="onAddSkinDragOver"
++				@add-skin-dragover="onAddSkinDragOver"
++				@add-skin-dragleave="onAddSkinDragLeave"
++				@add-skin-drop="onAddSkinDrop"
++			/>
++		</div>
++	</div>
+ 
+ 	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
+ 		<div
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 5c797ab..bedd28f 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -27,6 +27,23 @@ fn main() {
+                         DefaultPermissionRule::AllowAllCommands,
+                     ),
+             )
++            .plugin(
++                "ely-skins",
++                InlinedPlugin::new()
++                    .commands(&[
++                        "ely_list_skins",
++                        "ely_current_skin_url",
++                        "ely_get_texture",
++                        "ely_sign_in",
++                        "ely_wear_skin",
++                        "ely_upload_skin",
++                        "ely_edit_skin",
++                        "ely_remove_skin",
++                    ])
++                    .default_permission(
++                        DefaultPermissionRule::AllowAllCommands,
++                    ),
++            )
+             .plugin(
+                 "cache",
+                 InlinedPlugin::new()
+diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
+index 65d1441..15efb0c 100644
+--- a/apps/app/capabilities/plugins.json
++++ b/apps/app/capabilities/plugins.json
+@@ -111,6 +111,7 @@
+ 		"utils:default",
+ 		"ads:default",
+ 		"friends:default",
+-		"worlds:default"
++		"worlds:default",
++		"ely-skins:default"
+ 	]
+ }
+diff --git a/apps/app/src/api/ely_skins.rs b/apps/app/src/api/ely_skins.rs
+new file mode 100644
+index 0000000..12f15c4
+--- /dev/null
++++ b/apps/app/src/api/ely_skins.rs
+@@ -0,0 +1,368 @@
++//! Changing an Ely.by account's skin from the launcher's own skin page.
++//!
++//! Ely.by has no API for this. Its skin system only reads and its OAuth scopes
++//! stop at account info, so the website's own calls are the only way to change
++//! a skin, and those want the website's session. The launcher makes them from a
++//! hidden window on ely.by, where that session lives once the player has signed
++//! in there. The website itself only shows up when it asks for that sign-in.
++//!
++//! A remote page cannot answer over IPC, so each call writes its outcome into
++//! the window's address fragment, which is read back here. That is what lets the
++//! skin page say whether a change went through rather than guess.
++
++use std::sync::Arc;
++use std::sync::atomic::{AtomicBool, Ordering};
++use std::time::{Duration, Instant};
++
++use serde::{Deserialize, Serialize};
++use tauri::plugin::TauriPlugin;
++use tauri::webview::PageLoadEvent;
++use tauri::{
++    AppHandle, Manager, Runtime, WebviewUrl, WebviewWindow,
++    WebviewWindowBuilder,
++};
++use theseus::ely_skins::{self, ElyUploadedSkin};
++use tokio::sync::Mutex;
++
++use crate::api::{Result, TheseusSerializableError};
++
++pub fn init<R: Runtime>() -> TauriPlugin<R> {
++    tauri::plugin::Builder::<R>::new("ely-skins")
++        .invoke_handler(tauri::generate_handler![
++            ely_list_skins,
++            ely_current_skin_url,
++            ely_get_texture,
++            ely_sign_in,
++            ely_wear_skin,
++            ely_upload_skin,
++            ely_edit_skin,
++            ely_remove_skin,
++        ])
++        .build()
++}
++
++#[tauri::command]
++pub async fn ely_list_skins(username: String) -> Result<Vec<ElyUploadedSkin>> {
++    Ok(ely_skins::list_uploaded_skins(&username).await?)
++}
++
++#[tauri::command]
++pub async fn ely_current_skin_url(username: String) -> Result<Option<String>> {
++    Ok(ely_skins::current_skin_url(&username).await?)
++}
++
++#[tauri::command]
++pub async fn ely_get_texture(url: String) -> Result<Vec<u8>> {
++    Ok(ely_skins::texture(&url).await?)
++}
++
++/// What became of a change made on the website.
++#[derive(Serialize, Deserialize, Debug)]
++#[serde(tag = "status", rename_all = "snake_case")]
++pub enum ElyOutcome {
++    Done,
++    /// The website wants the player signed in first.
++    SignedOut,
++    Failed { message: String },
++}
++
++const WINDOW_LABEL: &str = "ely-session";
++const SITE: &str = "https://ely.by/";
++const SIGN_IN_PAGE: &str = "https://ely.by/authorization/login";
++const LOAD_TIMEOUT: Duration = Duration::from_secs(30);
++/// Uploads have been seen to take several seconds on Ely.by's side.
++const CALL_TIMEOUT: Duration = Duration::from_secs(60);
++const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(10 * 60);
++
++/// One call at a time: they share the window and its address.
++static SESSION: Mutex<()> = Mutex::const_new(());
++
++/// Shared by every call. `call` fetches from the site with its session,
++/// `problem` turns an answer into an outcome when it is not a success, and
++/// `form` builds a form post. Every write the site refuses for want of a
++/// session answers with `error_login`.
++const PRELUDE: &str = r#"
++const call = async (path, init = {}) => {
++    const response = await fetch('https://ely.by' + path, {
++        ...init,
++        credentials: 'same-origin',
++        headers: { 'X-Requested-With': 'XMLHttpRequest', ...(init.headers || {}) },
++    });
++    const text = await response.text();
++    let json = null;
++    try { json = JSON.parse(text); } catch (error) {}
++    return { response, json };
++};
++const problem = ({ response, json }) => {
++    if (json && json.error === 'error_login') return { status: 'signed_out' };
++    if (response.ok && !(json && json.error)) return null;
++    const said = json && (json.text || json.error);
++    return { status: 'failed', message: said ? String(said).replace(/<[^>]*>/g, '') : 'HTTP ' + response.status };
++};
++const form = (fields) => ({
++    method: 'POST',
++    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
++    body: new URLSearchParams(fields).toString(),
++});
++"#;
++
++/// Whether the site has a session. A skin that cannot exist is refused for want
++/// of a session before anything else is looked at, and removing it changes
++/// nothing either way.
++const PROBE: &str = r#"
++const answer = await call('/skins/remove/0', { method: 'POST' });
++return answer.json && answer.json.error === 'error_login' ? { status: 'signed_out' } : { status: 'done' };
++"#;
++
++const WEAR: &str = r#"
++return problem(await call('/skins/wear', form({ skinId: __SKIN_ID__ }))) || { status: 'done' };
++"#;
++
++const REMOVE: &str = r#"
++return problem(await call('/skins/remove/__SKIN_ID__', { method: 'POST' })) || { status: 'done' };
++"#;
++
++/// Uploading answers with the new skin's page, which is where its id comes
++/// from. Wearing it is a second call, as it is on the site.
++const UPLOAD: &str = r#"
++const bytes = Uint8Array.from(atob('__TEXTURE__'), (char) => char.charCodeAt(0));
++const body = new FormData();
++body.append('file', new File([bytes], 'skin.png', { type: 'image/png' }));
++const uploaded = await call('/skins/upload', { method: 'POST', body });
++const failed = problem(uploaded);
++if (failed) return failed;
++const address = String((uploaded.json && uploaded.json.url) || '');
++const at = address.indexOf('/skins/s');
++const id = at < 0 ? 0 : parseInt(address.slice(at + '/skins/s'.length), 10);
++if (!id) return { status: 'failed', message: 'Ely.by did not say where the skin went' };
++return problem(await call('/skins/wear', form({ skinId: id }))) || { status: 'done' };
++"#;
++
++/// The edit form posts every field at once and blanks whatever is left out, so
++/// the skin's details are read from its edit page and sent back around the
++/// changed model. That page redirects away rather than asking for a session, so
++/// the session is checked first.
++const SET_MODEL: &str = r#"
++const session = await call('/skins/remove/0', { method: 'POST' });
++if (session.json && session.json.error === 'error_login') return { status: 'signed_out' };
++const page = await (await fetch('https://ely.by/skins/s__SKIN_ID__/edit', { credentials: 'same-origin' })).text();
++const found = page.match(/alight\.service\.skin\s*=\s*(\{[\s\S]*?\});/);
++if (!found) return { status: 'failed', message: 'Ely.by would not open this skin for editing' };
++const skin = JSON.parse(found[1]);
++return problem(await call('/skins/save/__SKIN_ID__', form({
++    name: skin.name || '',
++    description: skin.description || '',
++    kind: String(skin.kind == null ? 0 : skin.kind),
++    color: String(skin.color || '').replace('#', ''),
++    tags: Array.isArray(skin.tags) ? skin.tags.join(',') : String(skin.tags || ''),
++    isSlim: '__SLIM__',
++}))) || { status: 'done' };
++"#;
++
++#[tauri::command]
++pub async fn ely_wear_skin<R: Runtime>(
++    app: AppHandle<R>,
++    skin_id: u64,
++) -> Result<ElyOutcome> {
++    on_site(&app, &WEAR.replace("__SKIN_ID__", &skin_id.to_string())).await
++}
++
++#[tauri::command]
++pub async fn ely_remove_skin<R: Runtime>(
++    app: AppHandle<R>,
++    skin_id: u64,
++) -> Result<ElyOutcome> {
++    on_site(&app, &REMOVE.replace("__SKIN_ID__", &skin_id.to_string())).await
++}
++
++/// Uploads a skin and wears it. `texture` is the PNG in base64.
++#[tauri::command]
++pub async fn ely_upload_skin<R: Runtime>(
++    app: AppHandle<R>,
++    texture: String,
++) -> Result<ElyOutcome> {
++    // It is pasted into the script, so nothing but base64 may be in it.
++    if texture.is_empty()
++        || !texture.bytes().all(|byte| {
++            byte.is_ascii_alphanumeric() || matches!(byte, b'+' | b'/' | b'=')
++        })
++    {
++        return Err(other("A skin has to be sent as base64"));
++    }
++
++    on_site(&app, &UPLOAD.replace("__TEXTURE__", &texture)).await
++}
++
++/// Switches one of the account's skins between the wide and the slim model.
++#[tauri::command]
++pub async fn ely_edit_skin<R: Runtime>(
++    app: AppHandle<R>,
++    skin_id: u64,
++    slim: bool,
++) -> Result<ElyOutcome> {
++    let script = SET_MODEL
++        .replace("__SKIN_ID__", &skin_id.to_string())
++        .replace("__SLIM__", if slim { "1" } else { "0" });
++    on_site(&app, &script).await
++}
++
++/// Shows the website's sign-in and waits until there is a session.
++///
++/// Returns `false` when the player closes the window instead.
++#[tauri::command]
++pub async fn ely_sign_in<R: Runtime>(app: AppHandle<R>) -> Result<bool> {
++    let _guard = SESSION.lock().await;
++    let session = open_session(&app).await?;
++    let window = &session.window;
++
++    if matches!(run(window, PROBE).await, Ok(ElyOutcome::Done)) {
++        window.destroy().ok();
++        return Ok(true);
++    }
++
++    window.navigate(SIGN_IN_PAGE.parse().expect("static address"))?;
++    window.set_title("Sign in to Ely.by")?;
++    window.show()?;
++    window.set_focus()?;
++
++    let start = Instant::now();
++    while start.elapsed() < SIGN_IN_TIMEOUT {
++        tokio::time::sleep(Duration::from_millis(500)).await;
++
++        if window.title().is_err() {
++            // The player closed the window.
++            return Ok(false);
++        }
++
++        // Sign-in hops through account.ely.by and back. There is only a
++        // session to ask about once it has landed on the site again.
++        let Ok(url) = window.url() else { continue };
++        if url.host_str() != Some("ely.by")
++            || url.path().starts_with("/authorization")
++            || !session.loaded.load(Ordering::SeqCst)
++        {
++            continue;
++        }
++
++        if matches!(run(window, PROBE).await, Ok(ElyOutcome::Done)) {
++            window.destroy().ok();
++            return Ok(true);
++        }
++    }
++
++    window.destroy().ok();
++    Ok(false)
++}
++
++fn other(message: impl Into<String>) -> TheseusSerializableError {
++    theseus::ErrorKind::OtherError(message.into())
++        .as_error()
++        .into()
++}
++
++struct Session<R: Runtime> {
++    window: WebviewWindow<R>,
++    /// Whether the page the window is on has finished loading.
++    loaded: Arc<AtomicBool>,
++}
++
++/// Runs one script in a fresh session window.
++async fn on_site<R: Runtime>(
++    app: &AppHandle<R>,
++    body: &str,
++) -> Result<ElyOutcome> {
++    let _guard = SESSION.lock().await;
++    let session = open_session(app).await?;
++    let outcome = run(&session.window, body).await;
++    session.window.destroy().ok();
++    outcome
++}
++
++/// Opens a hidden window on ely.by and waits for the site to load in it.
++///
++/// It is destroyed after every use. Its cookies outlive it, so the sign-in does
++/// too, and a hidden window left open would keep the launcher running after its
++/// main window had been closed.
++async fn open_session<R: Runtime>(app: &AppHandle<R>) -> Result<Session<R>> {
++    if let Some(stale) = app.get_webview_window(WINDOW_LABEL) {
++        stale.destroy().ok();
++    }
++
++    let loaded = Arc::new(AtomicBool::new(false));
++    let loaded_by_page = loaded.clone();
++
++    let window = WebviewWindowBuilder::new(
++        app,
++        WINDOW_LABEL,
++        WebviewUrl::External(SITE.parse().expect("static address")),
++    )
++    .title("Ely.by")
++    .inner_size(1000.0, 700.0)
++    .min_inner_size(500.0, 500.0)
++    .center()
++    .visible(false)
++    .on_page_load(move |_, payload| {
++        loaded_by_page.store(
++            matches!(payload.event(), PageLoadEvent::Finished),
++            Ordering::SeqCst,
++        );
++    })
++    .build()?;
++
++    let start = Instant::now();
++    while !loaded.load(Ordering::SeqCst) {
++        if start.elapsed() > LOAD_TIMEOUT {
++            window.destroy().ok();
++            return Err(other("Ely.by did not load"));
++        }
++        tokio::time::sleep(Duration::from_millis(100)).await;
++    }
++
++    Ok(Session { window, loaded })
++}
++
++/// Runs `body`, the inside of an async function returning an outcome, on the
++/// site, and reads back what it returned.
++async fn run<R: Runtime>(
++    window: &WebviewWindow<R>,
++    body: &str,
++) -> Result<ElyOutcome> {
++    let marker = format!("enhanced-{}=", uuid::Uuid::new_v4().simple());
++
++    window.eval(format!(
++        "(async () => {{\n\
++         let outcome;\n\
++         try {{\n\
++         outcome = await (async () => {{ {prelude}\n{body} }})();\n\
++         }} catch (error) {{\n\
++         outcome = {{ status: 'failed', message: String(error) }};\n\
++         }}\n\
++         location.replace('#{marker}' + encodeURIComponent(JSON.stringify(outcome)));\n\
++         }})();",
++        prelude = PRELUDE,
++        body = body,
++        marker = marker,
++    ))?;
++
++    let start = Instant::now();
++    while start.elapsed() < CALL_TIMEOUT {
++        tokio::time::sleep(Duration::from_millis(100)).await;
++
++        let url = window.url()?;
++        let Some(answer) = url
++            .fragment()
++            .and_then(|fragment| fragment.strip_prefix(marker.as_str()))
++        else {
++            continue;
++        };
++
++        let answer = urlencoding::decode(answer).map_err(|error| {
++            other(format!("Ely.by answered with something unreadable: {error}"))
++        })?;
++        return serde_json::from_str(&answer).map_err(|error| {
++            other(format!("Ely.by answered with something unreadable: {error}"))
++        });
++    }
++
++    Err(other("Ely.by did not answer in time"))
++}
+diff --git a/apps/app/src/api/mod.rs b/apps/app/src/api/mod.rs
+index 693bc86..15a5c1e 100644
+--- a/apps/app/src/api/mod.rs
++++ b/apps/app/src/api/mod.rs
+@@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
+ use thiserror::Error;
+ 
+ pub mod auth;
++pub mod ely_skins;
+ pub mod import;
+ pub mod install;
+ pub mod instance;
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index f702b95..098daa6 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -248,6 +248,7 @@ fn main() {
+ 
+     builder = builder
+         .plugin(api::auth::init())
++        .plugin(api::ely_skins::init())
+         .plugin(api::mr_auth::init())
+         .plugin(api::onboarding_checklist::init())
+         .plugin(api::import::init())
+diff --git a/packages/app-lib/src/api/ely_skins.rs b/packages/app-lib/src/api/ely_skins.rs
+new file mode 100644
+index 0000000..574183b
+--- /dev/null
++++ b/packages/app-lib/src/api/ely_skins.rs
+@@ -0,0 +1,127 @@
++//! Reading an Ely.by account's skins.
++//!
++//! Ely.by's skin system only reads, so changing a skin happens on the website
++//! (see the desktop shell). What can be read is read here: the account's skins
++//! in the public catalogue, the skin it wears, and the textures themselves,
++//! which the frontend cannot fetch because ely.by sends no CORS headers.
++
++use serde::{Deserialize, Serialize};
++
++use crate::util::fetch::REQWEST_CLIENT;
++
++/// A skin an account has uploaded to the Ely.by catalogue.
++#[derive(Serialize, Deserialize, Debug, Clone)]
++pub struct ElyUploadedSkin {
++    /// The catalogue id, which is what the website's calls take.
++    pub id: u64,
++    pub skin_url: String,
++    pub is_slim: bool,
++}
++
++#[derive(Deserialize)]
++struct Listing {
++    items: Vec<ElyUploadedSkin>,
++}
++
++#[derive(Deserialize)]
++struct Textures {
++    #[serde(rename = "SKIN")]
++    skin: Option<Texture>,
++}
++
++#[derive(Deserialize)]
++struct Texture {
++    url: String,
++}
++
++fn failed(what: &str, error: impl std::fmt::Display) -> crate::Error {
++    crate::ErrorKind::OtherError(format!("Could not {what} on Ely.by: {error}"))
++        .as_error()
++}
++
++/// Lists the skins an account has uploaded.
++///
++/// This is the website's own listing. It is public, and carries the id the
++/// website's other calls want.
++pub async fn list_uploaded_skins(
++    username: &str,
++) -> crate::Result<Vec<ElyUploadedSkin>> {
++    let url = format!(
++        "https://ely.by/skins/get?uploader={}",
++        urlencoding::encode(username)
++    );
++
++    let listing: Listing = REQWEST_CLIENT
++        .get(url)
++        .header("X-Requested-With", "XMLHttpRequest")
++        .header("Accept", "application/json")
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed("list the skins", error))?
++        .json()
++        .await
++        .map_err(|error| failed("read the skin list", error))?;
++
++    Ok(listing.items)
++}
++
++/// The address of the skin an account wears, or `None` for the default one.
++pub async fn current_skin_url(username: &str) -> crate::Result<Option<String>> {
++    let url = format!(
++        "https://skinsystem.ely.by/textures/{}",
++        urlencoding::encode(username)
++    );
++
++    let response = REQWEST_CLIENT
++        .get(url)
++        .send()
++        .await
++        .map_err(|error| failed("read the worn skin", error))?;
++
++    if !response.status().is_success() {
++        return Ok(None);
++    }
++
++    // An account without a skin gets an answer that is not a texture set.
++    Ok(response
++        .json::<Textures>()
++        .await
++        .ok()
++        .and_then(|textures| textures.skin)
++        .map(|skin| skin.url))
++}
++
++/// Fetches a texture from Ely.by.
++///
++/// Only from Ely.by: the address comes from the frontend, and this is not a
++/// way to fetch anything else.
++pub async fn texture(url: &str) -> crate::Result<Vec<u8>> {
++    let mut address = url::Url::parse(url).map_err(|error| {
++        crate::ErrorKind::OtherError(format!("Not a texture address: {error}"))
++            .as_error()
++    })?;
++
++    let host = address.host_str().unwrap_or_default();
++    if host != "ely.by" && !host.ends_with(".ely.by") {
++        return Err(crate::ErrorKind::OtherError(format!(
++            "Refusing to fetch a texture from {host}"
++        ))
++        .as_error());
++    }
++
++    // The skin system hands out plain http addresses.
++    let _ = address.set_scheme("https");
++
++    let bytes = REQWEST_CLIENT
++        .get(address)
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed("fetch a texture", error))?
++        .bytes()
++        .await
++        .map_err(|error| failed("fetch a texture", error))?;
++
++    Ok(bytes.to_vec())
++}
+diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
+index 743d5e7..ade3ca8 100644
+--- a/packages/app-lib/src/api/mod.rs
++++ b/packages/app-lib/src/api/mod.rs
+@@ -1,5 +1,6 @@
+ //! API for interacting with Theseus
+ pub mod cache;
++pub mod ely_skins;
+ pub mod friends;
+ pub mod handler;
+ pub mod instance;
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index 25c6dfb..ab85457 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -957,12 +957,14 @@ impl Serialize for Credentials {
+                 ),
+         };
+ 
+-        let mut ser = serializer.serialize_struct("Credentials", 5)?;
++        let mut ser = serializer.serialize_struct("Credentials", 6)?;
+         ser.serialize_field("profile", &*profile)?;
+         ser.serialize_field("access_token", &self.access_token)?;
+         ser.serialize_field("refresh_token", &self.refresh_token)?;
+         ser.serialize_field("expires", &self.expires)?;
+         ser.serialize_field("active", &self.active)?;
++        // So the skin page can manage an Ely.by account's skins on Ely.by.
++        ser.serialize_field("ely", &self.is_ely())?;
+         ser.end()
+     }
+ }
