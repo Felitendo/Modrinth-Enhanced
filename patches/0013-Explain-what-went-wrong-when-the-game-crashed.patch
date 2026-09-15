@@ -880,7 +880,7 @@ index e2a59fd..4fcddea 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index fc78fe1..4553d48 100644
+index f98395e..0fb53a5 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {
@@ -2075,7 +2075,7 @@ index 0000000..9a6f7e8
 +    }
 +}
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index ade3ca8..566810b 100644
+index a175675..4daf723 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
 @@ -1,5 +1,6 @@

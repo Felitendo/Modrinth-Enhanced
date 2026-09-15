@@ -28,6 +28,7 @@ works.
 | `0013-Explain-what-went-wrong-...`         | The Logs tab says what a crash was and offers a fix where there is one, without a connection.                                               |
 | `0014-Browse-skins-from-...`               | A Browse tab on the skin page: Ely.by's catalogue in the app, and NameMC, laby.net and crafty.gg in a window.                               |
 | `0015-Use-the-desktop-s-file-picker-...`   | File pickers on Linux are the desktop's own, such as KDE's, through the XDG desktop portal.                                                 |
+| `0016-Show-the-account-in-the-title-bar-...` | With the right sidebar folded away, the Minecraft account is shown in the title bar and managed from there.                         |
 
 ### Offline accounts
 
@@ -49,11 +50,11 @@ Microsoft sign-in opens your own browser rather than a webview inside the launch
 password manager, autofill and passkeys work, and you can see in the address bar that the page is
 really Microsoft's.
 
-Microsoft cannot hand the result back: the client id the launcher uses is Minecraft's own, whose
-only registered redirect is a fixed page on `login.live.com`, with no loopback address for the
-launcher to listen on. So the browser lands on that page with the code in the address and you copy
-the address into the launcher. The webview is still one click away for anyone the browser does not
-work out for.
+The client id the launcher uses is Minecraft's own, with no redirect the launcher could listen on.
+So the browser signs in on Microsoft's device code page, with the code already filled in, while the
+launcher asks Microsoft every few seconds whether that has happened. Once it has, the account is
+added and the launcher comes back to the front, without anything to paste. The window inside the
+launcher is still one click away in the dialog, for when the browser does not work out.
 
 ### Ely.by accounts
 
@@ -80,8 +81,10 @@ Settings > Features > Sidebar.
 The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
 folds away with the arrow button in the title bar, which upstream only shows once "Hide right
 sidebar" is turned on in settings. Both remember what they were set to across restarts, and the
-title bar button briefly shows a check once its state is saved. On pages that need the sidebar, such
-as the mod browser, the button stays in place, greyed out.
+title bar button briefly shows a check once its state is saved; the first time, a short note
+explains this. On pages that need the sidebar, such as the mod browser, the button stays in place,
+greyed out. While the sidebar is folded away, the
+Minecraft account sits in the title bar next to the window buttons, to switch, add or remove accounts.
 
 None of the three reach Modrinth. Preference syncing maps a fixed list of named fields in both
 directions and these are not in it, so they are neither sent to your Modrinth account nor

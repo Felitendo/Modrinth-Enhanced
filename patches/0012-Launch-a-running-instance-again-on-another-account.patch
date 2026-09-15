@@ -440,7 +440,7 @@ index 638386d..3cccc8a 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 02c30c0..fc78fe1 100644
+index f5af028..f98395e 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,7 +110,9 @@ fn main() {

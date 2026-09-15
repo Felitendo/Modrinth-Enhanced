@@ -30,14 +30,14 @@ page headed "Sync features across devices" and would otherwise look like
 it syncs. The other two are not settings entries - a heading and a title
 bar button - so nothing there promises anything.
 ---
- apps/app-frontend/src/App.vue                 | 153 ++++++++++++++++--
- .../ui/settings/display/FeaturesSettings.vue  |  28 ++++
- .../src/composables/use-app-settings.ts       |   3 +
- packages/app-lib/src/state/settings.rs        |   3 +
- 4 files changed, 172 insertions(+), 15 deletions(-)
+ apps/app-frontend/src/App.vue                 | 184 ++++++++++++++++--
+ .../ui/settings/display/FeaturesSettings.vue  |  28 +++
+ .../src/composables/use-app-settings.ts       |   4 +
+ packages/app-lib/src/state/settings.rs        |   4 +
+ 4 files changed, 205 insertions(+), 15 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index d750a5f..ac8308c 100644
+index d750a5f..c47484d 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -10,6 +10,8 @@ import {
@@ -49,7 +49,23 @@ index d750a5f..ac8308c 100644
  	ChevronLeftIcon,
  	ChevronRightIcon,
  	CompassIcon,
-@@ -254,12 +256,41 @@ const credentials = ref()
+@@ -34,6 +36,7 @@ import {
+ 	AccountSwitchOverlay,
+ 	Admonition,
+ 	Avatar,
++	Button,
+ 	ButtonLink,
+ 	commonMessages,
+ 	commonSettingsMessages,
+@@ -44,6 +47,7 @@ import {
+ 	I18nDebugPanel,
+ 	IconButton,
+ 	LoadingBar,
++	NewModal,
+ 	NewsArticleCard,
+ 	NotificationPanel,
+ 	PopupNotificationPanel,
+@@ -254,12 +258,46 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
@@ -72,29 +88,34 @@ index d750a5f..ac8308c 100644
 +	(hide) => setSidebarCollapsed(hide),
  )
 +
-+// Briefly shows a check on the fold button once the state is saved, so it is
-+// clear the choice is remembered.
++// Briefly shows a check on the fold button once the state is saved, and the
++// first time also explains that the choice is remembered.
 +const sidebarSaved = ref(false)
 +let sidebarSavedTimeout
++const sidebarRememberedModal = ref(null)
 +
 +function setSidebarCollapsed(collapsed) {
++	const explain = !appSettings.featureFlags.sidebar_fold_explained
 +	appSettings.featureFlags.right_sidebar_collapsed = collapsed
++	appSettings.featureFlags.sidebar_fold_explained = true
 +	getSettings()
 +		.then((settings) => {
 +			settings.feature_flags.right_sidebar_collapsed = collapsed
++			settings.feature_flags.sidebar_fold_explained = true
 +			return setSettings(settings)
 +		})
 +		.then(() => {
 +			sidebarSaved.value = true
 +			clearTimeout(sidebarSavedTimeout)
 +			sidebarSavedTimeout = setTimeout(() => (sidebarSaved.value = false), 1600)
++			if (explain) sidebarRememberedModal.value?.show()
 +		})
 +		.catch(handleError)
 +}
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -358,6 +389,21 @@ useQuery({
+@@ -358,6 +396,21 @@ useQuery({
  // ad and the gradient being drawn above it.
  const showAd = computed(() => false)
  const adConsentAvailable = computed(() => false)
@@ -116,15 +137,24 @@ index d750a5f..ac8308c 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -588,6 +634,16 @@ const messages = defineMessages({
+@@ -588,6 +641,25 @@ const messages = defineMessages({
  	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
  	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
  	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
 +	hideSidebar: { id: 'app.navigation.hide-sidebar', defaultMessage: 'Hide sidebar' },
 +	showSidebar: { id: 'app.navigation.show-sidebar', defaultMessage: 'Show sidebar' },
-+	sidebarRemembered: {
-+		id: 'app.navigation.sidebar-remembered',
-+		defaultMessage: 'Remembered after restart',
++	sidebarRememberedTitle: {
++		id: 'app.navigation.sidebar-remembered.title',
++		defaultMessage: 'The sidebar stays how you leave it',
++	},
++	sidebarRememberedBody: {
++		id: 'app.navigation.sidebar-remembered.body',
++		defaultMessage:
++			'Folding the sidebar away or bringing it back is saved right away, so the app opens the same way next time, even after a restart. The check on the button shows when it has been saved.',
++	},
++	sidebarRememberedDone: {
++		id: 'app.navigation.sidebar-remembered.done',
++		defaultMessage: 'Done',
 +	},
 +	sidebarRequired: {
 +		id: 'app.navigation.sidebar-required',
@@ -133,7 +163,7 @@ index d750a5f..ac8308c 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2252,6 +2308,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2252,6 +2324,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -141,7 +171,7 @@ index d750a5f..ac8308c 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2377,16 +2434,44 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2377,16 +2450,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<Breadcrumbs />
  			</div>
  			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
@@ -162,11 +192,9 @@ index d750a5f..ac8308c 100644
 +						formatMessage(
 +							forceSidebar
 +								? messages.sidebarRequired
-+								: sidebarSaved
-+									? messages.sidebarRemembered
-+									: sidebarToggled
-+										? messages.hideSidebar
-+										: messages.showSidebar,
++								: sidebarToggled
++									? messages.hideSidebar
++									: messages.showSidebar,
 +						)
 +					"
 +					class="relative mr-3 flex"
@@ -195,7 +223,7 @@ index d750a5f..ac8308c 100644
  				<div class="flex mr-3">
  					<Suspense>
  						<AppActionBar />
-@@ -2502,10 +2587,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2502,10 +2601,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
@@ -217,7 +245,29 @@ index d750a5f..ac8308c 100644
  							<NewsArticleCard
  								v-for="(item, index) in news"
  								:key="`news-${index}`"
-@@ -2743,6 +2836,36 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2531,6 +2638,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 	<I18nDebugPanel />
+ 	<NotificationPanel :has-sidebar="sidebarVisible" />
+ 	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
++	<NewModal
++		ref="sidebarRememberedModal"
++		:header="formatMessage(messages.sidebarRememberedTitle)"
++		max-width="460px"
++	>
++		<p class="m-0">{{ formatMessage(messages.sidebarRememberedBody) }}</p>
++		<template #actions>
++			<div class="flex justify-end">
++				<Button type="colored" color="brand" @click="sidebarRememberedModal?.hide()">
++					<CheckIcon />
++					{{ formatMessage(messages.sidebarRememberedDone) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
+ 	<ErrorModal ref="errorModal" />
+ 	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
+ 	<MinecraftRequiredModal ref="minecraftRequiredModal" />
+@@ -2743,6 +2865,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	display: contents;
  }
  
@@ -238,9 +288,11 @@ index d750a5f..ac8308c 100644
 +		opacity: 0;
 +	}
 +
++	/* The path runs from the long stroke's tip back to the short one, so it is
++	   revealed from its end: the check is drawn left to right. */
 +	.sidebar-saved-badge :deep(path) {
-+		stroke-dasharray: 20;
-+		stroke-dashoffset: 20;
++		stroke-dasharray: 24;
++		stroke-dashoffset: -24;
 +		animation: sidebar-saved-draw 0.3s 0.15s ease-out forwards;
 +	}
 +}
@@ -336,29 +388,31 @@ index 1d3e379..ae88550 100644
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index 0d58903..59da62b 100644
+index 0d58903..28c78c3 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -24,6 +24,9 @@ export const DEFAULT_FEATURE_FLAGS = {
+@@ -24,6 +24,10 @@ export const DEFAULT_FEATURE_FLAGS = {
  	friends_pending_collapsed: true,
  	dismissed_photosensitivity_filter_warning: false,
  	localhost_sign_in: false,
 +	show_hosting_in_sidebar: true,
 +	news_collapsed: false,
++	sidebar_fold_explained: false,
 +	right_sidebar_collapsed: false,
  }
  
  export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 20601b8..2fd0d87 100644
+index 20601b8..b5f2ec6 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -88,6 +88,9 @@ pub enum FeatureFlag {
+@@ -88,6 +88,10 @@ pub enum FeatureFlag {
      FriendsPendingCollapsed,
      DismissedPhotosensitivityFilterWarning,
      LocalhostSignIn,
 +    ShowHostingInSidebar,
 +    NewsCollapsed,
++    SidebarFoldExplained,
 +    RightSidebarCollapsed,
  }
  

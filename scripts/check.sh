@@ -76,7 +76,9 @@ done < <(grep -A1 '\.plugin($' "$WORKTREE/apps/app/build.rs" |
 
 log "Microsoft sign-in"
 check "the browser flow is registered" \
-	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_browser_begin,'
+	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_device_begin,'
+check "the browser sign-in comes back without pasting" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue" 'login_device_poll('
 check "the sign-in button opens it" \
 	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'microsoftLoginModal.value?.show'
 
@@ -135,6 +137,10 @@ check "the news section can be collapsed" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
 check "the right sidebar has a fold button" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setSidebarCollapsed(sidebarToggled)'
+check "folding the sidebar is explained once" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'sidebarRememberedModal.value?.show()'
+check "the account stays reachable with the sidebar folded" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" '<TitleBarAccountSwitcher'
 
 # tauri.linux.conf.json replaces the whole window list, so an upstream change to
 # the main window would otherwise silently not reach Linux.

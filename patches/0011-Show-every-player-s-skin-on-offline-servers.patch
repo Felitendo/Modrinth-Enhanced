@@ -187,12 +187,12 @@ index ae88550..9a9e8ef 100644
  		<h2 class="m-0 text-xl font-semibold text-contrast">
  			{{ formatMessage(messages.playPageTitle) }}
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index 59da62b..5340ad2 100644
+index 28c78c3..e0c0a89 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -27,6 +27,7 @@ export const DEFAULT_FEATURE_FLAGS = {
- 	show_hosting_in_sidebar: true,
+@@ -28,6 +28,7 @@ export const DEFAULT_FEATURE_FLAGS = {
  	news_collapsed: false,
+ 	sidebar_fold_explained: false,
  	right_sidebar_collapsed: false,
 +	universal_skins: true,
  }
@@ -214,7 +214,7 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 297f383..02c30c0 100644
+index 1e44522..f5af028 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -399,6 +399,7 @@ fn main() {
@@ -2580,12 +2580,12 @@ index 7418675..a25a7fd 100644
  pub(crate) async fn relocate_tree(from: &Path, to: &Path) -> crate::Result<()> {
      if !fs::try_exists(from).await? {
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 2fd0d87..673dfaa 100644
+index b5f2ec6..69fc7ff 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -91,6 +91,7 @@ pub enum FeatureFlag {
-     ShowHostingInSidebar,
+@@ -92,6 +92,7 @@ pub enum FeatureFlag {
      NewsCollapsed,
+     SidebarFoldExplained,
      RightSidebarCollapsed,
 +    UniversalSkins,
  }

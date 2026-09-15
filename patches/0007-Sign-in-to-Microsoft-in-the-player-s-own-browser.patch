@@ -8,30 +8,30 @@ which is the one place a player cannot use the tools they use everywhere
 else: no password manager, no autofill, no passkeys, and no way to tell
 by looking that the page is really Microsoft's.
 
-The browser gets all of it. What it cannot do is hand the code back:
-this client id is Minecraft's own, its only registered redirect is a
-fixed page on login.live.com, and no loopback address is registered for
-it, so there is nothing for the launcher to listen on. The browser
-therefore lands on that page with the code in the address, and the
-player copies the address over - which is what the new modal asks for,
-and what `login_browser_finish` reads the code out of.
+The browser gets all of it. What it cannot do is hand a code back: this
+client id is Minecraft's own, and no loopback address is registered for
+it. So the browser signs in on Microsoft's device code page, with the
+code already filled in, while the launcher polls for the result and
+comes back to the front once it is there.
 
 Every entry point goes through it, since they all end up at
 `AccountsCard.login()`. The webview is still one click away in that
 modal for anyone the browser does not work out for.
 ---
- .../src/components/ui/AccountsCard.vue        |  17 +-
- .../src/components/ui/MicrosoftLoginModal.vue | 213 ++++++++++++++++++
+ .../src/components/ui/AccountsCard.vue        |  21 +-
+ .../src/components/ui/MicrosoftLoginModal.vue | 219 ++++++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 +--
- apps/app-frontend/src/helpers/auth.js         |  25 ++
+ apps/app-frontend/src/helpers/auth.js         |  23 ++
  apps/app/build.rs                             |   2 +
- apps/app/src/api/auth.rs                      |  77 +++++++
+ apps/app/src/api/auth.rs                      |  64 +++++
+ packages/app-lib/src/api/minecraft_auth.rs    |  30 +++
  packages/app-lib/src/api/mod.rs               |  12 +-
- 7 files changed, 333 insertions(+), 42 deletions(-)
+ packages/app-lib/src/state/minecraft_auth.rs  | 145 +++++++++++-
+ 9 files changed, 499 insertions(+), 46 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 
 diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index 35c21fa..c81603c 100644
+index 35c21fa..224d776 100644
 --- a/apps/app-frontend/src/components/ui/AccountsCard.vue
 +++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
 @@ -105,6 +105,7 @@
@@ -84,46 +84,64 @@ index 35c21fa..c81603c 100644
  }
  
  async function accountAdded() {
+@@ -316,8 +309,8 @@ const messages = defineMessages({
+ 		defaultMessage: 'Not signed in',
+ 	},
+ 	addAccount: {
+-		id: 'minecraft-account.add-account',
+-		defaultMessage: 'Add account',
++		id: 'minecraft-account.add-microsoft-account',
++		defaultMessage: 'Add Microsoft account',
+ 	},
+ 	addOfflineAccount: {
+ 		id: 'minecraft-account.add-offline-account',
 diff --git a/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 new file mode 100644
-index 0000000..283b89c
+index 0000000..d587736
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,219 @@
 +<template>
-+	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="520px" width="100%">
++	<NewModal
++		ref="modal"
++		:header="formatMessage(messages.header)"
++		max-width="480px"
++		width="100%"
++		:on-hide="stop"
++	>
 +		<div class="flex flex-col gap-4">
 +			<p class="m-0 leading-tight text-secondary">
 +				{{ formatMessage(messages.description) }}
 +			</p>
 +
-+			<ol class="m-0 flex list-decimal flex-col gap-1 pl-5 leading-tight text-secondary">
-+				<li>{{ formatMessage(messages.stepSignIn) }}</li>
-+				<li>{{ formatMessage(messages.stepCopy) }}</li>
-+			</ol>
++			<div v-if="code" class="flex flex-col items-center gap-1 rounded-2xl bg-surface-2 px-4 py-3">
++				<span class="text-sm text-secondary">{{ formatMessage(messages.codeLabel) }}</span>
++				<div class="flex items-center gap-2">
++					<span class="select-all font-mono text-2xl font-bold tracking-widest text-contrast">
++						{{ code.user_code }}
++					</span>
++					<IconButton
++						v-tooltip="formatMessage(messages.copyCode)"
++						type="quiet"
++						size="sm"
++						:label="formatMessage(messages.copyCode)"
++						@click="copyCode"
++					>
++						<CheckIcon v-if="copied" />
++						<CopyIcon v-else />
++					</IconButton>
++				</div>
++			</div>
 +
-+			<form class="flex flex-col gap-2" @submit.prevent="submit">
-+				<label class="font-semibold text-contrast" for="microsoft-login-redirect">
-+					{{ formatMessage(messages.addressLabel) }}
-+				</label>
-+				<Input
-+					id="microsoft-login-redirect"
-+					v-model="redirect"
-+					:icon="LinkIcon"
-+					placeholder="https://login.live.com/oauth20_desktop.srf?code=..."
-+					:error="!!error"
-+					autocapitalize="none"
-+					autocorrect="off"
-+					:spellcheck="false"
-+					class="w-full"
-+				/>
-+				<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
-+			</form>
++			<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
++			<p v-else class="m-0 flex items-center gap-2 leading-tight text-secondary">
++				<SpinnerIcon aria-hidden="true" class="animate-spin" />
++				{{ formatMessage(code ? messages.waiting : messages.opening) }}
++			</p>
 +
 +			<button
 +				class="button-base m-0 cursor-pointer border-0 bg-transparent p-0 text-left text-sm text-secondary underline"
 +				type="button"
-+				:disabled="submitting"
 +				@click="useBuiltInWindow"
 +			>
 +				{{ formatMessage(messages.useBuiltInWindow) }}
@@ -136,25 +154,10 @@ index 0000000..283b89c
 +					<XIcon aria-hidden="true" />
 +					{{ formatMessage(commonMessages.cancelButton) }}
 +				</Button>
-+				<Button
-+					native-type="button"
-+					:disabled="submitting || opening"
-+					@click="openBrowser"
-+				>
++				<Button native-type="button" :disabled="opening" @click="openBrowser">
 +					<SpinnerIcon v-if="opening" aria-hidden="true" class="animate-spin" />
 +					<ExternalIcon v-else aria-hidden="true" />
 +					{{ formatMessage(messages.openAgain) }}
-+				</Button>
-+				<Button
-+					type="colored"
-+					color="brand"
-+					native-type="button"
-+					:disabled="submitting || !redirect.trim()"
-+					@click="submit"
-+				>
-+					<SpinnerIcon v-if="submitting" aria-hidden="true" class="animate-spin" />
-+					<LogInIcon v-else aria-hidden="true" />
-+					{{ formatMessage(messages.finish) }}
 +				</Button>
 +			</div>
 +		</template>
@@ -162,19 +165,27 @@ index 0000000..283b89c
 +</template>
 +
 +<script setup lang="ts">
-+import { ExternalIcon, LinkIcon, LogInIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
++import { CheckIcon, CopyIcon, ExternalIcon, SpinnerIcon, XIcon } from '@modrinth/assets'
 +import {
 +	Button,
 +	commonMessages,
 +	defineMessages,
-+	Input,
++	IconButton,
 +	NewModal,
 +	useVIntl,
 +} from '@modrinth/ui'
 +import { ref } from 'vue'
 +
 +import { handleSevereError } from '@/composables/use-error.js'
-+import { login as builtInLogin, login_browser_begin, login_browser_finish } from '@/helpers/auth'
++import { login as builtInLogin, login_device_begin, login_device_poll } from '@/helpers/auth'
++
++type DeviceCode = {
++	user_code: string
++	device_code: string
++	verification_uri: string
++	interval: number
++	expires_in: number
++}
 +
 +const { formatMessage } = useVIntl()
 +
@@ -183,60 +194,71 @@ index 0000000..283b89c
 +}>()
 +
 +const modal = ref<InstanceType<typeof NewModal>>()
-+const redirect = ref('')
++const code = ref<DeviceCode | null>(null)
 +const error = ref('')
 +const opening = ref(false)
-+const submitting = ref(false)
-+let flow: unknown = null
++const copied = ref(false)
 +
-+async function show(event?: MouseEvent) {
-+	redirect.value = ''
-+	error.value = ''
-+	submitting.value = false
++// Bumped whenever the sign-in starts over or is given up on, so that a poll
++// from before does not carry on.
++let attempt = 0
++let pollTimeout: ReturnType<typeof setTimeout> | undefined
++
++function show(event?: MouseEvent) {
 +	modal.value?.show(event)
-+	await openBrowser()
++	void openBrowser()
++}
++
++function stop() {
++	attempt++
++	clearTimeout(pollTimeout)
 +}
 +
 +async function openBrowser() {
-+	if (opening.value) return
-+
-+	opening.value = true
++	stop()
++	const current = attempt
++	code.value = null
 +	error.value = ''
++	copied.value = false
++	opening.value = true
 +
 +	try {
-+		flow = await login_browser_begin()
++		const started = (await login_device_begin()) as DeviceCode
++		if (current !== attempt) return
++		code.value = started
++		schedulePoll(current, started)
 +	} catch (e) {
-+		flow = null
-+		error.value = messageOf(e, messages.openError)
++		if (current === attempt) error.value = messageOf(e, messages.openError)
 +	} finally {
-+		opening.value = false
++		if (current === attempt) opening.value = false
 +	}
 +}
 +
-+async function submit() {
-+	if (submitting.value) return
++function schedulePoll(current: number, started: DeviceCode) {
++	pollTimeout = setTimeout(() => void poll(current, started), started.interval * 1000)
++}
 +
-+	const value = redirect.value.trim()
-+	if (!value) return
-+
-+	if (!flow) {
-+		error.value = formatMessage(messages.noFlow)
-+		return
-+	}
-+
-+	submitting.value = true
-+	error.value = ''
-+
++async function poll(current: number, started: DeviceCode) {
 +	try {
-+		const account = await login_browser_finish(value, flow)
-+		redirect.value = ''
-+		modal.value?.hide()
-+		emit('created', account)
++		const account = await login_device_poll(started.device_code)
++		if (account) {
++			// The account exists now, so it is announced even if the dialog was
++			// closed in the meantime.
++			if (current === attempt) modal.value?.hide()
++			emit('created', account)
++		} else if (current === attempt) {
++			schedulePoll(current, started)
++		}
 +	} catch (e) {
-+		error.value = messageOf(e, messages.genericError)
-+	} finally {
-+		submitting.value = false
++		if (current === attempt) error.value = messageOf(e, messages.genericError)
 +	}
++}
++
++async function copyCode() {
++	if (!code.value) return
++	await navigator.clipboard.writeText(code.value.user_code)
++	copied.value = true
++	setTimeout(() => (copied.value = false), 1500)
 +}
 +
 +// The window the launcher opens itself, for when the browser will not do.
@@ -262,28 +284,27 @@ index 0000000..283b89c
 +	description: {
 +		id: 'app.microsoft-login.description',
 +		defaultMessage:
-+			'Your browser has opened, so your password manager and passkeys work as they do everywhere else. Microsoft cannot hand the result back to the launcher on its own, so it has to be copied over.',
++			'Sign in to Microsoft in the browser that just opened, where your password manager and passkeys work as usual. Once you are done, you are brought back here.',
 +	},
-+	stepSignIn: {
-+		id: 'app.microsoft-login.step-sign-in',
-+		defaultMessage: 'Sign in to Microsoft in the browser.',
++	codeLabel: {
++		id: 'app.microsoft-login.code-label',
++		defaultMessage: 'If Microsoft asks for a code, enter',
 +	},
-+	stepCopy: {
-+		id: 'app.microsoft-login.step-copy',
-+		defaultMessage:
-+			'You will land on a blank page. Copy its whole address from the address bar and paste it below.',
++	copyCode: {
++		id: 'app.microsoft-login.copy-code',
++		defaultMessage: 'Copy code',
 +	},
-+	addressLabel: {
-+		id: 'app.microsoft-login.address-label',
-+		defaultMessage: 'Address the browser finished at',
++	opening: {
++		id: 'app.microsoft-login.opening',
++		defaultMessage: 'Opening your browser…',
++	},
++	waiting: {
++		id: 'app.microsoft-login.waiting',
++		defaultMessage: 'Waiting for you to sign in…',
 +	},
 +	openAgain: {
 +		id: 'app.microsoft-login.open-again',
 +		defaultMessage: 'Open browser again',
-+	},
-+	finish: {
-+		id: 'app.microsoft-login.finish',
-+		defaultMessage: 'Sign in',
 +	},
 +	useBuiltInWindow: {
 +		id: 'app.microsoft-login.use-built-in-window',
@@ -292,10 +313,6 @@ index 0000000..283b89c
 +	openError: {
 +		id: 'app.microsoft-login.open-error',
 +		defaultMessage: 'Could not open a browser to sign in with.',
-+	},
-+	noFlow: {
-+		id: 'app.microsoft-login.no-flow',
-+		defaultMessage: 'Open the browser again before signing in.',
 +	},
 +	genericError: {
 +		id: 'app.microsoft-login.generic-error',
@@ -369,56 +386,54 @@ index 7781cee..341ccdc 100644
  
  function addOfflineAccount(event: MouseEvent) {
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index 57580ff..c25af95 100644
+index 57580ff..9b2408e 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
-@@ -33,6 +33,31 @@ export async function login() {
+@@ -33,6 +33,29 @@ export async function login() {
  	return await invoke('plugin:auth|login')
  }
  
 +/**
 + * Starts a Microsoft sign-in in the default browser.
 + *
-+ * Opens the browser and returns the flow to hand back to
-+ * {@link login_browser_finish} together with the address the browser ends up
-+ * at. Unlike the window the launcher opens itself, the browser has the
-+ * player's password manager, autofill and passkeys.
++ * Opens Microsoft's sign-in page with the code already filled in. Unlike the
++ * window the launcher opens itself, the browser has the player's password
++ * manager, autofill and passkeys.
 + *
-+ * @returns {Promise<object>} the login flow to finish with
++ * @returns {Promise<object>} the code, to show and to poll {@link login_device_poll} with
 + */
-+export async function login_browser_begin() {
-+	return await invoke('plugin:auth|login_browser_begin')
++export async function login_device_begin() {
++	return await invoke('plugin:auth|login_device_begin')
 +}
 +
 +/**
-+ * Finishes a browser sign-in.
++ * Checks on a browser sign-in.
 + *
-+ * @param {string} redirect the address the browser finished at, or the code in it
-+ * @param {object} flow the flow returned by {@link login_browser_begin}
-+ * @returns {Promise<Credential>}
++ * @param {string} deviceCode the `device_code` from {@link login_device_begin}
++ * @returns {Promise<Credential | null>} the new account, or null while the player is still signing in
 + */
-+export async function login_browser_finish(redirect, flow) {
-+	return await invoke('plugin:auth|login_browser_finish', { redirect, flow })
++export async function login_device_poll(deviceCode) {
++	return await invoke('plugin:auth|login_device_poll', { deviceCode })
 +}
 +
  /**
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 0f62dd8..8562a68 100644
+index 0f62dd8..919c91a 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {
                      .commands(&[
                          "check_reachable",
                          "login",
-+                        "login_browser_begin",
-+                        "login_browser_finish",
++                        "login_device_begin",
++                        "login_device_poll",
                          "login_offline",
                          "login_ely",
                          "remove_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index dea07b2..5c3648c 100644
+index dea07b2..eab604d 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -2,6 +2,7 @@ use crate::api::Result;
@@ -433,12 +448,12 @@ index dea07b2..5c3648c 100644
          .invoke_handler(tauri::generate_handler![
              check_reachable,
              login,
-+            login_browser_begin,
-+            login_browser_finish,
++            login_device_begin,
++            login_device_poll,
              login_offline,
              login_ely,
              remove_user,
-@@ -88,6 +91,80 @@ pub async fn login<R: Runtime>(
+@@ -88,6 +91,67 @@ pub async fn login<R: Runtime>(
      Ok(None)
  }
  
@@ -449,19 +464,26 @@ index dea07b2..5c3648c 100644
 +/// cannot sign in the way they sign in everywhere else. Their own browser has
 +/// all of it.
 +///
-+/// What it cannot do is hand the code back. This client id's redirect is a
-+/// fixed page on login.live.com - no loopback address is registered for it, so
-+/// there is nothing for the launcher to listen on - and the browser lands
-+/// there with the code in the address. The player copies that address over,
-+/// which is what [`login_browser_finish`] takes.
++/// This client id has no redirect the launcher could listen on, so the browser
++/// cannot hand a code back. It signs in on Microsoft's device code page
++/// instead, with the code already filled in, while [`login_device_poll`] asks
++/// Microsoft whether that has happened yet.
 +#[tauri::command]
-+pub async fn login_browser_begin<R: Runtime>(
++pub async fn login_device_begin<R: Runtime>(
 +    app: tauri::AppHandle<R>,
-+) -> Result<MinecraftLoginFlow> {
-+    let flow = minecraft_auth::begin_login().await?;
++) -> Result<MinecraftDeviceCode> {
++    let code = minecraft_auth::begin_device_login().await?;
++
++    let mut url = url::Url::parse(&code.verification_uri).map_err(|_| {
++        theseus::ErrorKind::OtherError(
++            "Error parsing the sign-in address".to_string(),
++        )
++        .as_error()
++    })?;
++    url.query_pairs_mut().append_pair("otc", &code.user_code);
 +
 +    app.opener()
-+        .open_url(&flow.auth_request_uri, None::<String>)
++        .open_url(url.as_str(), None::<String>)
 +        .map_err(|error| {
 +            theseus::ErrorKind::OtherError(format!(
 +                "Could not open a browser to sign in with: {error}"
@@ -469,58 +491,79 @@ index dea07b2..5c3648c 100644
 +            .as_error()
 +        })?;
 +
-+    Ok(flow)
++    Ok(code)
 +}
 +
-+/// Finishes a browser sign-in with the address the browser ended up at.
-+///
-+/// Takes the whole address, since that is what a player can select and copy,
-+/// and a bare code as well, since that is what someone who knows what they are
-+/// looking at will paste.
++/// Checks on a sign-in started with [`login_device_begin`]: `None` until the
++/// player has finished it in the browser, after which the launcher comes back
++/// to the front.
 +#[tauri::command]
-+pub async fn login_browser_finish(
-+    redirect: String,
-+    flow: MinecraftLoginFlow,
-+) -> Result<Credentials> {
-+    let redirect = redirect.trim();
++pub async fn login_device_poll<R: Runtime>(
++    app: tauri::AppHandle<R>,
++    device_code: String,
++) -> Result<Option<Credentials>> {
++    let credentials = minecraft_auth::poll_device_login(&device_code).await?;
 +
-+    let code = url::Url::parse(redirect)
-+        .ok()
-+        .and_then(|url| {
-+            url.query_pairs()
-+                .find(|(key, _)| key == "code")
-+                .map(|(_, code)| code.into_owned())
-+        })
-+        .or_else(|| {
-+            // Not a URL, so treat it as the code itself - but only if it looks
-+            // like one, rather than sending whatever was in the clipboard.
-+            (!redirect.is_empty()
-+                && redirect.len() < 2048
-+                && redirect.bytes().all(|byte| {
-+                    byte.is_ascii_alphanumeric()
-+                        || byte == b'.'
-+                        || byte == b'-'
-+                        || byte == b'_'
-+                }))
-+            .then(|| redirect.to_owned())
-+        })
-+        .ok_or_else(|| {
-+            theseus::ErrorKind::InputError(
-+                "That does not look like the address the browser finished at. \
-+                 Copy the whole address out of the address bar."
-+                    .to_string(),
-+            )
-+            .as_error()
-+        })?;
++    if credentials.is_some()
++        && let Some(window) = app.get_webview_window("main")
++    {
++        // Best effort: a desktop may keep a window in the background from
++        // taking focus, in which case it at least asks for attention.
++        let _ = window.unminimize();
++        let _ = window.set_focus();
++        let _ = window
++            .request_user_attention(Some(UserAttentionType::Informational));
++    }
 +
-+    Ok(minecraft_auth::finish_login(&code, flow).await?)
++    Ok(credentials)
 +}
 +
  /// Adds an offline account with the given username and makes it active.
  #[tauri::command]
  pub async fn login_offline(username: String) -> Result<Credentials> {
+diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
+index 2d18da3..fba473f 100644
+--- a/packages/app-lib/src/api/minecraft_auth.rs
++++ b/packages/app-lib/src/api/minecraft_auth.rs
+@@ -47,6 +47,36 @@ pub async fn finish_login(
+     Ok(credentials)
+ }
+ 
++/// Starts a sign-in in the player's own browser. See [`poll_device_login`].
++#[tracing::instrument]
++pub async fn begin_device_login()
++-> crate::Result<crate::state::MinecraftDeviceCode> {
++    crate::state::login_device_begin().await
++}
++
++/// Checks on a sign-in started with [`begin_device_login`]: `None` until the
++/// player has finished it in the browser.
++#[tracing::instrument(skip(device_code))]
++pub async fn poll_device_login(
++    device_code: &str,
++) -> crate::Result<Option<Credentials>> {
++    let state = State::get().await?;
++
++    let credentials =
++        crate::state::login_device_poll(device_code, &state.pool).await?;
++
++    if credentials.is_some()
++        && let Err(error) =
++            crate::onboarding_checklist::mark_logged_into_minecraft().await
++    {
++        tracing::warn!(
++            "Failed to mark Minecraft login in onboarding checklist: {error}"
++        );
++    }
++
++    Ok(credentials)
++}
++
+ /// Creates an offline account for `username`, or reuses the existing one, and
+ /// makes it the active account.
+ ///
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 320112f..743d5e7 100644
+index 320112f..ba6c342 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
 @@ -28,12 +28,12 @@ pub mod data {
@@ -533,12 +576,194 @@ index 320112f..743d5e7 100644
 -        SearchResults, SearchResultsV3, Settings, SharedInstanceAttachment,
 -        SharedInstanceRole, TeamMember, Theme, User, UserFriend, Version,
 -        WindowSize,
-+        JavaVersion, LinkedModpackInfo, MemorySettings, MinecraftLoginFlow,
-+        ModLoader, ModrinthCredentials, OnboardingChecklist, Organization,
-+        OwnerType, ProcessMetadata, Project, ProjectType, ProjectV3,
-+        SearchResult, SearchResults, SearchResultsV3, Settings,
++        JavaVersion, LinkedModpackInfo, MemorySettings, MinecraftDeviceCode,
++        MinecraftLoginFlow, ModLoader, ModrinthCredentials, OnboardingChecklist,
++        Organization, OwnerType, ProcessMetadata, Project, ProjectType,
++        ProjectV3, SearchResult, SearchResults, SearchResultsV3, Settings,
 +        SharedInstanceAttachment, SharedInstanceRole, TeamMember, Theme, User,
 +        UserFriend, Version, WindowSize,
      };
      pub use ariadne::users::UserStatus;
      pub use modrinth_content_management::{
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index 25c6dfb..4c87e82 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -37,6 +37,7 @@ use uuid::Uuid;
+ pub enum MinecraftAuthStep {
+     GetDeviceToken,
+     SisuAuthenticate,
++    GetDeviceCode,
+     GetOAuthToken,
+     RefreshOAuthToken,
+     SisuAuthorize,
+@@ -108,6 +109,16 @@ pub struct MinecraftLoginFlow {
+     pub auth_request_uri: String,
+ }
+ 
++/// A sign-in in the player's own browser, on Microsoft's device code page.
++#[derive(Serialize, Deserialize, Debug)]
++pub struct MinecraftDeviceCode {
++    pub user_code: String,
++    pub device_code: String,
++    pub verification_uri: String,
++    pub interval: u64,
++    pub expires_in: u64,
++}
++
+ #[tracing::instrument]
+ pub async fn login_begin(
+     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+@@ -144,13 +155,37 @@ pub async fn login_finish(
+     code: &str,
+     flow: MinecraftLoginFlow,
+     exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
++) -> crate::Result<Credentials> {
++    let oauth_token = oauth_token(code, &flow.verifier).await?;
++    login_with_oauth_token(Some(&flow.session_id), oauth_token, exec).await
++}
++
++/// Checks on a sign-in in the player's own browser: `None` until they have
++/// finished it there.
++#[tracing::instrument(skip(device_code))]
++pub async fn login_device_poll(
++    device_code: &str,
++    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
++) -> crate::Result<Option<Credentials>> {
++    match oauth_device_token(device_code).await? {
++        Some(oauth_token) => login_with_oauth_token(None, oauth_token, exec)
++            .await
++            .map(Some),
++        None => Ok(None),
++    }
++}
++
++/// Turns a Microsoft token into a Minecraft account and saves it.
++async fn login_with_oauth_token(
++    session_id: Option<&str>,
++    oauth_token: RequestWithDate<OAuthToken>,
++    exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
+ ) -> crate::Result<Credentials> {
+     let (pair, _) =
+         DeviceTokenPair::refresh_and_get_device_token(Utc::now(), exec).await?;
+ 
+-    let oauth_token = oauth_token(code, &flow.verifier).await?;
+     let sisu_authorize = sisu_authorize(
+-        Some(&flow.session_id),
++        session_id,
+         &oauth_token.value.access_token,
+         &pair.token.token,
+         &pair.key,
+@@ -1273,6 +1308,112 @@ async fn oauth_token(
+     })
+ }
+ 
++/// Starts a sign-in on Microsoft's device code page.
++#[tracing::instrument]
++pub async fn login_device_begin() -> crate::Result<MinecraftDeviceCode> {
++    let mut query = HashMap::new();
++    query.insert("client_id", MICROSOFT_CLIENT_ID);
++    query.insert("scope", REQUESTED_SCOPE);
++    query.insert("response_type", "device_code");
++
++    let res = auth_retry(|| {
++        INSECURE_REQWEST_CLIENT
++            .post("https://login.live.com/oauth20_connect.srf")
++            .header("Accept", "application/json")
++            .form(&query)
++            .send()
++    })
++    .await
++    .map_err(|source| MinecraftAuthenticationError::Request {
++        source,
++        step: MinecraftAuthStep::GetDeviceCode,
++    })?;
++
++    let status = res.status();
++    let text = res.text().await.map_err(|source| {
++        MinecraftAuthenticationError::Request {
++            source,
++            step: MinecraftAuthStep::GetDeviceCode,
++        }
++    })?;
++
++    let body = serde_json::from_str(&text).map_err(|source| {
++        MinecraftAuthenticationError::DeserializeResponse {
++            source,
++            raw: text,
++            step: MinecraftAuthStep::GetDeviceCode,
++            status_code: status,
++        }
++    })?;
++
++    Ok(body)
++}
++
++/// The token for a device code sign-in, or `None` while the player is still
++/// signing in.
++#[tracing::instrument(skip(device_code))]
++async fn oauth_device_token(
++    device_code: &str,
++) -> crate::Result<Option<RequestWithDate<OAuthToken>>> {
++    let mut query = HashMap::new();
++    query.insert("client_id", MICROSOFT_CLIENT_ID);
++    query.insert("device_code", device_code);
++    query.insert("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
++
++    // Not retried: it is asked again every few seconds anyway.
++    let res = INSECURE_REQWEST_CLIENT
++        .post("https://login.live.com/oauth20_token.srf")
++        .header("Accept", "application/json")
++        .form(&query)
++        .send()
++        .await
++        .map_err(|source| MinecraftAuthenticationError::Request {
++            source,
++            step: MinecraftAuthStep::GetOAuthToken,
++        })?;
++
++    let status = res.status();
++    let current_date = get_date_header(res.headers());
++    let text = res.text().await.map_err(|source| {
++        MinecraftAuthenticationError::Request {
++            source,
++            step: MinecraftAuthStep::GetOAuthToken,
++        }
++    })?;
++
++    if !status.is_success()
++        && let Ok(response) = serde_json::from_str::<OAuthErrorResponse>(&text)
++    {
++        let message = match response.error.as_str() {
++            "authorization_pending" | "slow_down" => return Ok(None),
++            "expired_token" => {
++                "The sign-in took too long. Open the browser again to start over."
++            }
++            "authorization_declined" | "access_denied" => {
++                "The sign-in was cancelled in the browser."
++            }
++            _ => "",
++        };
++        if !message.is_empty() {
++            return Err(ErrorKind::OtherError(message.to_string()).into());
++        }
++    }
++
++    let body = serde_json::from_str(&text).map_err(|source| {
++        MinecraftAuthenticationError::DeserializeResponse {
++            source,
++            raw: text,
++            step: MinecraftAuthStep::GetOAuthToken,
++            status_code: status,
++        }
++    })?;
++
++    Ok(Some(RequestWithDate {
++        date: current_date,
++        value: body,
++    }))
++}
++
+ #[tracing::instrument]
+ async fn oauth_refresh(
+     refresh_token: &str,

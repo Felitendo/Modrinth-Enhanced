@@ -844,7 +844,7 @@ index 8240b8b..bcd79ec 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 8562a68..297f383 100644
+index 919c91a..1e44522 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -1416,7 +1416,7 @@ index 0000000..574183b
 +    Ok(bytes.to_vec())
 +}
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 743d5e7..ade3ca8 100644
+index ba6c342..a175675 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
 @@ -1,5 +1,6 @@
@@ -1427,10 +1427,10 @@ index 743d5e7..ade3ca8 100644
  pub mod handler;
  pub mod instance;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 25c6dfb..ab85457 100644
+index 4c87e82..904d1d8 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -957,12 +957,14 @@ impl Serialize for Credentials {
+@@ -992,12 +992,14 @@ impl Serialize for Credentials {
                  ),
          };
  

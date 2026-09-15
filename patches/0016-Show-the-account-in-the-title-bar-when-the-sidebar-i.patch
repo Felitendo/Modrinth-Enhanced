@@ -1,0 +1,268 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 15:14:28 +0200
+Subject: [PATCH] Show the account in the title bar when the sidebar is folded
+
+The Minecraft account lives in the right sidebar, so folding the sidebar
+away took with it any way to see which account is selected or to switch
+to another. While the sidebar is folded, the account now sits in the
+title bar next to the window buttons: its head and name, opening a menu
+to switch accounts, add one or remove one.
+
+The menu stands in for the sidebar's account card rather than being a
+second one. That card stays mounted while the sidebar is hidden, so the
+selection, the avatar and the sign-in dialogs are the card's own and
+stay in step with it, and a dialog opened from the menu outlives the
+menu closing.
+---
+ apps/app-frontend/src/App.vue                 |   8 +
+ .../src/components/ui/AccountsCard.vue        |  32 ++--
+ .../components/ui/TitleBarAccountSwitcher.vue | 163 ++++++++++++++++++
+ 3 files changed, 191 insertions(+), 12 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 0ffddff..5cbe7d8 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -79,6 +79,7 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from
+ import { RouterView, useRoute, useRouter } from 'vue-router'
+ 
+ import AccountsCard from '@/components/ui/AccountsCard.vue'
++import TitleBarAccountSwitcher from '@/components/ui/TitleBarAccountSwitcher.vue'
+ import AppActionBar from '@/components/ui/AppActionBar.vue'
+ import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
+ import ErrorModal from '@/components/ui/ErrorModal.vue'
+@@ -2509,6 +2510,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 						<AppActionBar />
+ 					</Suspense>
+ 				</div>
++				<!--
++					The account lives in the right sidebar. While that is folded away, it
++					is here instead, next to the window buttons, so it can still be seen
++					and switched.
++				-->
++				<!-- Flush against the window buttons, so no draggable gap is left between them. -->
++				<TitleBarAccountSwitcher v-if="!sidebarVisible" :card="accounts" />
+ 				<WindowControls />
+ 			</section>
+ 		</div>
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index 224d776..632483e 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -226,18 +226,6 @@ function showElyAccountModal(event?: MouseEvent) {
+ 	elyAccountModal.value?.show(event)
+ }
+ 
+-defineExpose({
+-	refreshValues,
+-	showOfflineAccountModal,
+-	showElyAccountModal,
+-	setEquippedSkin,
+-	setLoginDisabled,
+-	login,
+-	loginDisabled,
+-})
+-
+-await refreshValues()
+-
+ const selectedAccount = computed(() =>
+ 	accounts.value.find((account) => account.profile.id === defaultUser.value),
+ )
+@@ -256,6 +244,26 @@ const avatarUrl = computed(() => {
+ 	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
+ })
+ 
++defineExpose({
++	refreshValues,
++	showOfflineAccountModal,
++	showElyAccountModal,
++	setEquippedSkin,
++	setLoginDisabled,
++	login,
++	loginDisabled,
++	// For the title bar's account switcher, which stands in for this card while
++	// the sidebar is folded away.
++	accounts,
++	selectedAccount,
++	avatarUrl,
++	getAccountAvatarUrl,
++	setAccount,
++	logout,
++})
++
++await refreshValues()
++
+ function getAccountAvatarUrl(account: MinecraftCredential) {
+ 	if (
+ 		account.profile.id === selectedAccount.value?.profile?.id &&
+diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+new file mode 100644
+index 0000000..70ab9e9
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+@@ -0,0 +1,163 @@
++<!--
++	The Minecraft account, in the title bar while the right sidebar is folded away:
++	shown, switched, added and removed.
++
++	The sidebar's account card does the work: it stays mounted while the sidebar is
++	hidden, so the account shown here, switching it and the sign-in dialogs are that
++	card's own, and a dialog opened from here outlives this menu closing.
++-->
++<template>
++	<TeleportPopoutMenu
++		v-if="card"
++		type="quiet"
++		:label="formatMessage(messages.switchAccount)"
++		:tooltip="formatMessage(messages.switchAccount)"
++		placement="bottom-end"
++	>
++		<template #trigger>
++			<Avatar size="24px" :src="card.avatarUrl" />
++			<span class="max-w-40 truncate">
++				{{ card.selectedAccount?.profile.name ?? formatMessage(messages.selectAccount) }}
++			</span>
++			<DropdownIcon class="size-4 text-secondary" />
++		</template>
++		<template #panel="{ close }">
++			<div class="flex w-64 flex-col gap-1 p-2">
++				<div
++					v-for="account in card.accounts"
++					:key="account.profile.id"
++					class="flex min-w-0 items-center gap-1"
++				>
++					<button
++						class="button-base flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent p-2 text-left"
++						@click="choose(account, close)"
++					>
++						<RadioButtonCheckedIcon v-if="isSelected(account)" class="size-5 shrink-0 text-brand" />
++						<RadioButtonIcon v-else class="size-5 shrink-0 text-secondary" />
++						<Avatar :src="card.getAccountAvatarUrl(account)" size="24px" />
++						<span
++							class="min-w-0 truncate"
++							:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
++						>
++							{{ account.profile.name }}
++						</span>
++					</button>
++					<!-- The menu stays open, so what is left is on show. -->
++					<IconButton
++						v-tooltip="formatMessage(messages.removeAccount)"
++						type="quiet"
++						color="red"
++						size="sm"
++						:label="formatMessage(messages.removeAccount)"
++						@click="card.logout(account.profile.id)"
++					>
++						<TrashIcon />
++					</IconButton>
++				</div>
++				<div v-if="card.accounts.length" class="my-1 h-px bg-surface-5" />
++				<Button
++					type="quiet"
++					class="!justify-start"
++					:disabled="card.loginDisabled"
++					@click="(event: MouseEvent) => add(close, () => card?.login(event))"
++				>
++					<PlusIcon />
++					{{ formatMessage(messages.addAccount) }}
++				</Button>
++				<Button
++					type="quiet"
++					class="!justify-start"
++					@click="(event: MouseEvent) => add(close, () => card?.showElyAccountModal(event))"
++				>
++					<KeyIcon />
++					{{ formatMessage(messages.addElyAccount) }}
++				</Button>
++				<Button
++					type="quiet"
++					class="!justify-start"
++					@click="(event: MouseEvent) => add(close, () => card?.showOfflineAccountModal(event))"
++				>
++					<UserIcon />
++					{{ formatMessage(messages.addOfflineAccount) }}
++				</Button>
++			</div>
++		</template>
++	</TeleportPopoutMenu>
++</template>
++
++<script setup lang="ts">
++import {
++	DropdownIcon,
++	KeyIcon,
++	PlusIcon,
++	RadioButtonCheckedIcon,
++	RadioButtonIcon,
++	TrashIcon,
++	UserIcon,
++} from '@modrinth/assets'
++import {
++	Avatar,
++	Button,
++	defineMessages,
++	IconButton,
++	TeleportPopoutMenu,
++	useVIntl,
++} from '@modrinth/ui'
++import type { PropType } from 'vue'
++
++import type AccountsCard from '@/components/ui/AccountsCard.vue'
++
++type Card = InstanceType<typeof AccountsCard>
++type Account = Card['accounts'][number]
++
++const props = defineProps({
++	card: {
++		type: Object as PropType<Card | null>,
++		default: null,
++	},
++})
++
++const { formatMessage } = useVIntl()
++
++const messages = defineMessages({
++	switchAccount: {
++		id: 'minecraft-account.switch',
++		defaultMessage: 'Switch account',
++	},
++	selectAccount: {
++		id: 'minecraft-account.select-account',
++		defaultMessage: 'Select account',
++	},
++	addAccount: {
++		id: 'minecraft-account.add-microsoft-account',
++		defaultMessage: 'Add Microsoft account',
++	},
++	addElyAccount: {
++		id: 'minecraft-account.add-ely-account',
++		defaultMessage: 'Add Ely.by account',
++	},
++	addOfflineAccount: {
++		id: 'minecraft-account.add-offline-account',
++		defaultMessage: 'Add offline account',
++	},
++	removeAccount: {
++		id: 'minecraft-account.remove-account',
++		defaultMessage: 'Remove account',
++	},
++})
++
++function isSelected(account: Account) {
++	return props.card?.selectedAccount?.profile.id === account.profile.id
++}
++
++async function choose(account: Account, close: () => void) {
++	close()
++	if (!isSelected(account)) await props.card?.setAccount(account)
++}
++
++/** Closes the menu first: the dialog belongs to the sidebar's card, not to it. */
++function add(close: () => void, open: () => void) {
++	close()
++	open()
++}
++</script>
