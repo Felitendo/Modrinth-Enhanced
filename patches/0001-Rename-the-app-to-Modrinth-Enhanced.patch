@@ -36,7 +36,7 @@ index 50867a4..6367788 100644
  		<link rel="stylesheet" href="/src/assets/stylesheets/global.scss" />
  	</head>
 diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-index dd55fe5..0f33d0e 100644
+index 5f863d5..32a86a3 100644
 --- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
 +++ b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
 @@ -312,7 +312,7 @@ const messages = defineMessages({
@@ -49,10 +49,10 @@ index dd55fe5..0f33d0e 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index cc65180..faab078 100644
+index e81abe7..ba08ca7 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -1548,7 +1548,7 @@
+@@ -1626,7 +1626,7 @@
      "message": "Oldest"
    },
    "app.settings.app-version": {

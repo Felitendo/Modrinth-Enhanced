@@ -402,7 +402,7 @@ index cb7319a..57580ff 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index f8de273..1fdb8e1 100644
+index 68a02aa..0f62dd8 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {
@@ -487,10 +487,10 @@ index a7fac4a..2d18da3 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index b482547..660f63b 100644
+index 7910694..e623cab 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1056,6 +1056,22 @@ pub async fn launch_minecraft(
+@@ -1059,6 +1059,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -842,12 +842,12 @@ index 0000000..dc099f9
 +    Ok(jar)
 +}
 diff --git a/packages/app-lib/src/util/mod.rs b/packages/app-lib/src/util/mod.rs
-index 7656b4a..d0e4d5d 100644
+index 1962d6c..395d7f1 100644
 --- a/packages/app-lib/src/util/mod.rs
 +++ b/packages/app-lib/src/util/mod.rs
 @@ -1,4 +1,5 @@
  //! Theseus utility functions
 +pub mod authlib_injector;
+ pub(crate) mod content_hash;
  pub mod fetch;
  pub mod io;
- pub mod jre;

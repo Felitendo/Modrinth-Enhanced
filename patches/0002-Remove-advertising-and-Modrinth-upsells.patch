@@ -27,7 +27,7 @@ ads and these prompts were shown, and nothing more.
  2 files changed, 29 insertions(+), 91 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index a2ae0e6..6e7b27d 100644
+index 5faea7c..447f636 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -9,7 +9,6 @@ import {

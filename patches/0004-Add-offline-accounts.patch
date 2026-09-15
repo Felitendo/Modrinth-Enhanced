@@ -51,10 +51,10 @@ which offered Microsoft and nothing else:
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index d40a959..95bc842 100644
+index bdc7307..9006b00 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -11384,6 +11384,7 @@ dependencies = [
+@@ -11534,6 +11534,7 @@ dependencies = [
   "indicatif",
   "itertools 0.14.0",
   "json5",
@@ -63,7 +63,7 @@ index d40a959..95bc842 100644
   "notify",
   "notify-debouncer-mini",
 diff --git a/Cargo.toml b/Cargo.toml
-index a4a779c..a85f576 100644
+index b8b227e..8348c8d 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
 @@ -132,6 +132,7 @@ lz4_flex = { version = "0.11.5", default-features = false, features = [
@@ -75,7 +75,7 @@ index a4a779c..a85f576 100644
  modrinth-log = { path = "packages/modrinth-log" }
  modrinth-util = { path = "packages/modrinth-util" }
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 6e7b27d..e5c6fd4 100644
+index 447f636..d750a5f 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -2467,15 +2467,17 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
@@ -439,7 +439,7 @@ index 94bd13e..cb7319a 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index c4becf9..f8de273 100644
+index 926cab4..68a02aa 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,7 @@ fn main() {
@@ -476,10 +476,10 @@ index 8227d94..f4eded6 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
-index 69545c2..7da46c9 100644
+index 15a1dc9..4fe7643 100644
 --- a/packages/app-lib/Cargo.toml
 +++ b/packages/app-lib/Cargo.toml
-@@ -48,6 +48,7 @@ image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
+@@ -52,6 +52,7 @@ image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
  indicatif = { workspace = true, optional = true }
  itertools = { workspace = true }
  json5 = { workspace = true }

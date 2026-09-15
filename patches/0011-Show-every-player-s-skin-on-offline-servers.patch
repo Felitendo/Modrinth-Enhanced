@@ -37,9 +37,10 @@ The agent code comes from Noctrinth (https://github.com/Everelsu/Noctrinth).
  .../SessionServiceTransformer.java            | 258 +++++++
  packages/app-lib/src/launcher/args.rs         |  35 +-
  packages/app-lib/src/launcher/mod.rs          |  23 +
- packages/app-lib/src/state/dirs.rs            |   9 +
+ packages/app-lib/src/state/dirs.rs            |   8 +
+ .../src/state/dirs/move_app_directory.rs      |   3 +-
  packages/app-lib/src/state/settings.rs        |   1 +
- 19 files changed, 2253 insertions(+), 1 deletion(-)
+ 20 files changed, 2254 insertions(+), 2 deletions(-)
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
@@ -213,10 +214,10 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index bedd28f..cc3611c 100644
+index 297f383..02c30c0 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -393,6 +393,7 @@ fn main() {
+@@ -399,6 +399,7 @@ fn main() {
                          "open_path",
                          "show_launcher_logs_folder",
                          "show_app_db_backups_folder",
@@ -2492,10 +2493,10 @@ index a482f66..76bedc7 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 660f63b..b6055bb 100644
+index e623cab..e352716 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1015,6 +1015,28 @@ pub async fn launch_minecraft(
+@@ -1018,6 +1018,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2524,7 +2525,7 @@ index 660f63b..b6055bb 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1041,6 +1063,7 @@ pub async fn launch_minecraft(
+@@ -1044,6 +1066,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),
@@ -2533,18 +2534,18 @@ index 660f63b..b6055bb 100644
          .into_iter(),
      );
 diff --git a/packages/app-lib/src/state/dirs.rs b/packages/app-lib/src/state/dirs.rs
-index f3416bb..d1a5246 100644
+index b4fb7e2..fe37974 100644
 --- a/packages/app-lib/src/state/dirs.rs
 +++ b/packages/app-lib/src/state/dirs.rs
-@@ -14,6 +14,7 @@ pub const LAUNCHER_LOGS_FOLDER_NAME: &str = "launcher_logs";
- pub const INSTANCES_FOLDER_NAME: &str = "profiles";
+@@ -14,6 +14,7 @@ pub const INSTANCES_FOLDER_NAME: &str = "profiles";
  pub const METADATA_FOLDER_NAME: &str = "meta";
  pub const SYNCED_OPTIONS_FOLDER_NAME: &str = "synced-options";
+ pub const STORE_FOLDER_NAME: &str = "store";
 +pub const PLAYER_SKINS_FOLDER_NAME: &str = "player_skins";
  
- #[derive(Debug)]
+ #[derive(Clone, Debug)]
  pub struct DirectoryInfo {
-@@ -160,6 +161,13 @@ impl DirectoryInfo {
+@@ -176,6 +177,13 @@ impl DirectoryInfo {
          self.config_dir.join(SYNCED_OPTIONS_FOLDER_NAME)
      }
  
@@ -2558,14 +2559,26 @@ index f3416bb..d1a5246 100644
      /// Gets the logs dir for a given instance path
      #[inline]
      pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
-@@ -276,6 +284,7 @@ impl DirectoryInfo {
-                     INSTANCES_FOLDER_NAME,
-                     METADATA_FOLDER_NAME,
-                     SYNCED_OPTIONS_FOLDER_NAME,
-+                    PLAYER_SKINS_FOLDER_NAME,
-                 ];
+diff --git a/packages/app-lib/src/state/dirs/move_app_directory.rs b/packages/app-lib/src/state/dirs/move_app_directory.rs
+index 7418675..a25a7fd 100644
+--- a/packages/app-lib/src/state/dirs/move_app_directory.rs
++++ b/packages/app-lib/src/state/dirs/move_app_directory.rs
+@@ -11,13 +11,14 @@ use sqlx::SqlitePool;
+ use std::path::{Path, PathBuf};
+ use tokio::fs;
  
-                 struct MovePath {
+-const MOVED_APP_DIRECTORIES: [&str; 6] = [
++const MOVED_APP_DIRECTORIES: [&str; 7] = [
+     "store",
+     "profiles",
+     "meta",
+     "caches",
+     "icons",
+     "synced-options",
++    "player_skins",
+ ];
+ pub(crate) async fn relocate_tree(from: &Path, to: &Path) -> crate::Result<()> {
+     if !fs::try_exists(from).await? {
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
 index 2fd0d87..673dfaa 100644
 --- a/packages/app-lib/src/state/settings.rs

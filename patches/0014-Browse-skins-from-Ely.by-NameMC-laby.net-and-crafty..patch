@@ -976,7 +976,7 @@ index bcd79ec..9a10f0e 100644
  	</div>
  
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index fe38f0d..145ec31 100644
+index 4553d48..90e22ef 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,19 @@ fn main() {
@@ -1000,10 +1000,10 @@ index fe38f0d..145ec31 100644
                  "crash-analysis",
                  InlinedPlugin::new()
 diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
-index dbc3220..d22b900 100644
+index 0a1560d..c44fb00 100644
 --- a/apps/app/capabilities/plugins.json
 +++ b/apps/app/capabilities/plugins.json
-@@ -113,6 +113,7 @@
+@@ -106,6 +106,7 @@
  		"friends:default",
  		"worlds:default",
  		"ely-skins:default",
@@ -1153,10 +1153,10 @@ index 0000000..cfd0d8c
 +        .into()
 +}
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index c404189..57a68e6 100644
+index 8429e4c..04eedbd 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -250,6 +250,7 @@ fn main() {
+@@ -252,6 +252,7 @@ fn main() {
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())
          .plugin(api::crash_analysis::init())

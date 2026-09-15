@@ -302,10 +302,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index faab078..233cac2 100644
+index ba08ca7..28d0366 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2667,7 +2667,7 @@
+@@ -2745,7 +2745,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {
@@ -335,7 +335,7 @@ index e69e6b7..e5bbabe 100644
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 25626c1..d638128 100644
+index 415af27..4e46190 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -4,13 +4,10 @@ use crate::state::{
@@ -352,7 +352,7 @@ index 25626c1..d638128 100644
  
  #[derive(Debug, Clone)]
  pub enum QuickPlayType {
-@@ -232,54 +229,10 @@ async fn run_credentials(
+@@ -242,54 +239,10 @@ async fn run_credentials(
          mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
      }
  
@@ -411,7 +411,7 @@ index 25626c1..d638128 100644
  
      crate::minecraft_skins::flush_pending_skin_change().await?;
      crate::launcher::launch_minecraft(
-@@ -297,21 +250,6 @@ async fn run_credentials(
+@@ -307,21 +260,6 @@ async fn run_credentials(
      .await
  }
  
@@ -433,7 +433,7 @@ index 25626c1..d638128 100644
  pub async fn kill(instance_id: &str) -> crate::Result<()> {
      let state = State::get().await?;
      let processes =
-@@ -373,13 +311,12 @@ pub async fn try_update_playtime_by_instance_id(
+@@ -383,13 +321,12 @@ pub async fn try_update_playtime_by_instance_id(
              }
          }
  

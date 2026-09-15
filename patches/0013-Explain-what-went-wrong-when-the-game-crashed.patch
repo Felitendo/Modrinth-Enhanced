@@ -880,7 +880,7 @@ index e2a59fd..4fcddea 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 382ce22..fe38f0d 100644
+index fc78fe1..4553d48 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {
@@ -902,10 +902,10 @@ index 382ce22..fe38f0d 100644
                  "cache",
                  InlinedPlugin::new()
 diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
-index 15efb0c..dbc3220 100644
+index 1492b97..0a1560d 100644
 --- a/apps/app/capabilities/plugins.json
 +++ b/apps/app/capabilities/plugins.json
-@@ -112,6 +112,7 @@
+@@ -105,6 +105,7 @@
  		"ads:default",
  		"friends:default",
  		"worlds:default",
@@ -970,10 +970,10 @@ index 15a5c1e..565a39f 100644
  pub mod import;
  pub mod install;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 098daa6..c404189 100644
+index 5e582b5..8429e4c 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -249,6 +249,7 @@ fn main() {
+@@ -251,6 +251,7 @@ fn main() {
      builder = builder
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())

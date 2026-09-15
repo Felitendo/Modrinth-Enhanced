@@ -206,7 +206,7 @@ index 977bf82..c390c4c 100644
 + */
 +process_uuid: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-index 66144c0..42f013a 100644
+index e763358..149f9ef 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 @@ -50,7 +50,7 @@ export type FriendPayload = { tag: "friend_request", value: { from: string } } |
@@ -219,7 +219,7 @@ index 66144c0..42f013a 100644
  export type Log4jEvent = { timestamp_millis: i64 | undefined, logger_name: string | undefined, level: string | undefined, thread_name: string | undefined, message: string | undefined, throwable: string | undefined }
  export type ModLoader = { tag: "vanilla" } | { tag: "forge" } | { tag: "fabric" } | { tag: "quilt" } | { tag: "neoforge" }
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.js b/apps/app-frontend/src/generated/app-events/postcard/index.js
-index c8816ff..cd56865 100644
+index 2407d7d..1b343a0 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.js
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.js
 @@ -475,6 +475,7 @@ function deserialize_LOG_EVENT(d) {
@@ -440,7 +440,7 @@ index 638386d..3cccc8a 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index cc3611c..382ce22 100644
+index 02c30c0..fc78fe1 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,7 +110,9 @@ fn main() {
@@ -520,10 +520,10 @@ index e938efa..5150b00 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index 0efd145..c5cfed2 100644
+index 8a0040f..46cc47a 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
-@@ -53,7 +53,8 @@ pub use self::projects::{
+@@ -59,7 +59,8 @@ pub use self::projects::{
      update_managed_modrinth_version, update_project,
  };
  pub use self::run::{
@@ -534,7 +534,7 @@ index 0efd145..c5cfed2 100644
  pub use self::screenshot_groups::{
      ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index d638128..0394da0 100644
+index 4e46190..1d01c06 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -20,6 +20,25 @@ pub enum QuickPlayType {
@@ -563,7 +563,7 @@ index d638128..0394da0 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
-@@ -43,7 +62,8 @@ pub async fn run(
+@@ -53,7 +72,8 @@ pub async fn run(
          .await?
          .ok_or_else(|| crate::ErrorKind::NoCredentialsError.as_error())?;
  
@@ -573,7 +573,7 @@ index d638128..0394da0 100644
  }
  
  #[tracing::instrument(skip(credentials))]
-@@ -51,6 +71,7 @@ async fn run_credentials(
+@@ -61,6 +81,7 @@ async fn run_credentials(
      instance_id: &str,
      credentials: &Credentials,
      quick_play_type: QuickPlayType,
@@ -581,7 +581,7 @@ index d638128..0394da0 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      let settings = Settings::get(&state.pool).await?;
-@@ -246,6 +267,7 @@ async fn run_credentials(
+@@ -256,6 +277,7 @@ async fn run_credentials(
          post_exit_hook,
          &context,
          quick_play_type,
@@ -636,10 +636,10 @@ index 4ce0c57..3382b5b 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
-index 059bfbf..a83f732 100644
+index 833349d..84b9a87 100644
 --- a/packages/app-lib/src/event/mod.rs
 +++ b/packages/app-lib/src/event/mod.rs
-@@ -558,6 +558,8 @@ mod log_types {
+@@ -559,6 +559,8 @@ mod log_types {
      #[serde_binhum::serde_binhum]
      pub struct LogPayload {
          pub instance_id: String,
@@ -649,10 +649,10 @@ index 059bfbf..a83f732 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index b6055bb..55e1664 100644
+index e352716..6e7de28 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -823,6 +823,9 @@ pub async fn launch_minecraft(
+@@ -825,6 +825,9 @@ pub async fn launch_minecraft(
      post_exit_hook: Option<String>,
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
@@ -662,7 +662,7 @@ index b6055bb..55e1664 100644
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -951,21 +954,27 @@ pub async fn launch_minecraft(
+@@ -954,21 +957,27 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
@@ -705,7 +705,7 @@ index b6055bb..55e1664 100644
      }
  
      let natives_dir = state.directories.version_natives_dir(&version_jar);
-@@ -1203,6 +1212,8 @@ pub async fn launch_minecraft(
+@@ -1212,6 +1221,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,

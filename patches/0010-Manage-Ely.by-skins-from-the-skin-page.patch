@@ -844,7 +844,7 @@ index 8240b8b..bcd79ec 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 5c797ab..bedd28f 100644
+index 8562a68..297f383 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -872,10 +872,10 @@ index 5c797ab..bedd28f 100644
                  "cache",
                  InlinedPlugin::new()
 diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
-index 65d1441..15efb0c 100644
+index b08053e..1492b97 100644
 --- a/apps/app/capabilities/plugins.json
 +++ b/apps/app/capabilities/plugins.json
-@@ -111,6 +111,7 @@
+@@ -104,6 +104,7 @@
  		"utils:default",
  		"ads:default",
  		"friends:default",
@@ -1271,10 +1271,10 @@ index 693bc86..15a5c1e 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index f702b95..098daa6 100644
+index 352b181..5e582b5 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -248,6 +248,7 @@ fn main() {
+@@ -250,6 +250,7 @@ fn main() {
  
      builder = builder
          .plugin(api::auth::init())
