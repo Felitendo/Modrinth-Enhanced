@@ -1,0 +1,999 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 09:26:27 +0200
+Subject: [PATCH] Launch a running instance again on another account
+
+An instance that is running can be started once more from the button
+beside Stop on its page. The new copy runs as whichever account is
+selected now, so switching accounts first is how one instance is played
+on two accounts at once. A plain launch still refuses a running instance,
+so a double-clicked play button stays one game.
+
+The live log was kept per instance, so two copies would have written
+into one buffer. It is kept per process now, log events carry the
+process they came from, and while more than one copy runs the Logs tab
+shows a console for each, named after its account. The instance's log
+file is shared: another copy appends to it under a header naming its
+account instead of wiping what the first is still writing.
+
+The app event bindings are regenerated for the new log event field.
+
+Adapted from Noctrinth (https://github.com/Everelsu/Noctrinth).
+---
+ .../src/components/ui/ProcessConsole.vue      |  92 +++++++++++++
+ .../src/composables/useInstanceConsole.ts     |  33 ++++-
+ .../src/generated/app-events/LogPayload.ts    |   6 +-
+ .../generated/app-events/postcard/index.d.ts  |   2 +-
+ .../generated/app-events/postcard/index.js    |   1 +
+ apps/app-frontend/src/helpers/instance.ts     |   4 +-
+ apps/app-frontend/src/helpers/logs.js         |  10 ++
+ .../instance/components/page-header/index.vue |  18 +++
+ .../src/pages/instance/layout.vue             |  25 ++++
+ .../src/pages/instance/logs/index.vue         |  30 ++++-
+ .../src/providers/setup/app-event-codec.ts    |   2 +-
+ apps/app/build.rs                             |   2 +
+ apps/app/src/api/instance.rs                  |   9 +-
+ apps/app/src/api/logs.rs                      |  19 +++
+ packages/app-lib/src/api/instance.rs          |   3 +-
+ packages/app-lib/src/api/instance/run.rs      |  24 +++-
+ packages/app-lib/src/api/logs.rs              |  23 +++-
+ packages/app-lib/src/event/mod.rs             |   2 +
+ packages/app-lib/src/launcher/mod.rs          |  41 +++---
+ packages/app-lib/src/state/process.rs         | 123 ++++++++++++++----
+ 20 files changed, 418 insertions(+), 51 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/ProcessConsole.vue
+
+diff --git a/apps/app-frontend/src/components/ui/ProcessConsole.vue b/apps/app-frontend/src/components/ui/ProcessConsole.vue
+new file mode 100644
+index 0000000..b5102eb
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/ProcessConsole.vue
+@@ -0,0 +1,92 @@
++<!--
++	The live console of one copy of an instance, for when it runs more than once.
++	It provides a console manager of its own, so several can sit side by side.
++-->
++<template>
++	<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
++		<div class="flex items-center gap-2 text-sm">
++			<OnlineIndicatorIcon />
++			<span class="text-contrast">
++				{{ process.account_name || formatMessage(messages.unknownAccount) }}
++			</span>
++			<span v-if="startedAt" class="text-secondary">
++				{{ formatMessage(messages.startedAt, { time: startedAt }) }}
++			</span>
++		</div>
++		<ConsolePageLayout />
++	</div>
++</template>
++
++<script setup lang="ts">
++import { OnlineIndicatorIcon } from '@modrinth/assets'
++import { ConsolePageLayout, defineMessages, provideConsoleManager, useVIntl } from '@modrinth/ui'
++import { computed, onMounted, ref, shallowRef, triggerRef, watch } from 'vue'
++
++import { useAppEvent } from '@/composables/use-app-event'
++import { useProcessConsole } from '@/composables/useInstanceConsole'
++
++const props = defineProps<{
++	process: { uuid: string; account_name?: string; start_time?: string }
++}>()
++
++const { formatMessage } = useVIntl()
++
++const messages = defineMessages({
++	startedAt: {
++		id: 'instance.console.copy-started-at',
++		defaultMessage: 'started {time}',
++	},
++	unknownAccount: {
++		id: 'instance.console.copy-unknown-account',
++		defaultMessage: 'Unknown account',
++	},
++})
++
++const { console: liveConsole, hydrate, clear } = useProcessConsole(props.process.uuid)
++
++const startedAt = computed(() => {
++	if (!props.process.start_time) return ''
++	const started = new Date(props.process.start_time)
++	return Number.isNaN(started.getTime()) ? '' : started.toLocaleTimeString()
++})
++
++const loading = ref(true)
++const logLines = shallowRef(liveConsole.output.value)
++
++watch(
++	liveConsole.output,
++	(lines) => {
++		logLines.value = lines
++		triggerRef(logLines)
++	},
++	{ deep: true },
++)
++
++onMounted(async () => {
++	await hydrate().catch((error) => {
++		console.warn('Could not read what this copy has said so far:', error)
++	})
++	loading.value = false
++})
++
++// Every console hears every line; each keeps its own copy's.
++useAppEvent('log', (payload) => {
++	if (payload.process_uuid !== props.process.uuid) return
++
++	if (payload.type === 'log4j') {
++		liveConsole.addLog4jEvent(payload)
++	} else if (payload.type === 'legacy') {
++		liveConsole.addLegacyLog(payload.message)
++	}
++})
++
++provideConsoleManager({
++	logLines,
++	loading,
++	showCommandInput: false,
++	emptyStateType: 'instance',
++	onClear: () => {
++		void clear()
++	},
++})
++</script>
+diff --git a/apps/app-frontend/src/composables/useInstanceConsole.ts b/apps/app-frontend/src/composables/useInstanceConsole.ts
+index e7e30d4..c2b3277 100644
+--- a/apps/app-frontend/src/composables/useInstanceConsole.ts
++++ b/apps/app-frontend/src/composables/useInstanceConsole.ts
+@@ -1,6 +1,12 @@
+ import { createConsoleState } from '@modrinth/ui'
+ 
+-import { clear_log_buffer, get_live_log_buffer, get_logs } from '@/helpers/logs'
++import {
++	clear_log_buffer,
++	clear_log_buffer_for_process,
++	get_live_log_buffer,
++	get_live_log_buffer_for_process,
++	get_logs,
++} from '@/helpers/logs'
+ 
+ type ConsoleState = ReturnType<typeof createConsoleState>
+ 
+@@ -84,6 +90,31 @@ async function destroy(instanceId: string): Promise<void> {
+ 	await clear_log_buffer(instanceId).catch(() => {})
+ }
+ 
++/** Live consoles of single processes, for an instance running more than once. */
++const processConsoles = new Map<string, ConsoleState>()
++
++export function useProcessConsole(processUuid: string) {
++	let state = processConsoles.get(processUuid)
++	if (!state) {
++		state = createConsoleState()
++		processConsoles.set(processUuid, state)
++	}
++	const console = state
++
++	return {
++		console,
++		hydrate: async () => {
++			if (console.output.value.length > 0) return
++			const buffer = await get_live_log_buffer_for_process(processUuid)
++			if (buffer) console.addLegacyLog(buffer)
++		},
++		clear: async () => {
++			console.clear()
++			await clear_log_buffer_for_process(processUuid).catch(() => {})
++		},
++	}
++}
++
+ export function useInstanceConsole(instanceId: string) {
+ 	const entry = getOrCreate(instanceId)
+ 	return {
+diff --git a/apps/app-frontend/src/generated/app-events/LogPayload.ts b/apps/app-frontend/src/generated/app-events/LogPayload.ts
+index 977bf82..c390c4c 100644
+--- a/apps/app-frontend/src/generated/app-events/LogPayload.ts
++++ b/apps/app-frontend/src/generated/app-events/LogPayload.ts
+@@ -1,4 +1,8 @@
+ // This file was generated by [ts-rs](https://github.com/Aleph-Alpha/ts-rs). Do not edit this file manually.
+ import type { Log4jEvent } from "./Log4jEvent";
+ 
+-export type LogPayload = { instance_id: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
++export type LogPayload = { instance_id: string, 
++/**
++ * Which process said this: an instance can run more than once.
++ */
++process_uuid: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
+diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
+index 66144c0..42f013a 100644
+--- a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
++++ b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
+@@ -50,7 +50,7 @@ export type FriendPayload = { tag: "friend_request", value: { from: string } } |
+ export type FriendStatusPayload = { user_id: string, profile_name: string | undefined, last_update: string }
+ export type SharedInstanceUnavailableReason = { tag: "deleted" } | { tag: "access_revoked" } | { tag: "quarantined" }
+ export type LogEvent = { tag: "log4j", value: Log4jEvent } | { tag: "legacy", value: { message: string } }
+-export type LogPayload = { instance_id: string, event: LogEvent }
++export type LogPayload = { instance_id: string, process_uuid: string, event: LogEvent }
+ export type OnboardingChecklist = { has_created_instance: boolean, has_logged_into_minecraft: boolean, has_logged_into_modrinth: boolean, show_checklist: boolean }
+ export type Log4jEvent = { timestamp_millis: i64 | undefined, logger_name: string | undefined, level: string | undefined, thread_name: string | undefined, message: string | undefined, throwable: string | undefined }
+ export type ModLoader = { tag: "vanilla" } | { tag: "forge" } | { tag: "fabric" } | { tag: "quilt" } | { tag: "neoforge" }
+diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.js b/apps/app-frontend/src/generated/app-events/postcard/index.js
+index c8816ff..cd56865 100644
+--- a/apps/app-frontend/src/generated/app-events/postcard/index.js
++++ b/apps/app-frontend/src/generated/app-events/postcard/index.js
+@@ -475,6 +475,7 @@ function deserialize_LOG_EVENT(d) {
+ function deserialize_LOG_PAYLOAD(d) {
+     return {
+         instance_id: d.deserialize_string(),
++        process_uuid: d.deserialize_string(),
+         event: deserialize_LOG_EVENT(d)
+     };
+ }
+diff --git a/apps/app-frontend/src/helpers/instance.ts b/apps/app-frontend/src/helpers/instance.ts
+index a0c0b56..817a63c 100644
+--- a/apps/app-frontend/src/helpers/instance.ts
++++ b/apps/app-frontend/src/helpers/instance.ts
+@@ -601,11 +601,13 @@ export async function get_pack_export_candidates(
+ 
+ // Run Minecraft using an instance
+ // Returns PID of child
++// `additional` starts an instance that is already running once more.
+ export async function run(
+ 	instanceId: string,
+ 	serverAddress: string | null = null,
++	additional = false,
+ ): Promise<unknown> {
+-	return await invoke('plugin:instance|instance_run', { instanceId, serverAddress })
++	return await invoke('plugin:instance|instance_run', { instanceId, serverAddress, additional })
+ }
+ 
+ export async function kill(instanceId: string): Promise<void> {
+diff --git a/apps/app-frontend/src/helpers/logs.js b/apps/app-frontend/src/helpers/logs.js
+index 843e572..44d07d5 100644
+--- a/apps/app-frontend/src/helpers/logs.js
++++ b/apps/app-frontend/src/helpers/logs.js
+@@ -72,3 +72,13 @@ export async function get_live_log_buffer(instanceId) {
+ export async function clear_log_buffer(instanceId) {
+ 	return await invoke('plugin:logs|logs_clear_live_log_buffer', { instanceId })
+ }
++
++/// Get the buffered live log lines of one process
++export async function get_live_log_buffer_for_process(processUuid) {
++	return await invoke('plugin:logs|logs_get_live_log_buffer_for_process', { processUuid })
++}
++
++/// Clear the live log buffer of one process
++export async function clear_log_buffer_for_process(processUuid) {
++	return await invoke('plugin:logs|logs_clear_live_log_buffer_for_process', { processUuid })
++}
+diff --git a/apps/app-frontend/src/pages/instance/components/page-header/index.vue b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
+index ce4b436..31a6ded 100644
+--- a/apps/app-frontend/src/pages/instance/components/page-header/index.vue
++++ b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
+@@ -144,6 +144,19 @@
+ 					formatMessage(messages.starting)
+ 				}}</Button>
+ 
++				<!-- Beside Stop rather than instead of it. -->
++				<IconButton
++					v-if="playing && !isInstalling"
++					v-tooltip="formatMessage(messages.playAgain)"
++					size="xl"
++					:label="formatMessage(messages.playAgain)"
++					native-type="button"
++					:disabled="loading"
++					@click="emit('playAgain')"
++				>
++					<PlayIcon />
++				</IconButton>
++
+ 				<IconButton
+ 					v-tooltip="formatMessage(messages.instanceSettings)"
+ 					size="xl"
+@@ -256,6 +269,10 @@ const messages = defineMessages({
+ 		id: 'instance.action.stopping',
+ 		defaultMessage: 'Stopping...',
+ 	},
++	playAgain: {
++		id: 'instance.action.play-again',
++		defaultMessage: 'Launch another copy with the selected account',
++	},
+ 	sharedInstanceTooltip: {
+ 		id: 'instance.shared-instance.tooltip',
+ 		defaultMessage: "This instance's content is being managed by someone else.",
+@@ -302,6 +319,7 @@ const emit = defineEmits<{
+ 	repair: []
+ 	stop: []
+ 	play: []
++	playAgain: []
+ 	playServer: []
+ 	settings: []
+ 	openFolder: []
+diff --git a/apps/app-frontend/src/pages/instance/layout.vue b/apps/app-frontend/src/pages/instance/layout.vue
+index 7ec73ca..fcd5802 100644
+--- a/apps/app-frontend/src/pages/instance/layout.vue
++++ b/apps/app-frontend/src/pages/instance/layout.vue
+@@ -46,6 +46,7 @@
+ 				@repair="() => repairInstance()"
+ 				@stop="() => stopInstance('InstancePage')"
+ 				@play="() => startInstance('InstancePage')"
++				@play-again="() => launchAnotherCopy('InstancePage')"
+ 				@play-server="() => handlePlayServer()"
+ 				@settings="() => settingsModal?.show()"
+ 				@open-folder="() => instance && showInstanceInFolder(instance.id)"
+@@ -558,6 +559,30 @@ const launchInstance = async (context: string) => {
+ 	})
+ }
+ 
++/**
++ * Starts an instance that is already running once more, as the account selected
++ * now, which is how somebody plays one instance on two accounts.
++ */
++const launchAnotherCopy = async (context: string) => {
++	const currentInstance = instance.value
++	if (!currentInstance || currentInstance.quarantined || loading.value || !playing.value) return
++
++	loading.value = true
++	try {
++		await run(currentInstance.id, null, true)
++		await processesQuery.refetch()
++	} catch (err) {
++		handleSevereError(err, { instanceId: currentInstance.id })
++	}
++	loading.value = false
++
++	trackEvent('InstanceStart', {
++		loader: currentInstance.loader,
++		game_version: currentInstance.game_version,
++		source: context,
++	})
++}
++
+ async function handleSharedInstanceUnavailable(
+ 	reason: SharedInstanceUnavailableReason | null = null,
+ ) {
+diff --git a/apps/app-frontend/src/pages/instance/logs/index.vue b/apps/app-frontend/src/pages/instance/logs/index.vue
+index 2aacfe0..e2a59fd 100644
+--- a/apps/app-frontend/src/pages/instance/logs/index.vue
++++ b/apps/app-frontend/src/pages/instance/logs/index.vue
+@@ -1,6 +1,10 @@
+ <template>
+ 	<div class="flex flex-col gap-4 h-full">
+-		<ConsolePageLayout />
++		<!-- One console per copy while the instance is running more than once. -->
++		<div v-if="runningCopies.length > 1" class="flex min-h-0 flex-1 gap-4">
++			<ProcessConsole v-for="copy in runningCopies" :key="copy.uuid" :process="copy" />
++		</div>
++		<ConsolePageLayout v-else />
+ 	</div>
+ </template>
+ 
+@@ -14,12 +18,13 @@ import {
+ import { useQuery } from '@tanstack/vue-query'
+ import { computed, ref, shallowRef, triggerRef, watch, watchEffect } from 'vue'
+ 
++import ProcessConsole from '@/components/ui/ProcessConsole.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { useInstanceConsole } from '@/composables/useInstanceConsole'
+ import { delete_logs_by_filename, get_output_by_filename } from '@/helpers/logs.js'
+ 
+ import { injectInstancePage } from '../instance-context'
+-import { instanceKeys } from '../query-options'
++import { instanceKeys, instanceProcessesQueryOptions } from '../query-options'
+ 
+ const client = injectModrinthClient()
+ const { handleError } = injectNotificationManager()
+@@ -83,6 +88,20 @@ watch(historicalLogsQuery.error, (error) => {
+ 	if (error) handleError(error)
+ })
+ 
++// The running copies decide between one console and one per copy. Oldest
++// first, so the consoles keep their places.
++const processesQuery = useQuery(
++	computed(() => ({
++		...instanceProcessesQueryOptions(instanceId.value),
++		enabled: !!instanceId.value,
++	})),
++)
++const runningCopies = computed(() =>
++	[...(processesQuery.data.value ?? [])].sort((a, b) =>
++		String(a.start_time ?? '').localeCompare(String(b.start_time ?? '')),
++	),
++)
++
+ const selectedLogIndex = ref(0)
+ const isLive = computed(() => selectedLogIndex.value === 0)
+ 
+@@ -194,6 +213,11 @@ if (!instancePage.playing.value) {
+ useAppEvent('log', (payload) => {
+ 	if (payload.instance_id !== instanceId.value) return
+ 
++	// This console follows the newest copy, which is what its buffer holds, so it
++	// makes sense again once the other copies have stopped.
++	const newest = runningCopies.value[runningCopies.value.length - 1]
++	if (newest && payload.process_uuid !== newest.uuid) return
++
+ 	if (payload.type === 'log4j') {
+ 		liveConsole.addLog4jEvent(payload)
+ 	} else if (payload.type === 'legacy') {
+@@ -203,6 +227,8 @@ useAppEvent('log', (payload) => {
+ 
+ useAppEvent('process', async (e) => {
+ 	if (e.instance_id !== instanceId.value) return
++	// A copy starting or stopping adds or takes away a console.
++	void processesQuery.refetch()
+ 	if (e.event === 'launched') {
+ 		liveConsole.clear()
+ 		invalidate()
+diff --git a/apps/app-frontend/src/providers/setup/app-event-codec.ts b/apps/app-frontend/src/providers/setup/app-event-codec.ts
+index 638386d..3cccc8a 100644
+--- a/apps/app-frontend/src/providers/setup/app-event-codec.ts
++++ b/apps/app-frontend/src/providers/setup/app-event-codec.ts
+@@ -122,7 +122,7 @@ function normalizeLogPayload(value: unknown): WireObject {
+ 		event.timestamp_millis = number(event.timestamp_millis)
+ 	}
+ 
+-	return { instance_id: payload.instance_id, ...event }
++	return { instance_id: payload.instance_id, process_uuid: payload.process_uuid, ...event }
+ }
+ 
+ function normalizeInstallProgress(value: unknown): WireObject {
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index cc3611c..382ce22 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -110,7 +110,9 @@ fn main() {
+                         "logs_delete_logs_by_filename",
+                         "logs_get_latest_log_cursor",
+                         "logs_get_live_log_buffer",
++                        "logs_get_live_log_buffer_for_process",
+                         "logs_clear_live_log_buffer",
++                        "logs_clear_live_log_buffer_for_process",
+                     ])
+                     .default_permission(
+                         DefaultPermissionRule::AllowAllCommands,
+diff --git a/apps/app/src/api/instance.rs b/apps/app/src/api/instance.rs
+index 2861594..2a512dd 100644
+--- a/apps/app/src/api/instance.rs
++++ b/apps/app/src/api/instance.rs
+@@ -1324,12 +1324,19 @@ pub async fn instance_get_pack_export_candidates(
+ pub async fn instance_run(
+     instance_id: &str,
+     server_address: Option<String>,
++    additional: Option<bool>,
+ ) -> Result<ProcessMetadata> {
+     let quick_play = match server_address {
+         Some(addr) => QuickPlayType::Server(ServerAddress::Unresolved(addr)),
+         None => QuickPlayType::None,
+     };
+-    Ok(theseus::instance::run(instance_id, quick_play).await?)
++    // Another copy of a running instance has to be asked for, so that a
++    // double-clicked play button is still one game.
++    Ok(if additional.unwrap_or(false) {
++        theseus::instance::run_additional(instance_id, quick_play).await?
++    } else {
++        theseus::instance::run(instance_id, quick_play).await?
++    })
+ }
+ 
+ #[tauri::command]
+diff --git a/apps/app/src/api/logs.rs b/apps/app/src/api/logs.rs
+index e938efa..5150b00 100644
+--- a/apps/app/src/api/logs.rs
++++ b/apps/app/src/api/logs.rs
+@@ -22,7 +22,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+             logs_delete_logs_by_filename,
+             logs_get_latest_log_cursor,
+             logs_get_live_log_buffer,
++            logs_get_live_log_buffer_for_process,
+             logs_clear_live_log_buffer,
++            logs_clear_live_log_buffer_for_process,
+         ])
+         .build()
+ }
+@@ -91,9 +93,26 @@ pub async fn logs_get_live_log_buffer(
+     Ok(logs::get_live_log_buffer(instance_id).await?)
+ }
+ 
++/// Get the live log buffer of one process.
++#[tauri::command]
++pub async fn logs_get_live_log_buffer_for_process(
++    process_uuid: uuid::Uuid,
++) -> Result<CensoredString> {
++    Ok(logs::get_live_log_buffer_for_process(process_uuid).await?)
++}
++
+ /// Clear the live log buffer for an instance.
+ #[tauri::command]
+ pub async fn logs_clear_live_log_buffer(instance_id: &str) -> Result<()> {
+     logs::clear_live_log_buffer(instance_id);
+     Ok(())
+ }
++
++/// Clear the live log buffer of one process.
++#[tauri::command]
++pub async fn logs_clear_live_log_buffer_for_process(
++    process_uuid: uuid::Uuid,
++) -> Result<()> {
++    logs::clear_live_log_buffer_for_process(process_uuid);
++    Ok(())
++}
+diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
+index 0efd145..c5cfed2 100644
+--- a/packages/app-lib/src/api/instance.rs
++++ b/packages/app-lib/src/api/instance.rs
+@@ -53,7 +53,8 @@ pub use self::projects::{
+     update_managed_modrinth_version, update_project,
+ };
+ pub use self::run::{
+-    QuickPlayType, kill, run, try_update_playtime_by_instance_id,
++    QuickPlayType, kill, run, run_additional,
++    try_update_playtime_by_instance_id,
+ };
+ pub use self::screenshot_groups::{
+     ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
+diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
+index d638128..0394da0 100644
+--- a/packages/app-lib/src/api/instance/run.rs
++++ b/packages/app-lib/src/api/instance/run.rs
+@@ -20,6 +20,25 @@ pub enum QuickPlayType {
+ pub async fn run(
+     instance_id: &str,
+     quick_play_type: QuickPlayType,
++) -> crate::Result<ProcessMetadata> {
++    run_inner(instance_id, quick_play_type, false).await
++}
++
++/// Runs an instance that is already running once more, as whichever account is
++/// selected now. A normal run refuses that, so a double-clicked play button
++/// stays one game.
++#[tracing::instrument]
++pub async fn run_additional(
++    instance_id: &str,
++    quick_play_type: QuickPlayType,
++) -> crate::Result<ProcessMetadata> {
++    run_inner(instance_id, quick_play_type, true).await
++}
++
++async fn run_inner(
++    instance_id: &str,
++    quick_play_type: QuickPlayType,
++    additional: bool,
+ ) -> crate::Result<ProcessMetadata> {
+     let state = State::get().await?;
+     if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
+@@ -43,7 +62,8 @@ pub async fn run(
+         .await?
+         .ok_or_else(|| crate::ErrorKind::NoCredentialsError.as_error())?;
+ 
+-    run_credentials(instance_id, &default_account, quick_play_type).await
++    run_credentials(instance_id, &default_account, quick_play_type, additional)
++        .await
+ }
+ 
+ #[tracing::instrument(skip(credentials))]
+@@ -51,6 +71,7 @@ async fn run_credentials(
+     instance_id: &str,
+     credentials: &Credentials,
+     quick_play_type: QuickPlayType,
++    additional: bool,
+ ) -> crate::Result<ProcessMetadata> {
+     let state = State::get().await?;
+     let settings = Settings::get(&state.pool).await?;
+@@ -246,6 +267,7 @@ async fn run_credentials(
+         post_exit_hook,
+         &context,
+         quick_play_type,
++        additional,
+     )
+     .await
+ }
+diff --git a/packages/app-lib/src/api/logs.rs b/packages/app-lib/src/api/logs.rs
+index 4ce0c57..3382b5b 100644
+--- a/packages/app-lib/src/api/logs.rs
++++ b/packages/app-lib/src/api/logs.rs
+@@ -469,12 +469,27 @@ pub async fn delete_logs_by_filename(
+     Ok(())
+ }
+ 
++/// The live output of an instance's newest process.
+ #[tracing::instrument]
+ pub async fn get_live_log_buffer(
+     instance_id: &str,
++) -> crate::Result<CensoredString> {
++    censor_live_lines(crate::state::get_instance_log_buffer(instance_id)).await
++}
++
++/// The live output of one process, for showing each copy of an instance on
++/// its own.
++#[tracing::instrument]
++pub async fn get_live_log_buffer_for_process(
++    process_uuid: uuid::Uuid,
++) -> crate::Result<CensoredString> {
++    censor_live_lines(crate::state::get_log_buffer(process_uuid)).await
++}
++
++async fn censor_live_lines(
++    lines: Vec<String>,
+ ) -> crate::Result<CensoredString> {
+     let state = State::get().await?;
+-    let lines = crate::state::get_log_buffer(instance_id);
+     let joined = lines.join("\n");
+     let compacted = compact_duplicate_lines(&joined);
+ 
+@@ -488,7 +503,11 @@ pub async fn get_live_log_buffer(
+ }
+ 
+ pub fn clear_live_log_buffer(instance_id: &str) {
+-    crate::state::remove_log_buffer(instance_id);
++    crate::state::remove_instance_log_buffers(instance_id);
++}
++
++pub fn clear_live_log_buffer_for_process(process_uuid: uuid::Uuid) {
++    crate::state::remove_log_buffer(process_uuid);
+ }
+ 
+ #[tracing::instrument]
+diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
+index 059bfbf..a83f732 100644
+--- a/packages/app-lib/src/event/mod.rs
++++ b/packages/app-lib/src/event/mod.rs
+@@ -558,6 +558,8 @@ mod log_types {
+     #[serde_binhum::serde_binhum]
+     pub struct LogPayload {
+         pub instance_id: String,
++        /// Which process said this: an instance can run more than once.
++        pub process_uuid: String,
+         #[serde(flatten)]
+         #[cfg_attr(feature = "export-ts", ts(flatten))]
+         pub event: LogEvent,
+diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
+index b6055bb..55e1664 100644
+--- a/packages/app-lib/src/launcher/mod.rs
++++ b/packages/app-lib/src/launcher/mod.rs
+@@ -823,6 +823,9 @@ pub async fn launch_minecraft(
+     post_exit_hook: Option<String>,
+     context: &InstanceLaunchContext,
+     mut quick_play_type: QuickPlayType,
++    // Whether this is another copy of an instance that is already running,
++    // asked for on purpose.
++    additional: bool,
+ ) -> crate::Result<ProcessMetadata> {
+     let instance = &context.instance;
+     let content_set = &context.applied_content_set;
+@@ -951,21 +954,27 @@ pub async fn launch_minecraft(
+ 
+     let env_args = Vec::from(env_args);
+ 
+-    // Check if instance has a running process, and reject running the command if it does
+-    let existing_processes = process::get_by_instance_id(&instance.id).await?;
+-    if let Some(process) = existing_processes.first() {
+-        return Err(crate::ErrorKind::LauncherError(format!(
+-            "Instance {} is already running as process {}",
+-            instance.id, process.uuid
+-        ))
+-        .as_error());
+-    }
+-    if crate::state::instance_has_running_process(&instance.id, &state).await? {
+-        return Err(crate::ErrorKind::LauncherError(format!(
+-            "Instance {} is already running",
+-            instance.id
+-        ))
+-        .as_error());
++    // Check if instance has a running process, and reject running the command if it does,
++    // unless another copy is exactly what was asked for.
++    if !additional {
++        let existing_processes =
++            process::get_by_instance_id(&instance.id).await?;
++        if let Some(process) = existing_processes.first() {
++            return Err(crate::ErrorKind::LauncherError(format!(
++                "Instance {} is already running as process {}",
++                instance.id, process.uuid
++            ))
++            .as_error());
++        }
++        if crate::state::instance_has_running_process(&instance.id, &state)
++            .await?
++        {
++            return Err(crate::ErrorKind::LauncherError(format!(
++                "Instance {} is already running",
++                instance.id
++            ))
++            .as_error());
++        }
+     }
+ 
+     let natives_dir = state.directories.version_natives_dir(&version_jar);
+@@ -1203,6 +1212,8 @@ pub async fn launch_minecraft(
+             &instance.id,
+             &instance.path,
+             &instance.name,
++            &credentials.offline_profile.name,
++            additional,
+             command,
+             post_exit_hook,
+             env_args,
+diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
+index fb09842..e9aaa3a 100644
+--- a/packages/app-lib/src/state/process.rs
++++ b/packages/app-lib/src/state/process.rs
+@@ -47,37 +47,74 @@ impl LogRingBuffer {
+     fn get_all(&self) -> Vec<String> {
+         self.lines.iter().cloned().collect()
+     }
+-
+-    fn clear(&mut self) {
+-        self.lines.clear();
+-    }
+ }
+ 
+-static LOG_BUFFERS: LazyLock<DashMap<String, LogRingBuffer>> =
++/// Live output, kept per process: an instance can run more than once, and two
++/// games in one buffer is a log nobody can read.
++static LOG_BUFFERS: LazyLock<DashMap<Uuid, LogRingBuffer>> =
++    LazyLock::new(DashMap::new);
++
++/// The processes each instance has had since it was last started fresh, oldest
++/// first. Whatever only knows the instance reads the newest one.
++static INSTANCE_PROCESSES: LazyLock<DashMap<String, Vec<Uuid>>> =
+     LazyLock::new(DashMap::new);
+ 
+-pub fn push_log_line(instance_id: &str, line: String) {
++pub fn push_log_line(process_uuid: Uuid, line: String) {
+     LOG_BUFFERS
+-        .entry(instance_id.to_string())
++        .entry(process_uuid)
+         .or_insert_with(LogRingBuffer::new)
+         .push(line);
+ }
+ 
+-pub fn get_log_buffer(instance_id: &str) -> Vec<String> {
++pub fn get_log_buffer(process_uuid: Uuid) -> Vec<String> {
+     LOG_BUFFERS
+-        .get(instance_id)
++        .get(&process_uuid)
+         .map(|buf| buf.get_all())
+         .unwrap_or_default()
+ }
+ 
+-pub fn clear_log_buffer(instance_id: &str) {
+-    if let Some(mut buf) = LOG_BUFFERS.get_mut(instance_id) {
+-        buf.clear();
++/// The live output of an instance's newest process.
++pub fn get_instance_log_buffer(instance_id: &str) -> Vec<String> {
++    INSTANCE_PROCESSES
++        .get(instance_id)
++        .and_then(|uuids| uuids.last().map(|uuid| get_log_buffer(*uuid)))
++        .unwrap_or_default()
++}
++
++pub fn remove_log_buffer(process_uuid: Uuid) {
++    LOG_BUFFERS.remove(&process_uuid);
++}
++
++/// Forgets what an instance's processes said, but not which processes there
++/// are, so a game still running has somewhere to be read from.
++pub fn remove_instance_log_buffers(instance_id: &str) {
++    if let Some(uuids) = INSTANCE_PROCESSES.get(instance_id) {
++        for uuid in uuids.iter() {
++            remove_log_buffer(*uuid);
++        }
+     }
+ }
+ 
+-pub fn remove_log_buffer(instance_id: &str) {
+-    LOG_BUFFERS.remove(instance_id);
++/// Takes note of a process that has just started.
++///
++/// A fresh start drops what the instance's earlier processes said, as starting
++/// the game always has. A second copy joins them: the first is still running.
++fn note_new_process(instance_id: &str, process_uuid: Uuid, additional: bool) {
++    if additional {
++        INSTANCE_PROCESSES
++            .entry(instance_id.to_string())
++            .or_default()
++            .push(process_uuid);
++        return;
++    }
++
++    if let Some(previous) = INSTANCE_PROCESSES
++        .insert(instance_id.to_string(), vec![process_uuid])
++    {
++        for uuid in previous {
++            remove_log_buffer(uuid);
++        }
++    }
+ }
+ 
+ async fn clear_persisted_process(
+@@ -171,6 +208,10 @@ impl ProcessManager {
+         instance_id: &str,
+         instance_path: &str,
+         instance_name: &str,
++        account_name: &str,
++        // Whether the instance is already running and this is another copy of
++        // it, whose log joins the one already being written.
++        additional: bool,
+         mut mc_command: Command,
+         post_exit_command: Option<String>,
+         post_exit_env_vars: Vec<(String, String)>,
+@@ -200,13 +241,17 @@ impl ProcessManager {
+ 
+         let log_path = logs_folder.join(LAUNCHER_LOG_PATH);
+ 
+-        clear_log_buffer(instance_id);
++        let process_uuid = Uuid::new_v4();
++        note_new_process(instance_id, process_uuid, additional);
+ 
+         {
++            // One log file per instance: another copy appends to it rather than
++            // wiping what the running one is still writing.
+             let mut log_file = OpenOptions::new()
+                 .write(true)
+                 .create(true)
+-                .truncate(true)
++                .append(additional)
++                .truncate(!additional)
+                 .open(&log_path)
+                 .map_err(|e| IOError::with_path(e, &log_path))?;
+ 
+@@ -219,6 +264,10 @@ impl ProcessManager {
+             .map_err(|e| IOError::with_path(e, &log_path))?;
+             writeln!(log_file, "# Instance: {instance_path} \n")
+                 .map_err(|e| IOError::with_path(e, &log_path))?;
++            if additional {
++                writeln!(log_file, "# Another copy, as {account_name}")
++                    .map_err(|e| IOError::with_path(e, &log_path))?;
++            }
+             writeln!(log_file).map_err(|e| IOError::with_path(e, &log_path))?;
+         }
+ 
+@@ -230,11 +279,12 @@ impl ProcessManager {
+ 
+         let mut process = Process {
+             metadata: ProcessMetadata {
+-                uuid: Uuid::new_v4(),
++                uuid: process_uuid,
+                 start_time: Utc::now(),
+                 instance_id: instance_id.to_string(),
+                 instance_path: instance_path.to_string(),
+                 instance_name: instance_name.to_string(),
++                account_name: account_name.to_string(),
+             },
+             child: mc_proc,
+             rpc_server,
+@@ -297,10 +347,12 @@ impl ProcessManager {
+ 
+             let instance_id = metadata.instance_id.clone();
+             let instance_path = metadata.instance_path.clone();
++            let process_uuid = metadata.uuid;
+             tokio::spawn(async move {
+                 Process::process_output(
+                     &instance_id,
+                     &instance_path,
++                    process_uuid,
+                     stdout,
+                     log_path_clone,
+                     xml_logging,
+@@ -314,10 +366,12 @@ impl ProcessManager {
+ 
+             let instance_id = metadata.instance_id.clone();
+             let instance_path = metadata.instance_path.clone();
++            let process_uuid = metadata.uuid;
+             tokio::spawn(async move {
+                 Process::process_output(
+                     &instance_id,
+                     &instance_path,
++                    process_uuid,
+                     stderr,
+                     log_path_clone,
+                     xml_logging,
+@@ -400,6 +454,10 @@ pub struct ProcessMetadata {
+     pub instance_id: String,
+     pub instance_path: String,
+     pub instance_name: String,
++    /// The account the game was started as, which is what tells copies of one
++    /// instance apart.
++    #[serde(default)]
++    pub account_name: String,
+     pub start_time: DateTime<Utc>,
+ }
+ 
+@@ -429,6 +487,7 @@ impl Process {
+     async fn process_output<R>(
+         instance_id: &str,
+         _instance_path: &str,
++        process_uuid: Uuid,
+         reader: R,
+         log_path: impl AsRef<Path>,
+         xml_logging: bool,
+@@ -555,6 +614,7 @@ impl Process {
+ 
+                                 Self::emit_log4j_event(
+                                     instance_id,
++                                    process_uuid,
+                                     &current_event,
+                                 );
+                             }
+@@ -599,6 +659,7 @@ impl Process {
+ 
+                                     Self::emit_log4j_event(
+                                         instance_id,
++                                        process_uuid,
+                                         &current_event,
+                                     );
+                                 }
+@@ -625,7 +686,11 @@ impl Process {
+                                     e
+                                 );
+                             }
+-                            Self::emit_legacy_log(instance_id, &text);
++                            Self::emit_legacy_log(
++                                instance_id,
++                                process_uuid,
++                                &text,
++                            );
+                         }
+                     }
+                     Ok(Event::CData(e)) => {
+@@ -652,7 +717,11 @@ impl Process {
+                     if let Err(e) = Self::append_to_log_file(&log_path, &line) {
+                         tracing::warn!("Failed to write to log file: {}", e);
+                     }
+-                    Self::emit_legacy_log(instance_id, line.trim_ascii_end());
++                    Self::emit_legacy_log(
++                        instance_id,
++                        process_uuid,
++                        line.trim_ascii_end(),
++                    );
+                     if let Err(e) = Self::maybe_handle_old_server_join_logging(
+                         instance_id,
+                         line.trim_ascii_end(),
+@@ -711,13 +780,17 @@ impl Process {
+         ))
+     }
+ 
+-    fn emit_log4j_event(instance_id: &str, event: &Log4jEvent) {
++    fn emit_log4j_event(
++        instance_id: &str,
++        process_uuid: Uuid,
++        event: &Log4jEvent,
++    ) {
+         if let Some(formatted) = Self::format_log4j_entry(event) {
+-            push_log_line(instance_id, formatted.trim_end().to_string());
++            push_log_line(process_uuid, formatted.trim_end().to_string());
+         }
+         if let Some(ref throwable) = event.throwable {
+             for line in throwable.lines().filter(|l| !l.is_empty()) {
+-                push_log_line(instance_id, line.to_string());
++                push_log_line(process_uuid, line.to_string());
+             }
+         }
+ 
+@@ -726,6 +799,7 @@ impl Process {
+             let event_state = crate::EventState::get();
+             let _ = event_state.send(crate::event::AppEvent::Log(LogPayload {
+                 instance_id: instance_id.to_string(),
++                process_uuid: process_uuid.to_string(),
+                 event: LogEvent::Log4j(event.clone()),
+             }));
+         }
+@@ -735,14 +809,15 @@ impl Process {
+         }
+     }
+ 
+-    fn emit_legacy_log(instance_id: &str, message: &str) {
+-        push_log_line(instance_id, message.to_string());
++    fn emit_legacy_log(instance_id: &str, process_uuid: Uuid, message: &str) {
++        push_log_line(process_uuid, message.to_string());
+ 
+         #[cfg(feature = "tauri")]
+         {
+             let event_state = crate::EventState::get();
+             let _ = event_state.send(crate::event::AppEvent::Log(LogPayload {
+                 instance_id: instance_id.to_string(),
++                process_uuid: process_uuid.to_string(),
+                 event: LogEvent::Legacy {
+                     message: message.to_string(),
+                 },
