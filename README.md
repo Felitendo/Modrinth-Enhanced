@@ -181,10 +181,12 @@ cd ../..
 scripts/export-patches.sh           # rewrite patches/ from those commits
 ```
 
-Patches are applied with `git am --3way`, so small upstream movements around a hunk resolve by
-themselves. When one genuinely conflicts, `scripts/prepare.sh` stops and leaves the conflict staged
-in `build/upstream` to be resolved with `git am --continue`, after which `scripts/export-patches.sh`
-writes the fixed series back.
+Patches are applied to the release they were exported against (`patches/base.txt`), where they
+always fit, and then rebased onto the release in `upstream.txt` when that is newer. The rebase
+merges against the files the patches were written for, so upstream changes near a hunk resolve by
+themselves. When one genuinely conflicts, `scripts/prepare.sh` stops with the rebase in progress in
+`build/upstream`, to be resolved with `git rebase --continue`, after which
+`scripts/export-patches.sh` writes the fixed series back against the new release.
 
 To move to a newer upstream release:
 
@@ -199,7 +201,7 @@ scripts/prepare.sh
   reusable workflow the release job calls. It applies the patches, checks them, and builds on
   Linux, Windows and macOS.
 - **Upstream release** (`.github/workflows/upstream-release.yml`) runs daily. If Modrinth has
-  published a newer release than `upstream.txt`, it rebuilds against it and — only if every
+  published a newer release than `upstream.txt`, it rebases the patches onto it, rebuilds and — only if every
   platform built and every check passed — commits the bump, tags it with the upstream version and
   publishes a release with the installers.
 - **Revisions** of the same upstream release are published by running Upstream release by hand

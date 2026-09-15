@@ -26,5 +26,8 @@ git -C "$WORKTREE" format-patch \
 	--output-directory "$PATCH_DIR" \
 	"$UPSTREAM_REF..HEAD"
 
+# So that prepare.sh applies them where they fit and rebases from there.
+printf '%s\n' "$UPSTREAM_REF" >"$PATCH_DIR/base.txt"
+
 log "patches/ now contains:"
 ls -1 "$PATCH_DIR"

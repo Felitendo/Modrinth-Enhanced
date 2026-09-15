@@ -19,7 +19,18 @@ WORKTREE="${WORKTREE:-$REPO_ROOT/build/upstream}"
 # Branch the patches are applied on top of the upstream tag as.
 PATCH_BRANCH=enhanced
 
-PATCH_DIR="$REPO_ROOT/patches"
+PATCH_DIR="${PATCH_DIR:-$REPO_ROOT/patches}"
+
+# The upstream release the patches in patches/ were last exported against,
+# written there by export-patches.sh. upstream.txt cannot say: a release bumps
+# it without exporting the patches again.
+patch_base() {
+	if [ -f "$PATCH_DIR/base.txt" ]; then
+		tr -d '[:space:]' <"$PATCH_DIR/base.txt"
+	else
+		printf '%s\n' "$UPSTREAM_REF"
+	fi
+}
 
 log() {
 	printf '\033[1;32m==>\033[0m %s\n' "$*"
