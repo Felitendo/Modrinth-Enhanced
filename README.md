@@ -1,7 +1,7 @@
 # Modrinth Enhanced
 
 The [Modrinth App](https://github.com/modrinth/code), without advertising, without telemetry, and
-with offline and Ely.by accounts.
+with offline and Ely.by accounts, skins for every player and a skin browser.
 
 Everything else is deliberately left alone. This repository holds no forked source code — only a
 series of patches that are applied to an upstream release tag, built, and published. Whenever
@@ -22,6 +22,11 @@ works.
 | `0007-Sign-in-to-Microsoft-in-the-...`     | Microsoft sign-in happens in your own browser instead of a webview, so your password manager works.                                        |
 | `0008-Round-the-window-corners-on-Linux`   | The undecorated window gets rounded corners on Linux.                                                                                       |
 | `0009-Scroll-with-the-middle-mouse-button` | Middle-click autoscroll on Linux and macOS, as browsers do it on Windows.                                                                   |
+| `0010-Manage-Ely.by-skins-from-...`        | An Ely.by account's skins can be picked, uploaded, switched between models and deleted on the skin page.                                   |
+| `0011-Show-every-player-s-skin-...`        | Players who have a skin show it on offline-mode servers, and skins can be put in a folder by hand.                                          |
+| `0012-Launch-a-running-instance-...`       | A running instance can be started again on another account, with a console per copy.                                                       |
+| `0013-Explain-what-went-wrong-...`         | The Logs tab says what a crash was and offers a fix where there is one, without a connection.                                               |
+| `0014-Browse-skins-from-...`               | A Browse tab on the skin page: Ely.by's catalogue in the app, and NameMC, laby.net and crafty.gg in a window.                               |
 
 ### Offline accounts
 
@@ -73,7 +78,9 @@ Settings > Features > Sidebar.
 
 The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
 folds away with the arrow button in the title bar, which upstream only shows once "Hide right
-sidebar" is turned on in settings. Both remember what they were set to across restarts.
+sidebar" is turned on in settings. Both remember what they were set to across restarts, and the
+title bar button briefly shows a check once its state is saved. On pages that need the sidebar, such
+as the mod browser, the button stays in place, greyed out.
 
 None of the three reach Modrinth. Preference syncing maps a fixed list of named fields in both
 directions and these are not in it, so they are neither sent to your Modrinth account nor
@@ -88,6 +95,33 @@ needs a compositor; without one the corners show black.
 A click with the middle mouse button on anything that scrolls starts autoscroll: press and release
 to scroll until the next click, or hold and drag to scroll until you let go. Links and text fields
 keep their middle-click. Windows is left alone, since WebView2 autoscrolls by itself.
+
+### Skins
+
+With an Ely.by account selected, the skin page shows the account's skins on Ely.by: apply one, add
+one from a file, switch its model or delete it. Ely.by has no API for changing skins, so the
+launcher makes the website's own calls from a hidden window and asks you to sign in there once.
+
+On servers that send no skins, such as offline-mode servers, the game looks each player's skin up by
+name: first in the `player_skins` folder in the launcher directory (`<name>.png`, `<name>-slim.png`,
+`capes/`, `elytras/`), then Ely.by, then Mojang, with capes from OptiFine. Settings > Features > Skins
+has the switch and a button that opens the folder.
+
+The Browse tab finds skins elsewhere. Ely.by's catalogue is browsed in the app, with its sorting,
+filters and like, wearer and view counts. NameMC, laby.net and crafty.gg open in a window of the app
+instead, because their skin lists are bot-protected or not meant for other programs; the skin page
+you open there is previewed and can be added.
+
+### Instances and crashes
+
+A running instance can be started again from the button next to Stop, as whichever account is
+selected, and the Logs tab then shows a console for each copy.
+
+After a crash the Logs tab reads the crash report, the JVM error file and the end of the log, and
+says what went wrong: out of memory, the wrong Java, missing or duplicate mods and more.
+
+Ely.by skin management, skins for every player, second copies and crash explanations are adapted
+from [Noctrinth](https://github.com/Everelsu/Noctrinth).
 
 ### Modrinth+
 
