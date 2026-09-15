@@ -1,0 +1,1557 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 11:27:41 +0200
+Subject: [PATCH] Browse skins from Ely.by, NameMC, laby.net and crafty.gg
+
+The skin page has a Browse tab next to the account's own skins. Picking a
+skin there previews it on the big model, and Add skin sends it through
+the same dialog a skin file goes through, so choosing the model, the
+cape and an Ely.by account's upload all work as they already did.
+
+Ely.by's catalogue is browsed in the app: sort by best or newest, filter
+by format, category, tags and uploader, and order what is loaded by
+likes, wearers or views, all of which show on every tile. Its catalogue
+has no text search, so players can be searched by name instead, showing
+the skin each wears. Ely.by's robots.txt invites exactly this.
+
+NameMC, laby.net and crafty.gg are not browsed from the app. NameMC's
+skin lists sit behind a Cloudflare bot check, laby.net has no public
+API, and crafty.gg's terms forbid scraping. They open in a window of the
+app to browse as usual, with each site's own search, filters and counts,
+and the launcher only reads which page that window is on: the skin page
+open there is fetched and previewed, from NameMC's image host, laby.net's
+texture endpoint or crafty.gg's lookup for that one skin.
+---
+ .../src/components/ui/skin/SkinBrowser.vue    | 606 ++++++++++++++++++
+ apps/app-frontend/src/helpers/skin-browser.ts | 100 +++
+ apps/app-frontend/src/pages/Skins.vue         | 115 +++-
+ apps/app/build.rs                             |  13 +
+ apps/app/capabilities/plugins.json            |   3 +-
+ apps/app/src/api/mod.rs                       |   1 +
+ apps/app/src/api/skin_browser.rs              | 122 ++++
+ apps/app/src/main.rs                          |   1 +
+ packages/app-lib/src/api/mod.rs               |   1 +
+ packages/app-lib/src/api/skin_browser.rs      | 373 +++++++++++
+ 10 files changed, 1323 insertions(+), 12 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
+ create mode 100644 apps/app-frontend/src/helpers/skin-browser.ts
+ create mode 100644 apps/app/src/api/skin_browser.rs
+ create mode 100644 packages/app-lib/src/api/skin_browser.rs
+
+diff --git a/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
+new file mode 100644
+index 0000000..3d92c68
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
+@@ -0,0 +1,606 @@
++<!--
++	Finding skins elsewhere, next to the account's own.
++
++	Ely.by's catalogue is browsed right here. NameMC, laby.net and crafty.gg are
++	not: their lists are bot-protected or not meant for other programs, so they
++	open in a window to browse as usual, and the skin page open there is what
++	gets previewed. Picking a skin only previews it; the skin page adds it.
++-->
++<template>
++	<div class="flex flex-col gap-4">
++		<Chips v-model="source" :items="SOURCES" :format-label="sourceLabel" size="small" />
++
++		<template v-if="source === 'ely'">
++			<Chips v-model="elyMode" :items="ELY_MODES" :format-label="elyModeLabel" size="small" />
++
++			<div v-if="elyMode === 'catalogue'" class="flex flex-wrap items-center gap-2">
++				<Combobox
++					v-model="sort"
++					class="w-max"
++					:options="sortOptions"
++					:show-icon-in-selected="false"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<ArrowUpDownIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Combobox
++					v-model="order"
++					class="w-max"
++					:options="orderOptions"
++					:show-icon-in-selected="false"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<HeartIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Combobox
++					v-model="model"
++					class="w-max"
++					:options="modelOptions"
++					:show-icon-in-selected="false"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<UserIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Combobox
++					v-model="kind"
++					class="w-max"
++					:options="kindOptions"
++					:show-icon-in-selected="false"
++					:max-height="320"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<FilterIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Input
++					v-model="tagsText"
++					type="search"
++					:icon="TagIcon"
++					:placeholder="formatMessage(messages.tagsPlaceholder)"
++					wrapper-class="w-52"
++				/>
++				<Input
++					v-model="uploader"
++					type="search"
++					:icon="UserIcon"
++					:placeholder="formatMessage(messages.uploaderPlaceholder)"
++					wrapper-class="w-40"
++				/>
++			</div>
++			<Input
++				v-else
++				v-model="playerTerm"
++				type="search"
++				:icon="SearchIcon"
++				:placeholder="formatMessage(messages.playerPlaceholder)"
++				wrapper-class="w-full"
++			/>
++
++			<div
++				v-if="tiles.length"
++				class="grid w-full grid-cols-3 gap-3 min-[1300px]:grid-cols-4 min-[1750px]:grid-cols-5 min-[2050px]:grid-cols-6"
++			>
++				<div v-for="tile in tiles" :key="tile.key" class="flex min-w-0 flex-col gap-1.5">
++					<BakedSkinButton
++						v-if="tile.skin"
++						class="aspect-[31/40] w-full min-w-0 box-border rounded-[20px]"
++						:skin="tile.skin"
++						:capes="[]"
++						:selected="pickedKey === tile.key"
++						:tooltip="tile.title || undefined"
++						@select="pick(tile)"
++					/>
++					<div v-else class="aspect-[31/40] w-full animate-pulse rounded-[20px] bg-surface-3" />
++					<div
++						class="flex min-w-0 items-center justify-center gap-3 text-sm font-medium text-secondary"
++					>
++						<template v-if="tile.stats">
++							<span v-tooltip="formatMessage(messages.likes)" class="flex items-center gap-1">
++								<HeartIcon class="size-4" />{{ compact(tile.stats.likes) }}
++							</span>
++							<span v-tooltip="formatMessage(messages.wearers)" class="flex items-center gap-1">
++								<UsersIcon class="size-4" />{{ compact(tile.stats.wearers) }}
++							</span>
++							<span v-tooltip="formatMessage(messages.views)" class="flex items-center gap-1">
++								<EyeIcon class="size-4" />{{ compact(tile.stats.views) }}
++							</span>
++						</template>
++						<span v-else class="truncate">{{ tile.title }}</span>
++					</div>
++				</div>
++			</div>
++			<p v-else-if="!loading" class="m-0 text-secondary">
++				{{
++					formatMessage(
++						elyMode === 'players' && playerTerm.trim().length < 3
++							? messages.playerHint
++							: messages.nothingFound,
++					)
++				}}
++			</p>
++
++			<div class="flex justify-center">
++				<SpinnerIcon v-if="loading" class="size-6 animate-spin" />
++				<Button v-else-if="elyMode === 'catalogue' && hasMore" @click="loadMore">
++					{{ formatMessage(messages.loadMore) }}
++				</Button>
++			</div>
++		</template>
++
++		<template v-else>
++			<p class="m-0 text-secondary">
++				{{ formatMessage(messages.siteExplanation, { site: sourceLabel(source) }) }}
++			</p>
++			<div>
++				<Button type="colored" color="brand" @click="openSite">
++					<ExternalIcon />
++					{{ formatMessage(messages.openSite, { site: sourceLabel(source) }) }}
++				</Button>
++			</div>
++
++			<div v-if="siteTile?.skin" class="flex items-center gap-4">
++				<BakedSkinButton
++					class="aspect-[31/40] w-40 min-w-0 box-border rounded-[20px]"
++					:skin="siteTile.skin"
++					:capes="[]"
++					:selected="pickedKey === siteTile.key"
++					@select="pick(siteTile)"
++				/>
++				<div class="flex min-w-0 flex-col gap-2">
++					<span class="font-semibold text-contrast">{{ siteTile.title }}</span>
++					<div v-if="siteTile.stats" class="flex flex-col gap-1 text-sm text-secondary">
++						<span class="flex items-center gap-1">
++							<HeartIcon class="size-4" />
++							{{ formatMessage(messages.likes) }}: {{ compact(siteTile.stats.likes) }}
++						</span>
++						<span class="flex items-center gap-1">
++							<UsersIcon class="size-4" />
++							{{ formatMessage(messages.wearers) }}: {{ compact(siteTile.stats.wearers) }}
++						</span>
++						<span class="flex items-center gap-1">
++							<EyeIcon class="size-4" />
++							{{ formatMessage(messages.views) }}: {{ compact(siteTile.stats.views) }}
++						</span>
++					</div>
++				</div>
++			</div>
++			<SpinnerIcon v-else-if="siteLoading" class="size-6 animate-spin" />
++			<p v-else class="m-0 text-secondary">{{ formatMessage(messages.siteWaiting) }}</p>
++		</template>
++	</div>
++</template>
++
++<script setup lang="ts">
++import {
++	ArrowUpDownIcon,
++	ExternalIcon,
++	EyeIcon,
++	FilterIcon,
++	HeartIcon,
++	SearchIcon,
++	SpinnerIcon,
++	TagIcon,
++	UserIcon,
++	UsersIcon,
++} from '@modrinth/assets'
++import {
++	Button,
++	Chips,
++	Combobox,
++	type ComboboxOption,
++	defineMessages,
++	injectNotificationManager,
++	Input,
++	useVIntl,
++} from '@modrinth/ui'
++import { arrayBufferToBase64 } from '@modrinth/utils'
++import type { UnlistenFn } from '@tauri-apps/api/event'
++import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
++
++import BakedSkinButton from '@/components/ui/skin/BakedSkinButton.vue'
++import { getElyTexture } from '@/helpers/ely_skins'
++import {
++	ELY_KINDS,
++	type ElyModel,
++	type ElySort,
++	getElyCatalogue,
++	getSiteSkin,
++	onSkinSitePage,
++	openSkinSite,
++	searchElyPlayers,
++	type SitePage,
++	type SkinBrowserPick,
++	type SkinSite,
++} from '@/helpers/skin-browser'
++import { determineModelType, type Skin, type SkinModel } from '@/helpers/skins'
++
++const emit = defineEmits<{
++	pick: [pick: SkinBrowserPick | null]
++}>()
++
++const { formatMessage } = useVIntl()
++const { handleError } = injectNotificationManager()
++
++type Source = 'ely' | SkinSite
++type ElyMode = 'catalogue' | 'players'
++type Order = 'site' | 'likes' | 'wearers' | 'views'
++
++interface Stats {
++	likes: number
++	wearers: number
++	views: number
++}
++
++interface Entry {
++	key: string
++	title: string
++	url: string
++	variant: SkinModel
++	stats?: Stats
++}
++
++interface Tile extends Entry {
++	skin?: Skin
++}
++
++const SOURCES: Source[] = ['ely', 'namemc', 'laby', 'crafty']
++const ELY_MODES: ElyMode[] = ['catalogue', 'players']
++const SITE_NAMES: Record<Source, string> = {
++	ely: 'Ely.by',
++	namemc: 'NameMC',
++	laby: 'laby.net',
++	crafty: 'crafty.gg',
++}
++
++const messages = defineMessages({
++	catalogue: { id: 'app.skins.browse.ely.catalogue', defaultMessage: 'Catalogue' },
++	players: { id: 'app.skins.browse.ely.players', defaultMessage: 'Players' },
++	sortBest: { id: 'app.skins.browse.sort.best', defaultMessage: 'Best' },
++	sortNew: { id: 'app.skins.browse.sort.new', defaultMessage: 'Newest' },
++	orderSite: { id: 'app.skins.browse.order.site', defaultMessage: 'As loaded' },
++	orderLikes: { id: 'app.skins.browse.order.likes', defaultMessage: 'Most liked' },
++	orderWearers: { id: 'app.skins.browse.order.wearers', defaultMessage: 'Most worn' },
++	orderViews: { id: 'app.skins.browse.order.views', defaultMessage: 'Most viewed' },
++	modelAny: { id: 'app.skins.browse.model.any', defaultMessage: 'Any format' },
++	modelOld: { id: 'app.skins.browse.model.old', defaultMessage: 'Old format' },
++	modelNew: { id: 'app.skins.browse.model.new', defaultMessage: 'New format' },
++	modelSlim: { id: 'app.skins.browse.model.slim', defaultMessage: 'Slim' },
++	allCategories: { id: 'app.skins.browse.kind.all', defaultMessage: 'All categories' },
++	tagsPlaceholder: {
++		id: 'app.skins.browse.tags-placeholder',
++		defaultMessage: 'Tags, comma separated',
++	},
++	uploaderPlaceholder: { id: 'app.skins.browse.uploader-placeholder', defaultMessage: 'Uploader' },
++	playerPlaceholder: {
++		id: 'app.skins.browse.player-placeholder',
++		defaultMessage: 'Search players by name',
++	},
++	playerHint: {
++		id: 'app.skins.browse.player-hint',
++		defaultMessage: 'Type at least three letters of a player name.',
++	},
++	likes: { id: 'app.skins.browse.likes', defaultMessage: 'Likes' },
++	wearers: { id: 'app.skins.browse.wearers', defaultMessage: 'Players wearing it' },
++	views: { id: 'app.skins.browse.views', defaultMessage: 'Views' },
++	nothingFound: { id: 'app.skins.browse.nothing-found', defaultMessage: 'No skins found.' },
++	loadMore: { id: 'app.skins.browse.load-more', defaultMessage: 'Load more' },
++	siteExplanation: {
++		id: 'app.skins.browse.site.explanation',
++		defaultMessage:
++			'{site} opens in its own window. Search, filter and sort there as usual; the skin page you open is previewed here.',
++	},
++	openSite: { id: 'app.skins.browse.site.open', defaultMessage: 'Open {site}' },
++	siteWaiting: {
++		id: 'app.skins.browse.site.waiting',
++		defaultMessage: 'Open a skin page in the window to preview it here.',
++	},
++})
++
++function sourceLabel(value: Source) {
++	return SITE_NAMES[value]
++}
++
++function elyModeLabel(value: ElyMode) {
++	return formatMessage(value === 'players' ? messages.players : messages.catalogue)
++}
++
++const compactFormat = new Intl.NumberFormat(undefined, {
++	notation: 'compact',
++	maximumFractionDigits: 1,
++})
++
++function compact(value: number) {
++	return compactFormat.format(value)
++}
++
++const source = ref<Source>('ely')
++const elyMode = ref<ElyMode>('catalogue')
++const sort = ref<ElySort>('best')
++const order = ref<Order>('site')
++const model = ref<ElyModel>('any')
++const kind = ref('')
++const tagsText = ref('')
++const uploader = ref('')
++const playerTerm = ref('')
++
++const sortOptions = computed<ComboboxOption<ElySort>[]>(() => [
++	{ value: 'best', label: formatMessage(messages.sortBest) },
++	{ value: 'time', label: formatMessage(messages.sortNew) },
++])
++
++// Ely.by sorts by best or newest itself. The rest orders what has been loaded.
++const orderOptions = computed<ComboboxOption<Order>[]>(() => [
++	{ value: 'site', label: formatMessage(messages.orderSite) },
++	{ value: 'likes', label: formatMessage(messages.orderLikes) },
++	{ value: 'wearers', label: formatMessage(messages.orderWearers) },
++	{ value: 'views', label: formatMessage(messages.orderViews) },
++])
++
++const modelOptions = computed<ComboboxOption<ElyModel>[]>(() => [
++	{ value: 'any', label: formatMessage(messages.modelAny) },
++	{ value: 'old', label: formatMessage(messages.modelOld) },
++	{ value: 'new', label: formatMessage(messages.modelNew) },
++	{ value: 'slim', label: formatMessage(messages.modelSlim) },
++])
++
++const kindOptions = computed<ComboboxOption<string>[]>(() => [
++	{ value: '', label: formatMessage(messages.allCategories) },
++	...ELY_KINDS.map((value) => ({ value, label: value })),
++])
++
++const entries = ref<Entry[]>([])
++const textures = ref<Record<string, string>>({})
++const page = ref(1)
++const lastPage = ref(1)
++const loading = ref(false)
++const pickedKey = ref<string | null>(null)
++let generation = 0
++
++const hasMore = computed(() => page.value < lastPage.value)
++
++function skinOf(entry: Entry): Skin | undefined {
++	const texture = textures.value[entry.key]
++	if (!texture) return undefined
++	return {
++		texture_key: entry.key,
++		variant: entry.variant,
++		texture,
++		source: 'custom_external',
++		is_equipped: false,
++	}
++}
++
++const tiles = computed<Tile[]>(() => {
++	const ordered =
++		order.value === 'site' || elyMode.value === 'players'
++			? entries.value
++			: [...entries.value].sort(
++					(a, b) => (b.stats?.[order.value as keyof Stats] ?? 0) - (a.stats?.[order.value as keyof Stats] ?? 0),
++				)
++	return ordered.map((entry) => ({ ...entry, skin: skinOf(entry) }))
++})
++
++function tags() {
++	return tagsText.value
++		.split(',')
++		.map((tag) => tag.trim())
++		.filter(Boolean)
++		.slice(0, 10)
++}
++
++/** Textures come through Rust: ely.by sends no CORS headers. They land one by one. */
++function loadTextures(list: Entry[], forGeneration: number) {
++	for (const entry of list) {
++		if (textures.value[entry.key]) continue
++		getElyTexture(entry.url)
++			.then((texture) => {
++				if (forGeneration !== generation) return
++				textures.value = { ...textures.value, [entry.key]: texture }
++			})
++			.catch(() => {})
++	}
++}
++
++async function loadCatalogue(pageNumber: number, forGeneration: number) {
++	loading.value = true
++	try {
++		const result = await getElyCatalogue({
++			sort: sort.value,
++			model: model.value,
++			kind: kind.value,
++			tags: tags(),
++			uploader: uploader.value.trim(),
++			page: pageNumber,
++		})
++		if (forGeneration !== generation) return
++
++		const known = new Set(entries.value.map((entry) => entry.key))
++		const added: Entry[] = result.items
++			.map((skin) => ({
++				key: `browse-ely-${skin.id}`,
++				title: skin.tags.join(', '),
++				url: skin.skin_url,
++				variant: (skin.is_slim ? 'SLIM' : 'CLASSIC') as SkinModel,
++				stats: { likes: skin.likes, wearers: skin.wearers, views: skin.views },
++			}))
++			.filter((entry) => !known.has(entry.key))
++
++		entries.value = [...entries.value, ...added]
++		page.value = result.current || pageNumber
++		lastPage.value = result.last || pageNumber
++		loadTextures(added, forGeneration)
++	} catch (error) {
++		if (forGeneration === generation) handleError(error as Error)
++	} finally {
++		if (forGeneration === generation) loading.value = false
++	}
++}
++
++async function loadPlayers(forGeneration: number) {
++	loading.value = true
++	try {
++		const players = await searchElyPlayers(playerTerm.value.trim())
++		if (forGeneration !== generation) return
++
++		const found: Entry[] = players
++			.filter((player) => player.skin_url)
++			.map((player) => ({
++				key: `browse-ely-player-${player.nickname.toLowerCase()}`,
++				title: player.nickname,
++				url: player.skin_url!,
++				variant: 'UNKNOWN' as SkinModel,
++			}))
++
++		entries.value = found
++		loadTextures(found, forGeneration)
++	} catch (error) {
++		if (forGeneration === generation) handleError(error as Error)
++	} finally {
++		if (forGeneration === generation) loading.value = false
++	}
++}
++
++function reload() {
++	const forGeneration = ++generation
++	entries.value = []
++	page.value = 1
++	lastPage.value = 1
++	loading.value = false
++
++	if (elyMode.value === 'players') {
++		if (playerTerm.value.trim().length >= 3) void loadPlayers(forGeneration)
++		return
++	}
++	void loadCatalogue(1, forGeneration)
++}
++
++function loadMore() {
++	if (!loading.value && hasMore.value) void loadCatalogue(page.value + 1, generation)
++}
++
++watch([sort, model, kind, elyMode], reload)
++
++let typingTimeout: ReturnType<typeof setTimeout> | undefined
++watch([tagsText, uploader, playerTerm], () => {
++	clearTimeout(typingTimeout)
++	typingTimeout = setTimeout(reload, 500)
++})
++
++function dataUrlBytes(url: string) {
++	return Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (char) => char.charCodeAt(0))
++}
++
++async function pick(tile: Tile) {
++	if (!tile.skin) return
++	if (pickedKey.value === tile.key) {
++		pickedKey.value = null
++		emit('pick', null)
++		return
++	}
++
++	pickedKey.value = tile.key
++	const texture = tile.skin.texture
++	const variant =
++		tile.variant === 'UNKNOWN'
++			? await determineModelType(texture).catch(() => 'CLASSIC' as const)
++			: tile.variant
++	emit('pick', { texture, bytes: dataUrlBytes(texture), variant })
++}
++
++watch(source, () => {
++	pickedKey.value = null
++	emit('pick', null)
++})
++
++const siteTile = ref<Tile | null>(null)
++const siteLoading = ref(false)
++let siteGeneration = 0
++let unlistenSite: UnlistenFn | undefined
++let unmounted = false
++
++function openSite() {
++	if (source.value === 'ely') return
++	openSkinSite(source.value).catch((error) => handleError(error as Error))
++}
++
++/**
++ * Follows the browsing window. Leaving a skin page keeps the last one on show,
++ * so it can still be added after browsing on.
++ */
++async function showSitePage(sitePage: SitePage | null) {
++	if (!sitePage) return
++	const forGeneration = ++siteGeneration
++	siteLoading.value = true
++
++	try {
++		const skin = await getSiteSkin(sitePage.site, sitePage.id)
++		if (forGeneration !== siteGeneration) return
++
++		const bytes = new Uint8Array(skin.texture)
++		const texture = `data:image/png;base64,${arrayBufferToBase64(bytes)}`
++		const variant: SkinModel =
++			skin.slim === null
++				? await determineModelType(texture).catch(() => 'CLASSIC' as const)
++				: skin.slim
++					? 'SLIM'
++					: 'CLASSIC'
++		const key = `browse-${sitePage.site}-${sitePage.id}`
++		const hasStats = skin.likes !== null || skin.wearers !== null || skin.views !== null
++
++		siteTile.value = {
++			key,
++			title: SITE_NAMES[sitePage.site],
++			url: '',
++			variant,
++			stats: hasStats
++				? { likes: skin.likes ?? 0, wearers: skin.wearers ?? 0, views: skin.views ?? 0 }
++				: undefined,
++			skin: { texture_key: key, variant, texture, source: 'custom_external', is_equipped: false },
++		}
++
++		// The page open in the window is the skin being looked at, so it is
++		// previewed straight away.
++		pickedKey.value = key
++		emit('pick', { texture, bytes, variant })
++	} catch (error) {
++		if (forGeneration === siteGeneration) handleError(error as Error)
++	} finally {
++		if (forGeneration === siteGeneration) siteLoading.value = false
++	}
++}
++
++onMounted(async () => {
++	reload()
++	const unlisten = await onSkinSitePage((sitePage) => void showSitePage(sitePage))
++	if (unmounted) {
++		unlisten()
++	} else {
++		unlistenSite = unlisten
++	}
++})
++
++onUnmounted(() => {
++	unmounted = true
++	clearTimeout(typingTimeout)
++	unlistenSite?.()
++})
++</script>
+diff --git a/apps/app-frontend/src/helpers/skin-browser.ts b/apps/app-frontend/src/helpers/skin-browser.ts
+new file mode 100644
+index 0000000..ea86e86
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/skin-browser.ts
+@@ -0,0 +1,100 @@
++/**
++ * Finding skins on other sites, for the skin page.
++ *
++ * Ely.by's catalogue is read directly. NameMC, laby.net and crafty.gg open in a
++ * window the player browses; the launcher only learns which skin page it is on.
++ */
++import { invoke } from '@tauri-apps/api/core'
++import { listen, type UnlistenFn } from '@tauri-apps/api/event'
++
++import type { SkinModel } from '@/helpers/skins'
++
++export type SkinSite = 'namemc' | 'laby' | 'crafty'
++export type ElySort = 'best' | 'time'
++export type ElyModel = 'any' | 'old' | 'new' | 'slim'
++
++export interface ElyCatalogueQuery {
++	sort: ElySort
++	model: ElyModel
++	kind: string
++	tags: string[]
++	uploader: string
++	page: number
++}
++
++export interface ElyCatalogueSkin {
++	id: number
++	skin_url: string
++	is_slim: boolean
++	likes: number
++	wearers: number
++	views: number
++	tags: string[]
++}
++
++export interface ElyCataloguePage {
++	items: ElyCatalogueSkin[]
++	current: number
++	last: number
++	total: number
++}
++
++export interface ElyPlayer {
++	nickname: string
++	skin_url: string | null
++}
++
++export interface SitePage {
++	site: SkinSite
++	id: string
++}
++
++export interface SiteSkin {
++	texture: number[]
++	slim: boolean | null
++	likes: number | null
++	views: number | null
++	wearers: number | null
++}
++
++/** A skin picked in the browser, previewed until it is added. */
++export interface SkinBrowserPick {
++	texture: string
++	bytes: Uint8Array
++	variant: SkinModel
++}
++
++/** The categories Ely.by's catalogue sorts skins into, under its own names. */
++export const ELY_KINDS = [
++	'Comics',
++	'Adventure',
++	'Heroes',
++	'Evildoers',
++	'Weekend',
++	'Characters',
++	'Historical',
++	'Fantasy',
++	'Scientific',
++	'Other',
++] as const
++
++export async function getElyCatalogue(query: ElyCatalogueQuery): Promise<ElyCataloguePage> {
++	return await invoke('plugin:skin-browser|skin_browser_ely_catalogue', { query })
++}
++
++export async function searchElyPlayers(term: string): Promise<ElyPlayer[]> {
++	return await invoke('plugin:skin-browser|skin_browser_ely_players', { term })
++}
++
++export async function getSiteSkin(site: SkinSite, id: string): Promise<SiteSkin> {
++	return await invoke('plugin:skin-browser|skin_browser_site_skin', { site, id })
++}
++
++export async function openSkinSite(site: SkinSite): Promise<void> {
++	await invoke('plugin:skin-browser|skin_browser_open_site', { site })
++}
++
++/** Calls `handler` whenever the browsing window moves onto or off a skin page. */
++export function onSkinSitePage(handler: (page: SitePage | null) => void): Promise<UnlistenFn> {
++	return listen<SitePage | null>('skin-browser-page', (event) => handler(event.payload))
++}
+diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
+index bcd79ec..9a10f0e 100644
+--- a/apps/app-frontend/src/pages/Skins.vue
++++ b/apps/app-frontend/src/pages/Skins.vue
+@@ -5,6 +5,7 @@ import {
+ 	EyeIcon,
+ 	InfoIcon,
+ 	LogInIcon,
++	PlusIcon,
+ 	RotateCounterClockwiseIcon,
+ 	ShirtIcon,
+ 	SpinnerIcon,
+@@ -12,6 +13,7 @@ import {
+ } from '@modrinth/assets'
+ import {
+ 	Button,
++	Chips,
+ 	commonMessages,
+ 	ConfirmModal,
+ 	defineMessages,
+@@ -33,6 +35,7 @@ import EarsModIcon from '@/assets/skins/ears-mod.png'
+ import type AccountsCard from '@/components/ui/AccountsCard.vue'
+ import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
+ import ElySkinModal from '@/components/ui/skin/ElySkinModal.vue'
++import SkinBrowser from '@/components/ui/skin/SkinBrowser.vue'
+ import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
+ import { useAppSettings } from '@/composables/use-app-settings.ts'
+ import { handleSevereError } from '@/composables/use-error.js'
+@@ -52,6 +55,7 @@ import {
+ 	uploadElySkin,
+ 	wearElySkin,
+ } from '@/helpers/ely_skins'
++import type { SkinBrowserPick } from '@/helpers/skin-browser'
+ import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
+ import {
+ 	determineModelType,
+@@ -237,6 +241,18 @@ const messages = defineMessages({
+ 		id: 'app.skins.ely.failed.title',
+ 		defaultMessage: 'Ely.by did not take the change',
+ 	},
++	savedTab: {
++		id: 'app.skins.tab.saved',
++		defaultMessage: 'My skins',
++	},
++	browseTab: {
++		id: 'app.skins.tab.browse',
++		defaultMessage: 'Browse',
++	},
++	browseAddButton: {
++		id: 'app.skins.browse.add-button',
++		defaultMessage: 'Add skin',
++	},
+ })
+ 
+ const editSkinModal = useTemplateRef('editSkinModal')
+@@ -1032,6 +1048,28 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+ 	}
+ }
+ 
++/*
++ * Skins found elsewhere (see SkinBrowser.vue). A pick is only previewed until
++ * it is added, and adding goes through the same dialog a skin file does.
++ */
++const skinsTab = ref<'saved' | 'browse'>('saved')
++const browsePick = ref<SkinBrowserPick | null>(null)
++
++watch(skinsTab, (tab) => {
++	if (tab === 'saved') browsePick.value = null
++})
++
++function skinsTabLabel(tab: 'saved' | 'browse') {
++	return formatMessage(tab === 'browse' ? messages.browseTab : messages.savedTab)
++}
++
++async function addBrowsePick() {
++	const pick = browsePick.value
++	if (!pick) return
++	browsePick.value = null
++	await processSkinFileBuffer(pick.bytes)
++}
++
+ /*
+  * Ely.by accounts. Ely.by keeps an account's skins in its public catalogue and
+  * has no API to change one, so the grid shows that catalogue, and changes are
+@@ -1459,16 +1497,16 @@ await loadAccountSkins()
+ 				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
+ 			>
+ 				<SkinPreviewRenderer
+-					:cape-src="capeTexture"
+-					:texture-src="skinTexture || ''"
+-					:ears-texture-src="selectedSkin?.texture"
+-					:variant="skinVariant"
++					:cape-src="browsePick ? undefined : capeTexture"
++					:texture-src="browsePick?.texture ?? (skinTexture || '')"
++					:ears-texture-src="browsePick?.texture ?? selectedSkin?.texture"
++					:variant="browsePick?.variant ?? skinVariant"
+ 					:nametag="skinNametag"
+ 					:initial-rotation="Math.PI / 8"
+ 					:ears-enabled="earsFeaturesEnabled"
+ 					@ears-features-detected="selectedSkinHasEarsFeatures = $event"
+ 				>
+-					<template v-if="hasPendingSkinChange" #nametag-badge>
++					<template v-if="hasPendingSkinChange || browsePick" #nametag-badge>
+ 						<div
+ 							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
+ 						>
+@@ -1482,7 +1520,26 @@ await loadAccountSkins()
+ 							:class="{ 'has-ears-features': selectedSkinHasEarsFeatures }"
+ 						>
+ 							<div
+-								v-if="hasPendingSkinChange"
++								v-if="browsePick"
++								class="flex w-full flex-wrap items-center justify-center gap-1.5"
++							>
++								<Button type="base" size="lg" @click="browsePick = null">
++									<RotateCounterClockwiseIcon />
++									{{ formatMessage(commonMessages.resetButton) }}
++								</Button>
++								<Button
++									type="colored"
++									color="brand"
++									size="lg"
++									:disabled="isSkinManagementReadOnly"
++									@click="addBrowsePick"
++								>
++									<PlusIcon />
++									{{ formatMessage(messages.browseAddButton) }}
++								</Button>
++							</div>
++							<div
++								v-else-if="hasPendingSkinChange"
+ 								class="skin-preview-actions flex w-full items-center justify-center gap-1.5"
+ 								:class="selectedSkinHasEarsFeatures ? 'flex-nowrap' : 'flex-wrap'"
+ 							>
+@@ -1607,7 +1664,15 @@ await loadAccountSkins()
+ 		</div>
+ 
+ 		<div class="pt-2">
++			<Chips
++				v-model="skinsTab"
++				:items="['saved', 'browse']"
++				:format-label="skinsTabLabel"
++				class="mb-4"
++			/>
++			<SkinBrowser v-if="skinsTab === 'browse'" @pick="browsePick = $event" />
+ 			<VirtualSkinSectionList
++				v-else
+ 				ref="skinSectionList"
+ 				:saved-skins="savedSkins"
+ 				:default-skin-sections="defaultSkinSections"
+@@ -1638,13 +1703,13 @@ await loadAccountSkins()
+ 				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
+ 			>
+ 				<SkinPreviewRenderer
+-					:texture-src="elyPreviewTexture"
+-					:variant="elyPreviewVariant"
+-					:cape-src="elyCape"
++					:texture-src="browsePick?.texture ?? elyPreviewTexture"
++					:variant="browsePick?.variant ?? elyPreviewVariant"
++					:cape-src="browsePick ? undefined : elyCape"
+ 					:nametag="appSettings.hideNametagSkinsPage ? undefined : elyUsername"
+ 					:initial-rotation="Math.PI / 8"
+ 				>
+-					<template v-if="elyPending" #nametag-badge>
++					<template v-if="elyPending || browsePick" #nametag-badge>
+ 						<div
+ 							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
+ 						>
+@@ -1654,7 +1719,26 @@ await loadAccountSkins()
+ 					</template>
+ 					<template #subtitle>
+ 						<div
+-							v-if="elyPending"
++							v-if="browsePick"
++							class="flex w-full flex-wrap items-center justify-center gap-1.5"
++						>
++							<Button type="base" size="lg" @click="browsePick = null">
++								<RotateCounterClockwiseIcon />
++								{{ formatMessage(commonMessages.resetButton) }}
++							</Button>
++							<Button
++								type="colored"
++								color="brand"
++								size="lg"
++								:disabled="isSkinManagementReadOnly"
++								@click="addBrowsePick"
++							>
++								<PlusIcon />
++								{{ formatMessage(messages.browseAddButton) }}
++							</Button>
++						</div>
++						<div
++							v-else-if="elyPending"
+ 							class="flex w-full flex-wrap items-center justify-center gap-1.5"
+ 						>
+ 							<Button type="base" size="lg" :disabled="elyBusy" @click="elyPending = null">
+@@ -1679,6 +1763,14 @@ await loadAccountSkins()
+ 		</div>
+ 
+ 		<div class="pt-2">
++			<Chips
++				v-model="skinsTab"
++				:items="['saved', 'browse']"
++				:format-label="skinsTabLabel"
++				class="mb-4"
++			/>
++			<SkinBrowser v-if="skinsTab === 'browse'" @pick="browsePick = $event" />
++			<template v-else>
+ 			<p v-if="!elyLoading && !elyCatalogue.length" class="m-0 mb-4 text-secondary">
+ 				{{ formatMessage(messages.elySkinsEmpty) }}
+ 			</p>
+@@ -1700,6 +1792,7 @@ await loadAccountSkins()
+ 				@add-skin-dragleave="onAddSkinDragLeave"
+ 				@add-skin-drop="onAddSkinDrop"
+ 			/>
++			</template>
+ 		</div>
+ 	</div>
+ 
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index fe38f0d..145ec31 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -44,6 +44,19 @@ fn main() {
+                         DefaultPermissionRule::AllowAllCommands,
+                     ),
+             )
++            .plugin(
++                "skin-browser",
++                InlinedPlugin::new()
++                    .commands(&[
++                        "skin_browser_ely_catalogue",
++                        "skin_browser_ely_players",
++                        "skin_browser_site_skin",
++                        "skin_browser_open_site",
++                    ])
++                    .default_permission(
++                        DefaultPermissionRule::AllowAllCommands,
++                    ),
++            )
+             .plugin(
+                 "crash-analysis",
+                 InlinedPlugin::new()
+diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
+index dbc3220..d22b900 100644
+--- a/apps/app/capabilities/plugins.json
++++ b/apps/app/capabilities/plugins.json
+@@ -113,6 +113,7 @@
+ 		"friends:default",
+ 		"worlds:default",
+ 		"ely-skins:default",
+-		"crash-analysis:default"
++		"crash-analysis:default",
++		"skin-browser:default"
+ 	]
+ }
+diff --git a/apps/app/src/api/mod.rs b/apps/app/src/api/mod.rs
+index 565a39f..e01fcbc 100644
+--- a/apps/app/src/api/mod.rs
++++ b/apps/app/src/api/mod.rs
+@@ -18,6 +18,7 @@ pub mod process;
+ pub mod reports;
+ pub mod settings;
+ pub mod shortcuts;
++pub mod skin_browser;
+ pub mod tags;
+ mod thumbnails;
+ pub mod users;
+diff --git a/apps/app/src/api/skin_browser.rs b/apps/app/src/api/skin_browser.rs
+new file mode 100644
+index 0000000..cfd0d8c
+--- /dev/null
++++ b/apps/app/src/api/skin_browser.rs
+@@ -0,0 +1,122 @@
++//! Browsing skins from the skin page.
++//!
++//! Ely.by's catalogue is read directly (see `theseus::skin_browser`). NameMC,
++//! laby.net and crafty.gg open in a window the player browses like any browser;
++//! the launcher only watches which page that window is on, so that the skin
++//! page the player has open can be previewed and added.
++
++use std::time::Duration;
++
++use serde::Serialize;
++use tauri::plugin::TauriPlugin;
++use tauri::{
++    AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder,
++};
++use theseus::skin_browser::{
++    self, ElyCatalogueQuery, ElyCataloguePage, ElyPlayer, SiteSkin, SkinSite,
++};
++
++use crate::api::{Result, TheseusSerializableError};
++
++pub fn init<R: Runtime>() -> TauriPlugin<R> {
++    tauri::plugin::Builder::<R>::new("skin-browser")
++        .invoke_handler(tauri::generate_handler![
++            skin_browser_ely_catalogue,
++            skin_browser_ely_players,
++            skin_browser_site_skin,
++            skin_browser_open_site,
++        ])
++        .build()
++}
++
++const WINDOW_LABEL: &str = "skin-site";
++
++/// Carries the skin page the window is on, or `null` when it is on none or has
++/// been closed.
++const PAGE_EVENT: &str = "skin-browser-page";
++
++#[derive(Serialize, Clone, PartialEq)]
++struct SitePage {
++    site: SkinSite,
++    id: String,
++}
++
++#[tauri::command]
++pub async fn skin_browser_ely_catalogue(
++    query: ElyCatalogueQuery,
++) -> Result<ElyCataloguePage> {
++    Ok(skin_browser::ely_catalogue(&query).await?)
++}
++
++#[tauri::command]
++pub async fn skin_browser_ely_players(term: String) -> Result<Vec<ElyPlayer>> {
++    Ok(skin_browser::ely_players(&term).await?)
++}
++
++#[tauri::command]
++pub async fn skin_browser_site_skin(
++    site: SkinSite,
++    id: String,
++) -> Result<SiteSkin> {
++    Ok(skin_browser::site_skin(site, &id).await?)
++}
++
++/// Opens a skin site in the browsing window, or sends the open window there.
++#[tauri::command]
++pub async fn skin_browser_open_site<R: Runtime>(
++    app: AppHandle<R>,
++    site: SkinSite,
++) -> Result<()> {
++    let home: tauri::Url = site
++        .home()
++        .parse()
++        .map_err(|_| other("Could not build the skin site address"))?;
++
++    if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
++        window.navigate(home)?;
++        window.unminimize().ok();
++        window.set_focus()?;
++        return Ok(());
++    }
++
++    let window = WebviewWindowBuilder::new(
++        &app,
++        WINDOW_LABEL,
++        WebviewUrl::External(home),
++    )
++    .title("Browse skins")
++    .inner_size(1100.0, 800.0)
++    .min_inner_size(600.0, 500.0)
++    .center()
++    .focused(true)
++    .build()?;
++
++    // Where the window is gets read rather than reported, as in the sign-in
++    // windows: a navigation callback is not called for every way a page moves.
++    tauri::async_runtime::spawn(async move {
++        let mut last: Option<SitePage> = None;
++        loop {
++            tokio::time::sleep(Duration::from_millis(300)).await;
++            if window.title().is_err() {
++                break;
++            }
++            let Ok(url) = window.url() else { break };
++
++            let page = skin_browser::skin_page(url.as_str())
++                .map(|(site, id)| SitePage { site, id });
++            if page != last {
++                app.emit(PAGE_EVENT, &page).ok();
++                last = page;
++            }
++        }
++        app.emit(PAGE_EVENT, Option::<SitePage>::None).ok();
++    });
++
++    Ok(())
++}
++
++fn other(message: &str) -> TheseusSerializableError {
++    theseus::ErrorKind::OtherError(message.to_string())
++        .as_error()
++        .into()
++}
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index c404189..57a68e6 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -250,6 +250,7 @@ fn main() {
+         .plugin(api::auth::init())
+         .plugin(api::ely_skins::init())
+         .plugin(api::crash_analysis::init())
++        .plugin(api::skin_browser::init())
+         .plugin(api::mr_auth::init())
+         .plugin(api::onboarding_checklist::init())
+         .plugin(api::import::init())
+diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
+index 566810b..a6f770d 100644
+--- a/packages/app-lib/src/api/mod.rs
++++ b/packages/app-lib/src/api/mod.rs
+@@ -17,6 +17,7 @@ pub mod process;
+ pub mod reports;
+ pub mod server_address;
+ pub mod settings;
++pub mod skin_browser;
+ pub mod tags;
+ pub mod users;
+ pub mod worlds;
+diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
+new file mode 100644
+index 0000000..fba085b
+--- /dev/null
++++ b/packages/app-lib/src/api/skin_browser.rs
+@@ -0,0 +1,373 @@
++//! Browsing skins from other sites.
++//!
++//! Only Ely.by's catalogue is read from here: its robots.txt invites it. NameMC,
++//! laby.net and crafty.gg are not - their lists are bot-protected or not meant
++//! for other programs - so the player browses them in a window of the desktop
++//! shell, and all that is read from them is the one skin whose page is open.
++
++use base64::Engine;
++use serde::{Deserialize, Serialize};
++
++use crate::util::fetch::REQWEST_CLIENT;
++
++fn failed(what: &str, error: impl std::fmt::Display) -> crate::Error {
++    crate::ErrorKind::OtherError(format!("Could not {what}: {error}"))
++        .as_error()
++}
++
++fn invalid(what: &str) -> crate::Error {
++    crate::ErrorKind::OtherError(format!("Not a valid {what}")).as_error()
++}
++
++/// Short, and nothing that could not be typed.
++fn plain(value: &str, max: usize) -> bool {
++    value.chars().count() <= max && !value.chars().any(char::is_control)
++}
++
++fn is_hex(value: &str, length: usize) -> bool {
++    value.len() == length && value.bytes().all(|byte| byte.is_ascii_hexdigit())
++}
++
++/// A catalogue filter, as Ely.by's own catalogue page sends it.
++#[derive(Deserialize, Debug)]
++pub struct ElyCatalogueQuery {
++    /// `best` or `time`.
++    pub sort: String,
++    /// `any`, `old`, `new` or `slim`.
++    pub model: String,
++    /// A catalogue category, or empty for all of them.
++    pub kind: String,
++    pub tags: Vec<String>,
++    pub uploader: String,
++    pub page: u32,
++}
++
++#[derive(Serialize, Debug)]
++pub struct ElyCatalogueSkin {
++    pub id: u64,
++    pub skin_url: String,
++    pub is_slim: bool,
++    pub likes: u64,
++    pub wearers: u64,
++    pub views: u64,
++    pub tags: Vec<String>,
++}
++
++#[derive(Serialize, Debug)]
++pub struct ElyCataloguePage {
++    pub items: Vec<ElyCatalogueSkin>,
++    pub current: u32,
++    pub last: u32,
++    pub total: u64,
++}
++
++#[derive(Deserialize)]
++struct RawPage {
++    items: Vec<RawSkin>,
++    #[serde(default)]
++    current: u32,
++    #[serde(default)]
++    last: u32,
++    #[serde(default)]
++    total_items: u64,
++}
++
++#[derive(Deserialize)]
++struct RawSkin {
++    id: u64,
++    skin_url: String,
++    #[serde(default)]
++    is_slim: bool,
++    #[serde(default)]
++    count_cubes: u64,
++    #[serde(default)]
++    count_wearers: u64,
++    #[serde(default)]
++    count_views_total: u64,
++    #[serde(default)]
++    tags: Vec<String>,
++}
++
++/// One page of Ely.by's skin catalogue.
++///
++/// The filters go in the query and the page number in a form body, which is how
++/// the catalogue page itself asks: a page number in the query is ignored.
++pub async fn ely_catalogue(
++    query: &ElyCatalogueQuery,
++) -> crate::Result<ElyCataloguePage> {
++    if !matches!(query.sort.as_str(), "best" | "time") {
++        return Err(invalid("sort"));
++    }
++    if !matches!(query.model.as_str(), "any" | "old" | "new" | "slim") {
++        return Err(invalid("skin format"));
++    }
++    if !plain(&query.kind, 32)
++        || !plain(&query.uploader, 32)
++        || query.tags.len() > 10
++        || query.tags.iter().any(|tag| !plain(tag, 64))
++    {
++        return Err(invalid("filter"));
++    }
++
++    let mut params = vec![("sort", query.sort.clone())];
++    // The catalogue page leaves out whatever is not narrowing anything.
++    if query.model != "any" {
++        params.push(("type", query.model.clone()));
++    }
++    if !query.kind.is_empty() {
++        params.push(("kind", query.kind.clone()));
++    }
++    if !query.uploader.is_empty() {
++        params.push(("uploader", query.uploader.clone()));
++    }
++    for tag in &query.tags {
++        params.push(("tags[]", tag.clone()));
++    }
++
++    let url = url::Url::parse_with_params("https://ely.by/skins/get", &params)
++        .map_err(|error| failed("build the catalogue address", error))?;
++
++    let page: RawPage = REQWEST_CLIENT
++        .post(url)
++        .header("X-Requested-With", "XMLHttpRequest")
++        .header("Accept", "application/json")
++        .header("Content-Type", "application/x-www-form-urlencoded")
++        .body(format!("skinsPage={}", query.page.max(1)))
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed("load the Ely.by catalogue", error))?
++        .json()
++        .await
++        .map_err(|error| failed("read the Ely.by catalogue", error))?;
++
++    Ok(ElyCataloguePage {
++        items: page
++            .items
++            .into_iter()
++            .map(|skin| ElyCatalogueSkin {
++                id: skin.id,
++                skin_url: skin.skin_url,
++                is_slim: skin.is_slim,
++                likes: skin.count_cubes,
++                wearers: skin.count_wearers,
++                views: skin.count_views_total,
++                tags: skin.tags,
++            })
++            .collect(),
++        current: page.current,
++        last: page.last,
++        total: page.total_items,
++    })
++}
++
++#[derive(Serialize, Deserialize, Debug)]
++pub struct ElyPlayer {
++    pub nickname: String,
++    pub skin_url: Option<String>,
++}
++
++/// Ely.by players whose name matches `term`, with the skin each wears.
++///
++/// The catalogue itself has no text search; Ely.by's site-wide search, which
++/// finds players, is how it looks things up by name.
++pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
++    let term = term.trim();
++    if term.chars().count() < 3 || !plain(term, 32) {
++        return Err(invalid("player search"));
++    }
++
++    let url =
++        url::Url::parse_with_params("https://ely.by/search/", &[("term", term)])
++            .map_err(|error| failed("build the search address", error))?;
++
++    REQWEST_CLIENT
++        .get(url)
++        .header("X-Requested-With", "XMLHttpRequest")
++        .header("Accept", "application/json")
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed("search Ely.by", error))?
++        .json()
++        .await
++        .map_err(|error| failed("read the Ely.by search", error))
++}
++
++/// A site that is browsed in the launcher's window.
++#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
++#[serde(rename_all = "lowercase")]
++pub enum SkinSite {
++    Namemc,
++    Laby,
++    Crafty,
++}
++
++impl SkinSite {
++    /// Where browsing the site starts.
++    pub fn home(self) -> &'static str {
++        match self {
++            Self::Namemc => "https://namemc.com/minecraft-skins",
++            Self::Laby => "https://laby.net/skins",
++            Self::Crafty => "https://crafty.gg/skins",
++        }
++    }
++}
++
++/// The skin a page is about, when it is a skin page on one of the sites.
++pub fn skin_page(url: &str) -> Option<(SkinSite, String)> {
++    let url = url::Url::parse(url).ok()?;
++    let host = url.host_str()?.trim_start_matches("www.");
++    let mut segments = url.path_segments()?.filter(|part| !part.is_empty());
++    let section = segments.next()?;
++    let id = segments.next()?.to_ascii_lowercase();
++
++    let site = if host == "namemc.com" || host.ends_with(".namemc.com") {
++        (section == "skin" && is_hex(&id, 16)).then_some(SkinSite::Namemc)
++    } else if host == "laby.net" {
++        (matches!(section, "skin" | "skins") && is_hex(&id, 32))
++            .then_some(SkinSite::Laby)
++    } else if host == "crafty.gg" {
++        (section == "skins" && uuid::Uuid::parse_str(&id).is_ok())
++            .then_some(SkinSite::Crafty)
++    } else {
++        None
++    }?;
++
++    Some((site, id))
++}
++
++/// A skin from a skin page, with whatever the site says about it.
++#[derive(Serialize, Debug)]
++pub struct SiteSkin {
++    pub texture: Vec<u8>,
++    pub slim: Option<bool>,
++    pub likes: Option<u64>,
++    pub views: Option<u64>,
++    pub wearers: Option<u64>,
++}
++
++#[derive(Deserialize)]
++struct CraftyResponse {
++    data: CraftySkin,
++}
++
++#[derive(Deserialize)]
++struct CraftySkin {
++    texture: String,
++    #[serde(default)]
++    slim: Option<bool>,
++    #[serde(default)]
++    upvotes_lifetime: Option<u64>,
++    #[serde(default)]
++    views_lifetime: Option<u64>,
++    #[serde(default)]
++    players_count: Option<u64>,
++}
++
++/// The skin on a skin page the player has open.
++pub async fn site_skin(site: SkinSite, id: &str) -> crate::Result<SiteSkin> {
++    let id = id.to_ascii_lowercase();
++    let texture_only = |texture: Vec<u8>| SiteSkin {
++        texture,
++        slim: None,
++        likes: None,
++        views: None,
++        wearers: None,
++    };
++
++    match site {
++        SkinSite::Namemc => {
++            if !is_hex(&id, 16) {
++                return Err(invalid("NameMC skin"));
++            }
++            // The image host, which is not behind the bot check the pages are.
++            let url = format!("https://s.namemc.com/i/{id}.png");
++            Ok(texture_only(png(&url, "NameMC").await?))
++        }
++        SkinSite::Laby => {
++            if !is_hex(&id, 32) {
++                return Err(invalid("laby.net skin"));
++            }
++            let url = format!("https://laby.net/api/v3/texture/{id}/skin.png");
++            Ok(texture_only(png(&url, "laby.net").await?))
++        }
++        SkinSite::Crafty => {
++            if uuid::Uuid::parse_str(&id).is_err() {
++                return Err(invalid("crafty.gg skin"));
++            }
++            let skin = REQWEST_CLIENT
++                .get(format!("https://api.crafty.gg/api/v2/skins/{id}"))
++                .header("Accept", "application/json")
++                .send()
++                .await
++                .and_then(|response| response.error_for_status())
++                .map_err(|error| failed("load the crafty.gg skin", error))?
++                .json::<CraftyResponse>()
++                .await
++                .map_err(|error| failed("read the crafty.gg skin", error))?
++                .data;
++
++            let texture = base64::engine::general_purpose::STANDARD
++                .decode(skin.texture.as_bytes())
++                .map_err(|error| failed("read the crafty.gg skin", error))?;
++
++            Ok(SiteSkin {
++                texture,
++                slim: skin.slim,
++                likes: skin.upvotes_lifetime,
++                views: skin.views_lifetime,
++                wearers: skin.players_count,
++            })
++        }
++    }
++}
++
++async fn png(url: &str, site: &str) -> crate::Result<Vec<u8>> {
++    let what = format!("load the skin from {site}");
++    let bytes = REQWEST_CLIENT
++        .get(url)
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed(&what, error))?
++        .bytes()
++        .await
++        .map_err(|error| failed(&what, error))?;
++
++    // An empty answer or an error page is not a skin.
++    if !bytes.starts_with(b"\x89PNG") {
++        return Err(failed(&what, "the answer was not a PNG"));
++    }
++
++    Ok(bytes.to_vec())
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn recognises_skin_pages() {
++        assert_eq!(
++            skin_page("https://de.namemc.com/skin/ee40191789e621d3"),
++            Some((SkinSite::Namemc, "ee40191789e621d3".to_string()))
++        );
++        assert_eq!(
++            skin_page("https://laby.net/skins/2322dc180b90075fa936c3408e3776a4"),
++            Some((SkinSite::Laby, "2322dc180b90075fa936c3408e3776a4".to_string()))
++        );
++        assert_eq!(
++            skin_page(
++                "https://crafty.gg/skins/0a08b87a-c813-4b4f-b83b-c856d46f4b23"
++            ),
++            Some((
++                SkinSite::Crafty,
++                "0a08b87a-c813-4b4f-b83b-c856d46f4b23".to_string()
++            ))
++        );
++        assert_eq!(skin_page("https://namemc.com/minecraft-skins"), None);
++        assert_eq!(skin_page("https://crafty.gg/skins/trending"), None);
++        assert_eq!(skin_page("https://example.com/skin/ee40191789e621d3"), None);
++    }
++}
