@@ -20,6 +20,14 @@ cp "$WORKTREE/packages/app-lib/.env.prod" "$WORKTREE/packages/app-lib/.env"
 log "Installing JavaScript dependencies"
 (cd "$WORKTREE" && pnpm install --frozen-lockfile)
 
+# The frontend is built through turbo, whose local cache keeps every task's
+# outputs, and upstream counts the Rust target directory among them: gigabytes
+# a build, never cleaned up, and copied back over target/ on a cache hit. A
+# release build wants none of that, so the local cache is off and what an
+# earlier build left there is removed.
+export TURBO_CACHE=remote:r
+rm -rf "$WORKTREE/.turbo/cache"
+
 tauri_args=()
 case "$(uname -s)" in
 MINGW* | MSYS* | CYGWIN* | Windows_NT)
