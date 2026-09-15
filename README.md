@@ -27,6 +27,7 @@ works.
 | `0012-Launch-a-running-instance-...`       | A running instance can be started again on another account, with a console per copy.                                                       |
 | `0013-Explain-what-went-wrong-...`         | The Logs tab says what a crash was and offers a fix where there is one, without a connection.                                               |
 | `0014-Browse-skins-from-...`               | A Browse tab on the skin page: Ely.by's catalogue in the app, and NameMC, laby.net and crafty.gg in a window.                               |
+| `0015-Use-the-desktop-s-file-picker-...`   | File pickers on Linux are the desktop's own, such as KDE's, through the XDG desktop portal.                                                 |
 
 ### Offline accounts
 
@@ -95,6 +96,10 @@ needs a compositor; without one the corners show black.
 A click with the middle mouse button on anything that scrolls starts autoscroll: press and release
 to scroll until the next click, or hold and drag to scroll until you let go. Links and text fields
 keep their middle-click. Windows is left alone, since WebView2 autoscrolls by itself.
+
+File pickers on Linux go through the XDG desktop portal, so KDE shows its own dialog and GNOME its
+own, instead of a GTK dialog the AppImage themes as light Adwaita. Without a portal, GTK's dialog is
+used as before. Windows and macOS already use their native pickers.
 
 ### Skins
 

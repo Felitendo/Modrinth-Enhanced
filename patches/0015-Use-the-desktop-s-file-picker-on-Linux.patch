@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 14:25:43 +0200
+Subject: [PATCH] Use the desktop's file picker on Linux
+
+File pickers - the webview's own, like the skin page's, and the dialog
+plugin's - are GtkFileChooserNative on Linux, which only uses the XDG
+desktop portal when asked. Unasked, it draws a GTK dialog, and inside the
+AppImage that dialog is themed as light Adwaita whatever the desktop
+looks like. GTK_USE_PORTAL is now set at startup, so KDE shows its own
+file dialog and GNOME its own. A player who set it already keeps their
+value, and without a portal GTK falls back to its own dialog as before.
+
+Windows and macOS already use the native pickers.
+---
+ apps/app/src/main.rs | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index 04eedbd..4c269a3 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -115,6 +115,16 @@ async fn set_restart_after_pending_update(
+ // if Tauri app is called with arguments, then those arguments will be treated as commands
+ // ie: deep links or filepaths for .mrpacks
+ fn main() {
++    // File pickers on Linux - the webview's own and the dialog plugin's, both
++    // GtkFileChooserNative - go through the desktop portal, so KDE and GNOME
++    // show their own dialog rather than a GTK one the AppImage themes as
++    // Adwaita. Without a portal, GTK falls back to its own dialog.
++    #[cfg(target_os = "linux")]
++    if std::env::var_os("GTK_USE_PORTAL").is_none() {
++        // SAFETY: nothing else is running yet.
++        unsafe { std::env::set_var("GTK_USE_PORTAL", "1") };
++    }
++
+     #[cfg(feature = "export-app-events")]
+     theseus::export_app_event_bindings(
+         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))

@@ -156,6 +156,8 @@ check "its corners are rounded" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" "'rounded-window'"
 check "the middle button autoscrolls" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'installAutoscroll()'
+check "file pickers use the desktop portal on Linux" \
+	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("GTK_USE_PORTAL", "1")'
 
 log "No advertising or upsells"
 check "no Modrinth+ upsell in the app" \
