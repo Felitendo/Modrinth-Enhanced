@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 21:11:40 +0200
+Subject: [PATCH] Start on Wayland with an NVIDIA GPU
+
+With the NVIDIA driver under Wayland, WebKitGTK's DMA-BUF renderer takes
+the window down at start with "Error 71 (Protocol error) dispatching to
+Wayland display", so the .deb and .rpm did not open at all there. The
+AppImage forces X11 and never hit this. WEBKIT_DMABUF_RENDERER_FORCE_SHM
+is now set at startup when the NVIDIA DRM module is loaded, which hands
+frames over through shared memory and still renders on the GPU. A player
+who set it, or WEBKIT_DISABLE_DMABUF_RENDERER, keeps their value.
+---
+ apps/app/src/main.rs | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index 4c269a3..5cdab91 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -125,6 +125,20 @@ fn main() {
+         unsafe { std::env::set_var("GTK_USE_PORTAL", "1") };
+     }
+ 
++    // With the NVIDIA driver under Wayland, WebKitGTK's DMA-BUF renderer
++    // takes the window down at start with "Error 71 (Protocol error)
++    // dispatching to Wayland display". Handing frames over through shared
++    // memory avoids it and still renders on the GPU. The AppImage forces X11
++    // and never hit this.
++    #[cfg(target_os = "linux")]
++    if std::path::Path::new("/sys/module/nvidia_drm").exists()
++        && std::env::var_os("WEBKIT_DMABUF_RENDERER_FORCE_SHM").is_none()
++        && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
++    {
++        // SAFETY: nothing else is running yet.
++        unsafe { std::env::set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1") };
++    }
++
+     #[cfg(feature = "export-app-events")]
+     theseus::export_app_event_bindings(
+         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))

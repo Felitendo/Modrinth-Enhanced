@@ -29,6 +29,7 @@ works.
 | `0014-Browse-skins-from-...`               | A Browse tab on the skin page: Ely.by's catalogue in the app, and NameMC, laby.net and crafty.gg in a window.                               |
 | `0015-Use-the-desktop-s-file-picker-...`   | File pickers on Linux are the desktop's own, such as KDE's, through the XDG desktop portal.                                                 |
 | `0016-Show-the-account-in-the-title-bar-...` | With the right sidebar folded away, the Minecraft account is shown in the title bar and managed from there.                         |
+| `0017-Start-on-Wayland-with-an-NVIDIA-GPU` | The app no longer crashes at start under Wayland with the NVIDIA driver.                                                                    |
 
 ### Offline accounts
 
@@ -103,6 +104,12 @@ keep their middle-click. Windows is left alone, since WebView2 autoscrolls by it
 File pickers on Linux go through the XDG desktop portal, so KDE shows its own dialog and GNOME its
 own, instead of a GTK dialog the AppImage themes as light Adwaita. Without a portal, GTK's dialog is
 used as before. Windows and macOS already use their native pickers.
+
+With the NVIDIA driver under Wayland, WebKitGTK used to close the window at start with "Error 71".
+The webview now hands its frames over through shared memory there
+(`WEBKIT_DMABUF_RENDERER_FORCE_SHM=1`), still rendering on the GPU. Setting that or
+`WEBKIT_DISABLE_DMABUF_RENDERER` yourself keeps your choice. The AppImage forces X11 and was not
+affected.
 
 ### Skins
 

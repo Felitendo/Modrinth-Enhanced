@@ -164,6 +164,8 @@ check "the middle button autoscrolls" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'installAutoscroll()'
 check "file pickers use the desktop portal on Linux" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("GTK_USE_PORTAL", "1")'
+check "NVIDIA under Wayland does not crash the webview" \
+	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")'
 
 log "No advertising or upsells"
 check "no Modrinth+ upsell in the app" \
