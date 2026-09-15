@@ -2,6 +2,8 @@ name: Upstream release
 
 # Watches Modrinth for a new Modrinth App release, rebuilds Modrinth Enhanced
 # on top of it, and publishes a release of our own if everything still works.
+# When the patches changed since our last release of that upstream version,
+# it publishes them again as a revision: v1.2.3-2, v1.2.3-3, ...
 #
 # Nothing is published unless the patches applied, the checks passed and all
 # three platforms built, so an upstream change that breaks a patch stops here
@@ -16,10 +18,6 @@ on:
         description: Build this upstream tag instead of the newest one
         type: string
         required: false
-      revision:
-        description: Release the current patches again on the upstream release in upstream.txt, as v1.2.3-2, v1.2.3-3, ...
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -42,41 +40,42 @@ jobs:
       - name: Decide what to release
         id: check
         env:
-          GH_TOKEN: ${{ github.token }}
           REQUESTED: ${{ inputs.upstream-ref }}
-          REVISION: ${{ inputs.revision }}
         run: |
           set -euo pipefail
           current="$(tr -d '[:space:]' < upstream.txt)"
-          if [ "$REVISION" = true ]; then
-            # A revision rebuilds what we already ship, not whatever is newest.
-            upstream="${REQUESTED:-$current}"
-          else
-            upstream="${REQUESTED:-$(scripts/latest-upstream.sh)}"
-          fi
+          upstream="${REQUESTED:-$(scripts/latest-upstream.sh)}"
           echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
           echo "Upstream release: $upstream (we are on $current)"
 
-          if ! gh release view "$upstream" >/dev/null 2>&1; then
-            tag="$upstream"
-          elif [ "$REVISION" = true ]; then
-            # The first release of an upstream version is its plain tag, which
-            # counts as revision 1.
-            last="$(
-              git ls-remote --tags --refs origin "$upstream-*" |
-                sed 's#.*refs/tags/##' |
-                awk -v prefix="$upstream-" 'index($0, prefix) == 1 {
-                  n = substr($0, length(prefix) + 1)
-                  if (n ~ /^[0-9]+$/) print n
+          # Our newest release of it, as "<revision> <tag>". The plain tag is
+          # revision 1.
+          last="$(
+            git ls-remote --tags --refs origin "$upstream" "$upstream-*" |
+              sed 's#.*refs/tags/##' |
+              awk -v up="$upstream" '
+                $0 == up { print 1, $0; next }
+                index($0, up "-") == 1 {
+                  n = substr($0, length(up) + 2)
+                  if (n ~ /^[0-9]+$/) print n, $0
                 }' |
-                sort -n |
-                tail -1
-            )"
-            tag="$upstream-$(( ${last:-1} + 1 ))"
+              sort -n |
+              tail -1
+          )"
+
+          if [ -z "$last" ]; then
+            tag="$upstream"
           else
-            echo "$upstream has already been released; nothing to do."
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            revision="${last%% *}"
+            last_tag="${last#* }"
+            git fetch --no-tags --depth=1 origin "refs/tags/$last_tag:refs/tags/$last_tag"
+            # Only what goes into the build counts, not docs or CI.
+            if git diff --quiet "$last_tag" HEAD -- patches scripts; then
+              echo "$last_tag already ships the current patches; nothing to do."
+              echo "proceed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            tag="$upstream-$((revision + 1))"
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -127,15 +126,24 @@ jobs:
         run: |
           set -euo pipefail
           ls -la artifacts
+          # Every patch by its subject, so the list never falls behind.
+          patches="$(
+            for patch in patches/0*.patch; do
+              awk '/^Subject: /{
+                s = $0
+                sub(/^Subject: (\[PATCH[^]]*\] )?/, "", s)
+                while ((getline line) > 0 && line ~ /^ /) s = s line
+                print "- " s
+                exit
+              }' "$patch"
+            done
+          )"
           notes="$(cat <<EOF
           Modrinth Enhanced $TAG, built from [Modrinth App $UPSTREAM](https://github.com/modrinth/code/releases/tag/$UPSTREAM).
 
           Same app as upstream, with the patches in \`patches/\` applied:
 
-          - no advertising,
-          - no telemetry, crash reporting or survey embeds,
-          - offline accounts for singleplayer and offline-mode servers,
-          - renamed and re-iconed as Modrinth Enhanced.
+          $patches
 
           It keeps using the same data directory as the official Modrinth App,
           so instances, settings and accounts carry over. Do not run both at
@@ -144,7 +152,10 @@ jobs:
           See the upstream release notes for everything else that changed.
           EOF
           )"
+          # The tag goes on the commit that was built, not on whatever main is
+          # by now, so the next run compares against the patches it shipped.
           gh release create "$TAG" \
+            --target "$(git rev-parse HEAD)" \
             --title "Modrinth Enhanced $TAG" \
             --notes "$notes" \
             artifacts/*
