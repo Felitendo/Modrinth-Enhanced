@@ -1,0 +1,2087 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 09:42:35 +0200
+Subject: [PATCH] Explain what went wrong when the game crashed
+
+The Logs tab now says what a crash was, without a connection. After a
+run ends, the launcher reads the game's crash report, the JVM's own
+hs_err file and the end of the log, and matches them against rules for
+the usual causes: out of memory, the wrong Java version, missing or
+duplicate mods, mods for another game version, failed mixins, a
+software renderer and more. Each finding gets a plain explanation, the
+line it was found on, and where it helps a button to the Java settings
+or the instance folder. Picking an older log from the list runs the same
+rules against it. Files from an earlier run than the log are ignored,
+so an old crash report is not blamed for a new crash.
+
+The rules report an id and what they captured; the words are in the
+frontend, so they can be translated. mclo.gs analysis in the console is
+unchanged.
+
+Adapted from Noctrinth (https://github.com/Everelsu/Noctrinth).
+---
+ .../src/components/ui/CrashDiagnosis.vue      |  641 ++++++++++
+ .../src/helpers/crash-analysis.ts             |   84 ++
+ .../src/pages/instance/logs/index.vue         |   44 +-
+ apps/app/build.rs                             |   11 +
+ apps/app/capabilities/plugins.json            |    3 +-
+ apps/app/src/api/crash_analysis.rs            |   37 +
+ apps/app/src/api/mod.rs                       |    1 +
+ apps/app/src/main.rs                          |    1 +
+ packages/app-lib/src/api/crash_analysis.rs    | 1087 +++++++++++++++++
+ packages/app-lib/src/api/mod.rs               |    1 +
+ 10 files changed, 1908 insertions(+), 2 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/CrashDiagnosis.vue
+ create mode 100644 apps/app-frontend/src/helpers/crash-analysis.ts
+ create mode 100644 apps/app/src/api/crash_analysis.rs
+ create mode 100644 packages/app-lib/src/api/crash_analysis.rs
+
+diff --git a/apps/app-frontend/src/components/ui/CrashDiagnosis.vue b/apps/app-frontend/src/components/ui/CrashDiagnosis.vue
+new file mode 100644
+index 0000000..26b04eb
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/CrashDiagnosis.vue
+@@ -0,0 +1,641 @@
++<script setup lang="ts">
++/**
++ * What the launcher makes of the files a crashed run left behind.
++ *
++ * The rules live in Rust — see `crash_analysis.rs` — and report an id and what
++ * they captured. The words are here, so that they can be translated and so that
++ * a fix can be a button rather than a sentence telling somebody where to look.
++ */
++import { ExternalIcon, FolderOpenIcon, SettingsIcon, WrenchIcon } from '@modrinth/assets'
++import {
++	Admonition,
++	Button,
++	Collapsible,
++	defineMessages,
++	injectNotificationManager,
++	useVIntl,
++} from '@modrinth/ui'
++import { computed, ref } from 'vue'
++
++import type { CrashFinding, CrashSeverity } from '@/helpers/crash-analysis'
++import { showInstanceInFolder } from '@/helpers/utils.js'
++
++const props = defineProps<{
++	instanceId: string
++	findings: CrashFinding[]
++	/** Opens the instance's settings, on the tab a fix belongs to. */
++	onOpenSettings?: (tab?: number) => void
++}>()
++
++const emit = defineEmits<{ dismiss: [] }>()
++
++const { formatMessage } = useVIntl()
++const { handleError } = injectNotificationManager()
++
++/**
++ * The settings tab Java and memory live on.
++ *
++ * Upstream moved them into the overrides tab in 0.20.0; a fix that opens the
++ * wrong tab is worse than one that opens none, so this is checked against
++ * `settings-modal/index.vue` when that page changes.
++ */
++const JAVA_SETTINGS_TAB = 2
++
++const messages = defineMessages({
++	header: {
++		id: 'app.crash.header',
++		defaultMessage: 'The launcher found something in this crash',
++	},
++	headerNote: {
++		id: 'app.crash.header-note',
++		defaultMessage: 'Worth knowing about this run',
++	},
++	showEvidence: { id: 'app.crash.show-evidence', defaultMessage: 'Show the line' },
++	hideEvidence: { id: 'app.crash.hide-evidence', defaultMessage: 'Hide the line' },
++	openSettings: { id: 'app.crash.open-settings', defaultMessage: 'Open settings' },
++	openFolder: { id: 'app.crash.open-folder', defaultMessage: 'Open instance folder' },
++	dismiss: { id: 'app.crash.dismiss', defaultMessage: 'Dismiss' },
++	foundIn: { id: 'app.crash.found-in', defaultMessage: 'In {file}' },
++
++	// One title and one fix per rule. A rule with nothing useful to suggest has
++	// no fix line rather than a filler one.
++	crash_description: {
++		id: 'app.crash.rule.crash-description.title',
++		defaultMessage: 'The game described it as: {description}',
++	},
++	loader_suggestion: {
++		id: 'app.crash.rule.loader-suggestion.title',
++		defaultMessage: 'The mod loader worked out a fix itself',
++	},
++	loader_suggestion_fix: {
++		id: 'app.crash.rule.loader-suggestion.fix',
++		defaultMessage: '{suggestion}',
++	},
++	suspected_mods: {
++		id: 'app.crash.rule.suspected-mods.title',
++		defaultMessage: 'The mod loader suspects: {mods}',
++	},
++	suspected_mods_fix: {
++		id: 'app.crash.rule.suspected-mods.fix',
++		defaultMessage: 'Turn those off first, one at a time, and launch again after each.',
++	},
++	out_of_memory_heap: {
++		id: 'app.crash.rule.out-of-memory-heap.title',
++		defaultMessage: 'The game ran out of the memory it was given',
++	},
++	out_of_memory_heap_fix: {
++		id: 'app.crash.rule.out-of-memory-heap.fix',
++		defaultMessage:
++			'Give this instance more memory, or ask less of it: a lower render distance and fewer world-generation mods are what usually costs the most.',
++	},
++	out_of_memory_metaspace: {
++		id: 'app.crash.rule.out-of-memory-metaspace.title',
++		defaultMessage: 'The game ran out of room for the code it was loading',
++	},
++	out_of_memory_metaspace_fix: {
++		id: 'app.crash.rule.out-of-memory-metaspace.fix',
++		defaultMessage:
++			'This is a very large modpack on a small allocation. Raise the memory for this instance.',
++	},
++	out_of_memory_system: {
++		id: 'app.crash.rule.out-of-memory-system.title',
++		defaultMessage: 'The machine had no memory left to give',
++	},
++	out_of_memory_system_fix: {
++		id: 'app.crash.rule.out-of-memory-system.fix',
++		defaultMessage:
++			'Lower the memory this instance asks for, or close what else is running. Asking for more than the machine has is what stops it starting at all.',
++	},
++	heap_too_large_to_start: {
++		id: 'app.crash.rule.heap-too-large-to-start.title',
++		defaultMessage: 'The instance asked for more memory than could be reserved ({size})',
++	},
++	heap_too_large_to_start_fix: {
++		id: 'app.crash.rule.heap-too-large-to-start.fix',
++		defaultMessage: 'Lower the allocation for this instance and launch again.',
++	},
++	java_too_old: {
++		id: 'app.crash.rule.java-too-old.title',
++		defaultMessage: 'Something needs Java {needs}, and the instance ran on Java {has}',
++	},
++	java_too_old_fix: {
++		id: 'app.crash.rule.java-too-old.fix',
++		defaultMessage: 'Point this instance at a Java {needs} installation, or let it download one.',
++	},
++	java_unsupported_class: {
++		id: 'app.crash.rule.java-unsupported-class.title',
++		defaultMessage: 'A mod was built for a newer Java than the one that ran',
++	},
++	java_unsupported_class_fix: {
++		id: 'app.crash.rule.java-unsupported-class.fix',
++		defaultMessage: 'Change the Java this instance uses in its settings.',
++	},
++	fabric_missing_dependency: {
++		id: 'app.crash.rule.fabric-missing-dependency.title',
++		defaultMessage: '{mod_name} needs {dependency}, which is not installed',
++	},
++	fabric_missing_dependency_fix: {
++		id: 'app.crash.rule.fabric-missing-dependency.fix',
++		defaultMessage: 'Install {dependency}, or remove {mod_name}.',
++	},
++	fabric_wrong_dependency_version: {
++		id: 'app.crash.rule.fabric-wrong-dependency-version.title',
++		defaultMessage: '{mod_name} needs another version of {dependency}',
++	},
++	fabric_wrong_dependency_version_fix: {
++		id: 'app.crash.rule.fabric-wrong-dependency-version.fix',
++		defaultMessage: 'Update {dependency} to {requirement}, or use a build of {mod_name} that fits.',
++	},
++	forge_missing_dependency: {
++		id: 'app.crash.rule.forge-missing-dependency.title',
++		defaultMessage: '{mod_id} needs {dependency}, which is missing',
++	},
++	forge_missing_dependency_fix: {
++		id: 'app.crash.rule.forge-missing-dependency.fix',
++		defaultMessage: 'Install {dependency}, or remove {mod_id}.',
++	},
++	duplicate_mods: {
++		id: 'app.crash.rule.duplicate-mods.title',
++		defaultMessage: 'The same mod is installed more than once',
++	},
++	duplicate_mods_fix: {
++		id: 'app.crash.rule.duplicate-mods.fix',
++		defaultMessage:
++			'Open the mods folder and leave one copy of each — two versions of the same file is the usual cause.',
++	},
++	mod_for_other_version: {
++		id: 'app.crash.rule.mod-for-other-version.title',
++		defaultMessage: 'A mod was built for a different version of Minecraft',
++	},
++	mod_for_other_version_fix: {
++		id: 'app.crash.rule.mod-for-other-version.fix',
++		defaultMessage:
++			'It went looking for {symbol}, which this version does not have. Update the mod, or use the version of it built for this one.',
++	},
++	mixin_failed: {
++		id: 'app.crash.rule.mixin-failed.title',
++		defaultMessage: 'A mod could not patch the game ({config})',
++	},
++	mixin_failed_fix: {
++		id: 'app.crash.rule.mixin-failed.fix',
++		defaultMessage:
++			'The name in front of .mixins.json is the mod to update or remove first; when two mods patch the same thing, it is the pair that has to change.',
++	},
++	optifine_present: {
++		id: 'app.crash.rule.optifine-present.title',
++		defaultMessage: 'OptiFine was loaded when this went wrong',
++	},
++	optifine_present_fix: {
++		id: 'app.crash.rule.optifine-present.fix',
++		defaultMessage:
++			'OptiFine breaks against most modern mods. Sodium with Iris, or Embeddium with Oculus, do the same job and are made to sit beside them.',
++	},
++	connector_fabric_mod: {
++		id: 'app.crash.rule.connector-fabric-mod.title',
++		defaultMessage: 'Sinytra Connector could not carry a Fabric mod ({exception})',
++	},
++	connector_fabric_mod_fix: {
++		id: 'app.crash.rule.connector-fabric-mod.fix',
++		defaultMessage:
++			"On NeoForge, install the mod's own NeoForge build where there is one — Sodium and Iris both have official ones, and they do not go through Connector. On Forge 1.20.1 and older the equivalents are Embeddium and Oculus.",
++	},
++	corrupted_archive: {
++		id: 'app.crash.rule.corrupted-archive.title',
++		defaultMessage: 'A file the game had to read is damaged or half-downloaded',
++	},
++	corrupted_archive_fix: {
++		id: 'app.crash.rule.corrupted-archive.fix',
++		defaultMessage:
++			'Repair the instance so the launcher fetches it again. A download that was interrupted leaves exactly this.',
++	},
++	disk_full: {
++		id: 'app.crash.rule.disk-full.title',
++		defaultMessage: 'The disk is full',
++	},
++	disk_full_fix: {
++		id: 'app.crash.rule.disk-full.fix',
++		defaultMessage: 'Free some space on the drive the instance is on and launch again.',
++	},
++	file_locked: {
++		id: 'app.crash.rule.file-locked.title',
++		defaultMessage: 'Another program was holding one of the game’s files',
++	},
++	file_locked_fix: {
++		id: 'app.crash.rule.file-locked.fix',
++		defaultMessage:
++			'Close other launchers and any copy of the game still running, and check whether an antivirus is scanning this folder.',
++	},
++	gpu_driver_amd: {
++		id: 'app.crash.rule.gpu-driver-amd.title',
++		defaultMessage: 'The AMD graphics driver crashed ({library})',
++	},
++	gpu_driver_nvidia: {
++		id: 'app.crash.rule.gpu-driver-nvidia.title',
++		defaultMessage: 'The NVIDIA graphics driver crashed ({library})',
++	},
++	gpu_driver_intel: {
++		id: 'app.crash.rule.gpu-driver-intel.title',
++		defaultMessage: 'The Intel graphics driver crashed ({library})',
++	},
++	gpu_driver_fix: {
++		id: 'app.crash.rule.gpu-driver.fix',
++		defaultMessage:
++			'Update the graphics driver from the maker’s site rather than through Windows Update, and turn off shaders while testing.',
++	},
++	opengl_unsupported: {
++		id: 'app.crash.rule.opengl-unsupported.title',
++		defaultMessage: 'The graphics driver could not give the game the OpenGL it needs',
++	},
++	opengl_unsupported_fix: {
++		id: 'app.crash.rule.opengl-unsupported.fix',
++		defaultMessage:
++			'Update the graphics driver. On a laptop with two GPUs, make sure the game is set to run on the faster one.',
++	},
++	missing_native_library: {
++		id: 'app.crash.rule.missing-native-library.title',
++		defaultMessage: 'A library the game loads from disk could not be loaded',
++	},
++	missing_native_library_fix: {
++		id: 'app.crash.rule.missing-native-library.fix',
++		defaultMessage:
++			'Repair the instance. If it happens again, check that an antivirus is not quarantining the natives folder.',
++	},
++	jvm_problematic_frame: {
++		id: 'app.crash.rule.jvm-problematic-frame.title',
++		defaultMessage: 'Java itself stopped in {frame}',
++	},
++	jvm_signal: {
++		id: 'app.crash.rule.jvm-signal.title',
++		defaultMessage: 'The process was stopped by {signal}',
++	},
++
++	neoforge_dependency_version: {
++		id: 'app.crash.rule.neoforge-dependency-version.title',
++		defaultMessage: '{mod_id} needs {dependency} {expected}, and found {actual}',
++	},
++	neoforge_dependency_version_fix: {
++		id: 'app.crash.rule.neoforge-dependency-version.fix',
++		defaultMessage:
++			'Update {dependency} to a version in that range, or roll {mod_id} back to one that accepts what you have.',
++	},
++	mod_incompatible: {
++		id: 'app.crash.rule.mod-incompatible.title',
++		defaultMessage: '{mod_name} refuses to run alongside {conflict}',
++	},
++	mod_incompatible_fix: {
++		id: 'app.crash.rule.mod-incompatible.fix',
++		defaultMessage:
++			'The two cannot both be installed. Keep whichever you need and remove the other.',
++	},
++	not_a_mod_file: {
++		id: 'app.crash.rule.not-a-mod-file.title',
++		defaultMessage: '{file} is not a mod',
++	},
++	not_a_mod_file_fix: {
++		id: 'app.crash.rule.not-a-mod-file.fix',
++		defaultMessage:
++			'Usually a download that saved the web page instead of the file, or a resource pack put in the mods folder by mistake. Remove it and download it again.',
++	},
++	mixin_injection_failed: {
++		id: 'app.crash.rule.mixin-injection-failed.title',
++		defaultMessage: 'A mod could not patch the game where it expected to ({config})',
++	},
++	mixin_injection_failed_fix: {
++		id: 'app.crash.rule.mixin-injection-failed.fix',
++		defaultMessage:
++			'Almost always the mod behind that file being built for a different version of the game or of another mod. Update it, and if it is already current, remove the mod it clashes with.',
++	},
++	mixin_invalid_injection: {
++		id: 'app.crash.rule.mixin-invalid-injection.title',
++		defaultMessage: 'Two mods changed the same part of the game',
++	},
++	mixin_invalid_injection_fix: {
++		id: 'app.crash.rule.mixin-invalid-injection.fix',
++		defaultMessage:
++			'Look at the mods named in the lines below and update them. If one of them is a performance or rendering mod, try without it first — those touch the most.',
++	},
++	java_too_new: {
++		id: 'app.crash.rule.java-too-new.title',
++		defaultMessage: 'This Java is newer than the game can use',
++	},
++	java_too_new_fix: {
++		id: 'app.crash.rule.java-too-new.fix',
++		defaultMessage:
++			'Older versions of Minecraft need an older Java. Let the launcher install the one this version expects.',
++	},
++	missing_main_class: {
++		id: 'app.crash.rule.missing-main-class.title',
++		defaultMessage: 'The game could not be started at all ({class_name} is missing)',
++	},
++	missing_main_class_fix: {
++		id: 'app.crash.rule.missing-main-class.fix',
++		defaultMessage:
++			'The instance is incomplete — usually an install that was interrupted. Repair or reinstall it.',
++	},
++	software_renderer: {
++		id: 'app.crash.rule.software-renderer.title',
++		defaultMessage: 'The game is drawing without a graphics driver ({renderer})',
++	},
++	software_renderer_fix: {
++		id: 'app.crash.rule.software-renderer.fix',
++		defaultMessage:
++			'Windows is falling back to software rendering, which Minecraft cannot run on. Install the driver for your graphics card from its maker.',
++	},
++	integrated_gpu_in_use: {
++		id: 'app.crash.rule.integrated-gpu-in-use.title',
++		defaultMessage: 'The game is running on the built-in graphics chip ({renderer})',
++	},
++	integrated_gpu_in_use_fix: {
++		id: 'app.crash.rule.integrated-gpu-in-use.fix',
++		defaultMessage:
++			'If this computer also has a separate graphics card, the game is using the slower one. The launcher can ask Windows to use the other.',
++	},
++	datapack_blocked_world: {
++		id: 'app.crash.rule.datapack-blocked-world.title',
++		defaultMessage: 'The world would not load because a datapack has errors',
++	},
++	datapack_blocked_world_fix: {
++		id: 'app.crash.rule.datapack-blocked-world.fix',
++		defaultMessage:
++			'A mod that adds recipes or world generation was removed or changed. Put it back, or open the world with "safe mode" to load it without the broken datapack.',
++	},
++	chunk_unreadable: {
++		id: 'app.crash.rule.chunk-unreadable.title',
++		defaultMessage: 'Part of the world could not be read (chunk {chunk})',
++	},
++	chunk_unreadable_fix: {
++		id: 'app.crash.rule.chunk-unreadable.fix',
++		defaultMessage:
++			'Back the world up before doing anything else. A single damaged region file can be deleted and regenerated, losing only what was built there.',
++	},
++	config_unreadable: {
++		id: 'app.crash.rule.config-unreadable.title',
++		defaultMessage: 'A settings file is damaged ({file})',
++	},
++	config_unreadable_fix: {
++		id: 'app.crash.rule.config-unreadable.fix',
++		defaultMessage:
++			'Delete that file and start the game again — the mod will write a fresh one with its defaults.',
++	},
++
++	native_allocator: {
++		id: 'app.crash.rule.native-allocator.title',
++		defaultMessage: 'The memory allocator brought the process down ({library})',
++	},
++	native_allocator_fix: {
++		id: 'app.crash.rule.native-allocator.fix',
++		defaultMessage:
++			'Almost always failing memory or a memory overclock. Run a RAM test, and turn off XMP or EXPO in the BIOS to see if it stops.',
++	},
++	native_audio: {
++		id: 'app.crash.rule.native-audio.title',
++		defaultMessage: 'The sound system brought the process down',
++	},
++	native_audio_fix: {
++		id: 'app.crash.rule.native-audio.fix',
++		defaultMessage:
++			'Usually the audio device changing while the game runs — headphones unplugged, a Bluetooth speaker going to sleep. Update the sound driver, and set a fixed output device.',
++	},
++	native_window_linux: {
++		id: 'app.crash.rule.native-window-linux.title',
++		defaultMessage: 'A system graphics library brought the process down ({library})',
++	},
++	native_window_linux_fix: {
++		id: 'app.crash.rule.native-window-linux.fix',
++		defaultMessage:
++			'Update the graphics driver and Mesa. On Wayland, running the game through XWayland avoids most of these.',
++	},
++	native_shader_macos: {
++		id: 'app.crash.rule.native-shader-macos.title',
++		defaultMessage: 'The macOS graphics layer brought the process down',
++	},
++	native_shader_macos_fix: {
++		id: 'app.crash.rule.native-shader-macos.fix',
++		defaultMessage:
++			'A shader pack macOS cannot compile. Turn shaders off — most packs are written for drivers Apple does not ship.',
++	},
++	wrong_jdk_apple_silicon: {
++		id: 'app.crash.rule.wrong-jdk-apple-silicon.title',
++		defaultMessage: 'Java is the wrong build for this Mac',
++	},
++	wrong_jdk_apple_silicon_fix: {
++		id: 'app.crash.rule.wrong-jdk-apple-silicon.fix',
++		defaultMessage:
++			'An Apple Silicon Mac running an Intel Java, or the reverse. Let the launcher install Java for this instance rather than using one already on the system.',
++	},
++	jvm_itself_failed: {
++		id: 'app.crash.rule.jvm-itself-failed.title',
++		defaultMessage: 'Java itself stopped, not the game',
++	},
++	jvm_itself_failed_fix: {
++		id: 'app.crash.rule.jvm-itself-failed.fix',
++		defaultMessage:
++			'A crash inside Java itself is either failing hardware or a bug in that Java build. Test the memory first; if it is clean, install a different Java version for this instance.',
++	},
++	resource_location_invalid: {
++		id: 'app.crash.rule.resource-location-invalid.title',
++		defaultMessage: 'A name the game cannot use got into a path',
++	},
++	resource_location_invalid_fix: {
++		id: 'app.crash.rule.resource-location-invalid.fix',
++		defaultMessage:
++			'Minecraft only accepts lowercase Latin letters, digits and a few symbols in these names. The usual cause is the Windows account being named in another alphabet, which puts those letters in the path to everything. Move the launcher folder somewhere with a plain Latin path.',
++	},
++	language_provider_mismatch: {
++		id: 'app.crash.rule.language-provider-mismatch.title',
++		defaultMessage: 'A mod was built for a different version of the loader',
++	},
++	language_provider_mismatch_fix: {
++		id: 'app.crash.rule.language-provider-mismatch.fix',
++		defaultMessage:
++			'The lines below name what it wanted. Either update the loader for this instance, or take the build of that mod made for the loader you have.',
++	},
++	java_module_error: {
++		id: 'app.crash.rule.java-module-error.title',
++		defaultMessage: 'Two mods shipped the same library ({exception})',
++	},
++	java_module_error_fix: {
++		id: 'app.crash.rule.java-module-error.fix',
++		defaultMessage:
++			'Java refuses to start when two files claim the same module. The detail below names it — find which mods carry it and keep the newer one.',
++	},
++	oculus_without_embeddium: {
++		id: 'app.crash.rule.oculus-without-embeddium.title',
++		defaultMessage: 'Oculus is installed without Embeddium',
++	},
++	oculus_without_embeddium_fix: {
++		id: 'app.crash.rule.oculus-without-embeddium.fix',
++		defaultMessage:
++			'Oculus draws through Embeddium and cannot start without it. Install Embeddium, or on NeoForge use the official Sodium and Iris builds instead of either.',
++	},
++	missing_indium: {
++		id: 'app.crash.rule.missing-indium.title',
++		defaultMessage: 'A mod needs Indium to draw with Sodium',
++	},
++	missing_indium_fix: {
++		id: 'app.crash.rule.missing-indium.fix',
++		defaultMessage:
++			'Sodium leaves out the rendering interface some mods draw through, and Indium puts it back. Install Indium for the same Minecraft version.',
++	},
++	too_many_block_ids: {
++		id: 'app.crash.rule.too-many-block-ids.title',
++		defaultMessage: 'The pack ran out of ids for blocks or items',
++	},
++	too_many_block_ids_fix: {
++		id: 'app.crash.rule.too-many-block-ids.fix',
++		defaultMessage:
++			'Old versions of Minecraft have a hard limit here. Remove some content mods, or install one that raises the limit for that version.',
++	},
++	server_thread_stuck: {
++		id: 'app.crash.rule.server-thread-stuck.title',
++		defaultMessage: 'The world stopped responding and was shut down',
++	},
++	server_thread_stuck_fix: {
++		id: 'app.crash.rule.server-thread-stuck.fix',
++		defaultMessage:
++			'Something took so long that the game gave up waiting — usually world generation on a slow disk, or one mod stuck in a loop. The lines below name what it was doing.',
++	},
++	feature_order_cycle: {
++		id: 'app.crash.rule.feature-order-cycle.title',
++		defaultMessage: 'Two world-generation mods disagree about what comes first',
++	},
++	feature_order_cycle_fix: {
++		id: 'app.crash.rule.feature-order-cycle.fix',
++		defaultMessage:
++			'Each is waiting for the other, so no order exists. Remove one of the world-generation mods, or install a mod that resolves the ordering.',
++	},
++})
++
++/** Rules whose fix is a page of this launcher rather than a sentence. */
++const ACTIONS: Record<string, 'settings' | 'folder'> = {
++	out_of_memory_heap: 'settings',
++	out_of_memory_metaspace: 'settings',
++	out_of_memory_system: 'settings',
++	heap_too_large_to_start: 'settings',
++	java_too_old: 'settings',
++	java_unsupported_class: 'settings',
++	duplicate_mods: 'folder',
++	corrupted_archive: 'folder',
++	missing_native_library: 'folder',
++	file_locked: 'folder',
++	java_too_new: 'settings',
++	integrated_gpu_in_use: 'settings',
++	not_a_mod_file: 'folder',
++	config_unreadable: 'folder',
++	chunk_unreadable: 'folder',
++	wrong_jdk_apple_silicon: 'settings',
++	jvm_itself_failed: 'settings',
++}
++
++/** A class file version is its Java version plus forty-four. */
++function javaOf(classVersion: string | undefined): string {
++	const version = Number(classVersion)
++	return Number.isFinite(version) && version > 44 ? String(version - 44) : (classVersion ?? '?')
++}
++
++function values(finding: CrashFinding): Record<string, string> {
++	const filled = { ...finding.values }
++
++	if (finding.rule === 'java_too_old') {
++		filled.needs = javaOf(finding.values.class_version)
++		filled.has = javaOf(finding.values.runtime_version)
++	}
++
++	return filled
++}
++
++function messageFor(key: string, finding: CrashFinding): string | undefined {
++	const message = (messages as Record<string, { id: string; defaultMessage: string }>)[key]
++	if (!message) return undefined
++
++	return formatMessage(message, values(finding))
++}
++
++function titleOf(finding: CrashFinding): string {
++	return messageFor(finding.rule, finding) ?? finding.evidence
++}
++
++function fixOf(finding: CrashFinding): string | undefined {
++	if (finding.rule.startsWith('gpu_driver_')) return messageFor('gpu_driver_fix', finding)
++	return messageFor(`${finding.rule}_fix`, finding)
++}
++
++const worst = computed<CrashSeverity>(() =>
++	props.findings.some((finding) => finding.severity === 'critical')
++		? 'critical'
++		: props.findings.some((finding) => finding.severity === 'warning')
++			? 'warning'
++			: 'note',
++)
++
++const admonitionType = computed(() =>
++	worst.value === 'critical' ? 'critical' : worst.value === 'warning' ? 'warning' : 'info',
++)
++
++const shownEvidence = ref<string | null>(null)
++
++function toggleEvidence(rule: string) {
++	shownEvidence.value = shownEvidence.value === rule ? null : rule
++}
++
++function runAction(finding: CrashFinding) {
++	const action = ACTIONS[finding.rule]
++	if (action === 'settings') {
++		props.onOpenSettings?.(JAVA_SETTINGS_TAB)
++	} else if (action === 'folder') {
++		void showInstanceInFolder(props.instanceId).catch(handleError)
++	}
++}
++</script>
++
++<template>
++	<Admonition
++		v-if="findings.length"
++		:type="admonitionType"
++		:header="formatMessage(worst === 'note' ? messages.headerNote : messages.header)"
++	>
++		<div class="flex flex-col gap-3">
++			<div v-for="finding in findings" :key="finding.rule" class="flex flex-col gap-1">
++				<span class="font-semibold text-contrast">{{ titleOf(finding) }}</span>
++				<span v-if="fixOf(finding)" class="text-secondary">{{ fixOf(finding) }}</span>
++
++				<div class="flex flex-wrap items-center gap-2 pt-1">
++					<Button v-if="ACTIONS[finding.rule] === 'settings'" size="sm" @click="runAction(finding)">
++						<SettingsIcon aria-hidden="true" />
++						{{ formatMessage(messages.openSettings) }}
++					</Button>
++					<Button v-if="ACTIONS[finding.rule] === 'folder'" size="sm" @click="runAction(finding)">
++						<FolderOpenIcon aria-hidden="true" />
++						{{ formatMessage(messages.openFolder) }}
++					</Button>
++					<Button size="sm" type="transparent" @click="toggleEvidence(finding.rule)">
++						<WrenchIcon aria-hidden="true" />
++						{{
++							formatMessage(
++								shownEvidence === finding.rule ? messages.hideEvidence : messages.showEvidence,
++							)
++						}}
++					</Button>
++					<span class="text-sm text-secondary">
++						{{ formatMessage(messages.foundIn, { file: finding.source_name }) }}
++					</span>
++				</div>
++
++				<Collapsible :collapsed="shownEvidence !== finding.rule">
++					<code
++						class="mt-1 block overflow-x-auto whitespace-pre rounded-lg bg-surface-2 p-2 text-xs"
++					>
++						{{ finding.evidence }}
++					</code>
++				</Collapsible>
++			</div>
++
++			<div class="flex items-center gap-2">
++				<Button size="sm" type="transparent" @click="emit('dismiss')">
++					<ExternalIcon aria-hidden="true" class="rotate-90" />
++					{{ formatMessage(messages.dismiss) }}
++				</Button>
++			</div>
++		</div>
++	</Admonition>
++</template>
+diff --git a/apps/app-frontend/src/helpers/crash-analysis.ts b/apps/app-frontend/src/helpers/crash-analysis.ts
+new file mode 100644
+index 0000000..1c8a37f
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/crash-analysis.ts
+@@ -0,0 +1,84 @@
++/**
++ * The launcher's own reading of a crash.
++ *
++ * Upstream sends the live console to mclo.gs and shows what it makes of it,
++ * which is the better answer for anything unusual — and no answer at all
++ * without a connection, or for the crash report and the JVM's own error file,
++ * which is where the cause is usually written in plain sight.
++ *
++ * This is the local half: rules that run against those files as well, on this
++ * machine, and fixes that are pages of this launcher rather than advice. See
++ * `packages/app-lib/src/api/crash_analysis.rs` for why the words a player reads
++ * are not in the Rust.
++ */
++import { invoke } from '@tauri-apps/api/core'
++
++export type CrashSeverity = 'note' | 'warning' | 'critical'
++export type CrashSourceKind = 'crash_report' | 'log' | 'jvm_error'
++
++export interface CrashFinding {
++	rule: string
++	severity: CrashSeverity
++	source: CrashSourceKind
++	source_name: string
++	evidence: string
++	values: Record<string, string>
++}
++
++export interface CrashSourceFile {
++	kind: CrashSourceKind
++	name: string
++	modified: number
++}
++
++export interface CrashDiagnosis {
++	findings: CrashFinding[]
++	sources: CrashSourceFile[]
++}
++
++const EMPTY: CrashDiagnosis = { findings: [], sources: [] }
++
++/** Reads the files the last run left behind and reports what it recognised. */
++export async function analyzeInstanceCrash(instanceId: string): Promise<CrashDiagnosis> {
++	try {
++		return await invoke<CrashDiagnosis>('plugin:crash-analysis|crash_analyze_instance', {
++			instanceId,
++		})
++	} catch (error) {
++		// A diagnosis that cannot be made is not worth a notification: the log
++		// the player came here to read is on screen either way.
++		console.warn('Could not read the crash files for a diagnosis', error)
++		return EMPTY
++	}
++}
++
++/** The same rules, against text already in hand. */
++export async function analyzeCrashText(
++	text: string,
++	kind: CrashSourceKind,
++	sourceName: string,
++): Promise<CrashDiagnosis> {
++	if (!text.trim()) return EMPTY
++
++	try {
++		return await invoke<CrashDiagnosis>('plugin:crash-analysis|crash_analyze_text', {
++			text,
++			kind,
++			sourceName,
++		})
++	} catch (error) {
++		console.warn('Could not analyse the log', error)
++		return EMPTY
++	}
++}
++
++/** Which of two diagnoses to lead with, worst first. */
++const SEVERITY_ORDER: Record<CrashSeverity, number> = {
++	critical: 0,
++	warning: 1,
++	note: 2,
++}
++
++export function sortFindings(findings: CrashFinding[]): CrashFinding[] {
++	return [...findings].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
++}
+diff --git a/apps/app-frontend/src/pages/instance/logs/index.vue b/apps/app-frontend/src/pages/instance/logs/index.vue
+index e2a59fd..4fcddea 100644
+--- a/apps/app-frontend/src/pages/instance/logs/index.vue
++++ b/apps/app-frontend/src/pages/instance/logs/index.vue
+@@ -1,5 +1,16 @@
+ <template>
+ 	<div class="flex flex-col gap-4 h-full">
++		<!--
++			The launcher's own reading of the crash report, the JVM error file and the
++			log. It works offline, next to the mclo.gs analysis in the console.
++		-->
++		<CrashDiagnosis
++			v-if="localFindings.length"
++			:instance-id="instanceId"
++			:findings="localFindings"
++			:on-open-settings="instancePage.openSettings"
++			@dismiss="localFindings = []"
++		/>
+ 		<!-- One console per copy while the instance is running more than once. -->
+ 		<div v-if="runningCopies.length > 1" class="flex min-h-0 flex-1 gap-4">
+ 			<ProcessConsole v-for="copy in runningCopies" :key="copy.uuid" :process="copy" />
+@@ -18,9 +29,11 @@ import {
+ import { useQuery } from '@tanstack/vue-query'
+ import { computed, ref, shallowRef, triggerRef, watch, watchEffect } from 'vue'
+ 
++import CrashDiagnosis from '@/components/ui/CrashDiagnosis.vue'
+ import ProcessConsole from '@/components/ui/ProcessConsole.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { useInstanceConsole } from '@/composables/useInstanceConsole'
++import { analyzeCrashText, analyzeInstanceCrash } from '@/helpers/crash-analysis'
+ import { delete_logs_by_filename, get_output_by_filename } from '@/helpers/logs.js'
+ 
+ import { injectInstancePage } from '../instance-context'
+@@ -129,6 +142,28 @@ watchEffect(() => {
+ 
+ const crashAnalysis = ref(null)
+ 
++const localFindings = ref([])
++
++/**
++ * Reads what the instance left on disk: the crash report, the JVM error file
++ * and the end of the log. Runs when the page opens and when a run ends, which
++ * is when those files are complete.
++ */
++async function diagnoseInstance() {
++	const diagnosis = await analyzeInstanceCrash(instanceId.value)
++	localFindings.value = diagnosis.findings
++}
++
++/** The same rules against a log picked out of the list. */
++async function diagnoseText(output, logType, filename) {
++	const diagnosis = await analyzeCrashText(
++		output,
++		logType === 'CrashReport' ? 'crash_report' : 'log',
++		filename,
++	)
++	localFindings.value = diagnosis.findings
++}
++
+ async function analyseForCrash() {
+ 	const lines = liveConsole.output.value
+ 	if (lines.length === 0) return
+@@ -184,7 +219,10 @@ provideConsoleManager({
+ })
+ 
+ watch(selectedLogIndex, async (newIndex) => {
+-	if (newIndex === 0) return
++	if (newIndex === 0) {
++		void diagnoseInstance()
++		return
++	}
+ 	const log = filteredLogs.value[newIndex]
+ 	if (!log) return
+ 
+@@ -192,6 +230,7 @@ watch(selectedLogIndex, async (newIndex) => {
+ 	if (cached) {
+ 		historicalConsole.clear()
+ 		historicalConsole.addLegacyLog(cached)
++		void diagnoseText(cached, log.log_type, log.filename)
+ 		return
+ 	}
+ 
+@@ -201,6 +240,7 @@ watch(selectedLogIndex, async (newIndex) => {
+ 	if (output) {
+ 		historicalConsole.clear()
+ 		historicalConsole.addLegacyLog(output)
++		void diagnoseText(output, log.log_type, log.filename)
+ 	}
+ })
+ 
+@@ -208,6 +248,7 @@ selectedLogIndex.value = 0
+ 
+ if (!instancePage.playing.value) {
+ 	void analyseForCrash()
++	void diagnoseInstance()
+ }
+ 
+ useAppEvent('log', (payload) => {
+@@ -240,6 +281,7 @@ useAppEvent('process', async (e) => {
+ 		const { data } = await historicalLogsQuery.refetch()
+ 		if (data) logs.value = buildLogList(data)
+ 		void analyseForCrash()
++		void diagnoseInstance()
+ 	}
+ })
+ </script>
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 382ce22..fe38f0d 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -44,6 +44,17 @@ fn main() {
+                         DefaultPermissionRule::AllowAllCommands,
+                     ),
+             )
++            .plugin(
++                "crash-analysis",
++                InlinedPlugin::new()
++                    .commands(&[
++                        "crash_analyze_instance",
++                        "crash_analyze_text",
++                    ])
++                    .default_permission(
++                        DefaultPermissionRule::AllowAllCommands,
++                    ),
++            )
+             .plugin(
+                 "cache",
+                 InlinedPlugin::new()
+diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
+index 15efb0c..dbc3220 100644
+--- a/apps/app/capabilities/plugins.json
++++ b/apps/app/capabilities/plugins.json
+@@ -112,6 +112,7 @@
+ 		"ads:default",
+ 		"friends:default",
+ 		"worlds:default",
+-		"ely-skins:default"
++		"ely-skins:default",
++		"crash-analysis:default"
+ 	]
+ }
+diff --git a/apps/app/src/api/crash_analysis.rs b/apps/app/src/api/crash_analysis.rs
+new file mode 100644
+index 0000000..1ec92c5
+--- /dev/null
++++ b/apps/app/src/api/crash_analysis.rs
+@@ -0,0 +1,37 @@
++//! The launcher's own reading of what a bad run left behind.
++//!
++//! What it
++//! exposes is the analysis in `theseus::crash_analysis` — see that module for
++//! why the words a player reads are not in it.
++
++use crate::api::Result;
++use theseus::crash_analysis::{self, CrashDiagnosis, CrashSourceKind};
++
++pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
++    tauri::plugin::Builder::new("crash-analysis")
++        .invoke_handler(tauri::generate_handler![
++            crash_analyze_instance,
++            crash_analyze_text,
++        ])
++        .build()
++}
++
++/// Reads the crash report, the JVM's own error file and the tail of the log an
++/// instance last wrote, and reports what it recognised.
++#[tauri::command]
++pub async fn crash_analyze_instance(
++    instance_id: &str,
++) -> Result<CrashDiagnosis> {
++    Ok(crash_analysis::analyze_instance(instance_id).await?)
++}
++
++/// The same rules, against text the interface already has in hand: the log
++/// being looked at, or the console of a run whose files are not written yet.
++#[tauri::command]
++pub async fn crash_analyze_text(
++    text: String,
++    kind: CrashSourceKind,
++    source_name: String,
++) -> Result<CrashDiagnosis> {
++    Ok(crash_analysis::analyze_text(&text, kind, &source_name))
++}
+diff --git a/apps/app/src/api/mod.rs b/apps/app/src/api/mod.rs
+index 15a5c1e..565a39f 100644
+--- a/apps/app/src/api/mod.rs
++++ b/apps/app/src/api/mod.rs
+@@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
+ use thiserror::Error;
+ 
+ pub mod auth;
++pub mod crash_analysis;
+ pub mod ely_skins;
+ pub mod import;
+ pub mod install;
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index 098daa6..c404189 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -249,6 +249,7 @@ fn main() {
+     builder = builder
+         .plugin(api::auth::init())
+         .plugin(api::ely_skins::init())
++        .plugin(api::crash_analysis::init())
+         .plugin(api::mr_auth::init())
+         .plugin(api::onboarding_checklist::init())
+         .plugin(api::import::init())
+diff --git a/packages/app-lib/src/api/crash_analysis.rs b/packages/app-lib/src/api/crash_analysis.rs
+new file mode 100644
+index 0000000..9a6f7e8
+--- /dev/null
++++ b/packages/app-lib/src/api/crash_analysis.rs
+@@ -0,0 +1,1087 @@
++//! Reads what the game left behind after a bad run and says what went wrong.
++//!
++//! A crash leaves three kinds of trace: the game's own crash report, the log it
++//! was writing at the time, and — when the JVM itself died rather than the game
++//! — an `hs_err_pid*.log` beside them. Between them the cause is almost always
++//! written down plainly, a few hundred lines from the end, in words that mean
++//! nothing to the person reading them.
++//!
++//! This finds the lines that matter and names the cause. Nothing here writes
++//! prose: a rule reports its own id and whatever it captured, and the words a
++//! player reads live in the interface with the rest of the translations. That
++//! is also what keeps this honest about what it knows — a rule either matched
++//! or it did not.
++//!
++//! Everything is local. The launcher already sends a log to mclo.gs when asked,
++//! which is the better answer for anything unusual; this is the answer for the
++//! usual, and it works with no connection at all.
++
++use std::collections::BTreeMap;
++use std::path::{Path, PathBuf};
++use std::sync::LazyLock;
++
++use regex::Regex;
++use serde::{Deserialize, Serialize};
++
++use crate::State;
++use crate::util::io::{self, IOError};
++
++/// How much of a log is worth reading.
++///
++/// The cause of a crash is written at the end, and a log that has been running
++/// for hours can be tens of megabytes of chat and chunk noise before it.
++const LOG_TAIL_BYTES: u64 = 512 * 1024;
++
++/// How much of a JVM error file is worth reading, from the top.
++///
++/// Everything that says why it died — the signal, the problematic frame, the
++/// failing library — is in the header. What follows is the state of every
++/// thread in the process.
++const JVM_ERROR_HEAD_BYTES: u64 = 96 * 1024;
++
++/// How many findings are worth showing at once.
++const MAX_FINDINGS: usize = 8;
++
++/// How far from the log a crash report may have been written and still be about
++/// the same run.
++///
++/// Crash reports pile up in a folder and are never cleared, so the newest one
++/// can be from a week ago while the game has run fine since. The game writes it
++/// as it goes down, moments after the last line of the log; anything older than
++/// this is somebody else's crash and saying otherwise would be worse than
++/// saying nothing.
++const SAME_RUN_SECONDS: u64 = 5 * 60;
++
++#[derive(
++    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
++)]
++#[serde(rename_all = "snake_case")]
++pub enum CrashSeverity {
++    /// Worth knowing, not the cause on its own.
++    Note,
++    /// Likely to be the cause, or to have made it worse.
++    Warning,
++    /// This is why the game is not running.
++    Critical,
++}
++
++#[derive(
++    Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord,
++)]
++#[serde(rename_all = "snake_case")]
++pub enum CrashSourceKind {
++    /// `crash-reports/crash-*.txt`, written by the game itself.
++    CrashReport,
++    /// `logs/latest.log`, or whichever log was asked about.
++    Log,
++    /// `hs_err_pid*.log`, written by the JVM when it died.
++    JvmError,
++}
++
++/// One thing that was recognised, and where.
++#[derive(Serialize, Deserialize, Debug, Clone)]
++pub struct CrashFinding {
++    /// Which rule matched. The interface has the words for it.
++    pub rule: String,
++    pub severity: CrashSeverity,
++    pub source: CrashSourceKind,
++    /// The file it was found in, by name.
++    pub source_name: String,
++    /// The line that matched, so the reader can see it for themselves.
++    pub evidence: String,
++    /// What the rule pulled out of that line, to fill in its text.
++    pub values: BTreeMap<String, String>,
++}
++
++/// A file that was read, and how recently the game wrote it.
++#[derive(Serialize, Deserialize, Debug, Clone)]
++pub struct CrashSourceFile {
++    pub kind: CrashSourceKind,
++    pub name: String,
++    /// Seconds since the epoch, or 0 when the filesystem would not say.
++    pub modified: u64,
++}
++
++#[derive(Serialize, Deserialize, Debug, Clone, Default)]
++pub struct CrashDiagnosis {
++    pub findings: Vec<CrashFinding>,
++    pub sources: Vec<CrashSourceFile>,
++}
++
++impl CrashDiagnosis {
++    pub fn is_empty(&self) -> bool {
++        self.findings.is_empty()
++    }
++}
++
++/// One thing worth recognising.
++struct Rule {
++    id: &'static str,
++    severity: CrashSeverity,
++    /// The line that gives the rule away. Named captures are handed to the
++    /// interface as the values its text is filled in with.
++    pattern: &'static str,
++    /// A second thing that has to be somewhere in the same file, when one line
++    /// on its own would be too easy to mistake.
++    also: Option<&'static str>,
++    /// Something that, if it is in the same file, means this rule is wrong.
++    ///
++    /// A log records what is installed as readily as what went wrong, so a rule
++    /// looking for a name finds it in the mod list of every run that was fine.
++    /// This is how a rule says what it is not about — and a wrong finding costs
++    /// more than a missing one, because somebody acts on it.
++    unless: Option<&'static str>,
++    /// Kinds of file this rule speaks about; empty means all of them.
++    kinds: &'static [CrashSourceKind],
++}
++
++/// The rules, in the order their findings are shown when they tie on severity.
++static RULES: &[Rule] = &[
++    // What the game itself said, which is a headline rather than a diagnosis.
++    Rule {
++        id: "crash_description",
++        severity: CrashSeverity::Note,
++        pattern: r"(?m)^Description: (?P<description>.+)$",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::CrashReport],
++    },
++    // Forge and NeoForge work some of this out themselves and say so.
++    Rule {
++        id: "loader_suggestion",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?m)^\s*A potential solution has been determined[:,]?\s*(?P<suggestion>.*)$",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "suspected_mods",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?m)^\s*Suspected Mods?: (?P<mods>.+)$",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Memory.
++    Rule {
++        id: "out_of_memory_heap",
++        severity: CrashSeverity::Critical,
++        pattern: r"java\.lang\.OutOfMemoryError: Java heap space",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "out_of_memory_metaspace",
++        severity: CrashSeverity::Critical,
++        pattern: r"java\.lang\.OutOfMemoryError: (?:Metaspace|Compressed class space)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "out_of_memory_system",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:There is insufficient memory for the Java Runtime Environment|Native memory allocation \(\w+\) failed|Failed to reserve shared memory)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "heap_too_large_to_start",
++        severity: CrashSeverity::Critical,
++        pattern: r"Could not reserve enough space for (?P<size>[\w ]+) object heap",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Java itself.
++    Rule {
++        id: "java_too_old",
++        severity: CrashSeverity::Critical,
++        pattern: r"class file version (?P<class_version>\d+)(?:\.\d+)?\), this version of the Java Runtime only recognizes class file versions up to (?P<runtime_version>\d+)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "java_unsupported_class",
++        severity: CrashSeverity::Critical,
++        pattern: r"java\.lang\.UnsupportedClassVersionError: (?P<class_name>[\w./$]+)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Mods that are missing, doubled, or built for something else.
++    Rule {
++        id: "fabric_missing_dependency",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?m)^\s*-\s*Mod '(?P<mod_name>[^']+)' \((?P<mod_id>[^)]+)\)[^\n]*? requires [^\n]*? of (?:mod )?'?(?P<dependency>[\w\-.]+)'?, which is missing",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "fabric_wrong_dependency_version",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?m)^\s*-\s*Mod '(?P<mod_name>[^']+)' \((?P<mod_id>[^)]+)\)[^\n]*? requires (?P<requirement>[^\n]+?) of (?:mod )?'?(?P<dependency>[\w\-.]+)'?, but only the wrong version",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "forge_missing_dependency",
++        severity: CrashSeverity::Critical,
++        pattern: r"Mod ID: '(?P<dependency>[^']+)', Requested by: '(?P<mod_id>[^']+)'",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "duplicate_mods",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)duplicate mod(?:s| ids| entries)?(?: found| detected)?[:!]?\s*(?P<mods>[^\n]*)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "mod_for_other_version",
++        severity: CrashSeverity::Warning,
++        pattern: r"java\.lang\.(?:NoSuchMethodError|NoClassDefFoundError|NoSuchFieldError): (?:Failed resolution of: )?(?P<symbol>[\w./$;()\[\]<>]*net[/.]minecraft[\w./$;()\[\]<>]*)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "mixin_failed",
++        severity: CrashSeverity::Critical,
++        pattern: r"Mixin (?:apply|prepare|transformation) (?:for|of)?\s*[^\n]*?(?P<config>[\w\-.]+\.mixins?\.json)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "neoforge_dependency_version",
++        severity: CrashSeverity::Critical,
++        pattern: r"Mod ID: '(?P<dependency>[^']+)', Requested by: '(?P<mod_id>[^']+)', Expected range: '(?P<expected>[^']+)', Actual version: '(?P<actual>[^']+)'",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "mod_incompatible",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?m)^\s*-\s*Mod '(?P<mod_name>[^']+)' \((?P<mod_id>[^)]+)\)[^\n]*? is incompatible with [^\n]*?'?(?P<conflict>[\w\-.]+)'?",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "not_a_mod_file",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<file>[\w\-. ]+\.jar)[^\n]{0,40}?is not a valid (?:mod|jar) file",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Mixins, which is what most mod conflicts actually look like.
++    Rule {
++        id: "mixin_injection_failed",
++        severity: CrashSeverity::Critical,
++        pattern: r"Critical injection failure: [^\n]*?(?P<config>[\w\-.]+\.mixins?\.json)[^\n]*?(?:->|::)?\s*(?P<mixin>[\w$]+)?",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "mixin_invalid_injection",
++        severity: CrashSeverity::Critical,
++        pattern: r"org\.spongepowered\.asm\.mixin\.[\w.]*?(?P<exception>InvalidInjectionException|InjectionError|MixinApplyError|MixinTransformerError)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Java that is too new, which reads nothing like Java that is too old.
++    Rule {
++        id: "java_too_new",
++        severity: CrashSeverity::Critical,
++        pattern: r"Unsupported class file major version (?P<major>\d+)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "missing_main_class",
++        severity: CrashSeverity::Critical,
++        pattern: r"Could not find or load main class (?P<class_name>[\w./$]+)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // Graphics, from the line the game writes about what it is drawing on.
++    Rule {
++        id: "software_renderer",
++        severity: CrashSeverity::Critical,
++        pattern: r"Renderer: '(?P<renderer>[^']*(?:Microsoft Basic Render|llvmpipe|GDI Generic|SwiftShader)[^']*)'",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "integrated_gpu_in_use",
++        severity: CrashSeverity::Note,
++        pattern: r"Renderer: '(?P<renderer>[^']*(?:Intel\(R\) (?:UHD|HD|Iris) Graphics|AMD Radeon\(TM\) Graphics)[^']*)'",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // The world, which is the other thing a player can lose.
++    Rule {
++        id: "datapack_blocked_world",
++        severity: CrashSeverity::Critical,
++        pattern: r"Errors in currently selected datapacks prevented the world from loading",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "chunk_unreadable",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?i)Chunk file at \[?(?P<chunk>-?\d+,\s*-?\d+)\]? is (?P<problem>missing|in the wrong location)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "config_unreadable",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?:Failed to load config|Error parsing config|ConfigLoadingException)[^\n]{0,80}?(?P<file>[\w\-./]+\.(?:toml|json5?|cfg|properties))",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // A resource name the game will not accept, which on a Windows install is
++    // almost always the player's own folder name.
++    Rule {
++        id: "resource_location_invalid",
++        severity: CrashSeverity::Critical,
++        pattern: r"ResourceLocationException: (?P<problem>[^\n]*?)(?:in path|in ID)?\s*(?P<value>[^\n]*)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "language_provider_mismatch",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:requires language provider (?P<provider>[\w]+):(?P<wanted>[\d.,\[\])(]+)|Missing or unsupported mandatory dependencies)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "java_module_error",
++        severity: CrashSeverity::Critical,
++        pattern: r"java\.lang\.module\.(?P<exception>FindException|ResolutionException|InvalidModuleDescriptorException)(?:: (?P<detail>[^\n]+))?",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "oculus_without_embeddium",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)oculus[^\n]{0,60}?requires[^\n]{0,40}?(?:embeddium|rubidium)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "missing_indium",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?:requires[^\n]{0,40}?indium|Indium is required|fabric-renderer-api-v1[^\n]{0,60}?(?:missing|not (?:found|installed)))",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "too_many_block_ids",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?:Invalid id (?P<id>\d{4,})|maximum (?:block|item) id|too many (?:blocks|items|ids))",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "server_thread_stuck",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:A single server tick took (?P<seconds>[\d.]+) seconds|Considering it to be crashed, server will forcibly shutdown|watchdog[^\n]{0,40}?(?:deadlock|stuck))",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "feature_order_cycle",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?:Feature order cycle found|Cycle while building feature order)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "optifine_present",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?P<frame>(?:net\.optifine|optifine)[\w.$]*)",
++        also: Some(r"(?i)(?:exception|error|crash)"),
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "connector_fabric_mod",
++        severity: CrashSeverity::Warning,
++        // Sinytra Connector failing, rather than Sinytra Connector existing.
++        // The old rule looked for its name next to Sodium's or Iris's, and a
++        // log names every mod that loaded — so it fired on runs where nothing
++        // was wrong and told people to replace mods that were working. What it
++        // looks for now is Connector saying it could not carry something.
++        pattern: r"(?i)(?:dev\.su5ed\.sinytra|org\.sinytra)[\w.]*?(?P<exception>\w*(?:Exception|Error))|Connector (?:failed to|could not) [^\n]+",
++        also: None,
++        // The official NeoForge builds do not go through Connector at all. A
++        // pack can carry both — Connector for something else entirely — and
++        // blaming it for a crash it had no part in is the mistake this rule was
++        // making before.
++        unless: Some(
++            r"(?i)(?:sodium|iris)[\w\-]*?neoforge|neoforge[\w\-]*?(?:sodium|iris)",
++        ),
++        kinds: &[],
++    },
++    // The files under the game.
++    Rule {
++        id: "corrupted_archive",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:java\.util\.zip\.ZipException|Invalid CEN header|zip END header not found|error in opening zip file|java\.io\.EOFException)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "disk_full",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:No space left on device|There is not enough space on the disk|ENOSPC)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "file_locked",
++        severity: CrashSeverity::Warning,
++        pattern: r"The process cannot access the file because it is being used by another process",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // The machine the game is drawn on.
++    Rule {
++        id: "gpu_driver_amd",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<library>ati[a-z0-9]*\.dll|amdvlk[a-z0-9]*\.dll|amdxx[a-z0-9]*\.dll)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "gpu_driver_nvidia",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<library>nvoglv(?:32|64)\.dll|nvd3dum\.dll)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "gpu_driver_intel",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<library>ig[a-z0-9]*icd(?:32|64)\.dll|igd[a-z0-9]*\.dll)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "opengl_unsupported",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:GLFW error 6554[0-9]|WGL: The driver does not appear to support OpenGL|Pixel format not accelerated|Failed to create window|OpenGL 3\.2|GL_ARB_framebuffer_object)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    Rule {
++        id: "missing_native_library",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?:java\.lang\.UnsatisfiedLinkError|no lwjgl(?:64)? in java\.library\.path|Failed to locate library)",
++        also: None,
++        unless: None,
++        kinds: &[],
++    },
++    // The JVM died rather than the game, and said where.
++    // Native frames that name their own cause, which the generic frame rule
++    // below would only quote.
++    Rule {
++        id: "native_allocator",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<library>jemalloc[\w.]*\.(?:dll|so|dylib))",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "native_audio",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?i)(?P<library>(?:soft_)?oal[\w.]*\.dll|libopenal[\w.]*\.so|OpenAL[\w.]*\.dylib)|alc?[A-Z]\w*Cleanup",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "native_window_linux",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?P<library>libglfw[\w.]*\.so|libX11[\w.]*\.so|libGLX[\w.]*\.so)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "native_shader_macos",
++        severity: CrashSeverity::Critical,
++        pattern: r"(?P<library>libGLProgrammability\.dylib|GLEngine)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "wrong_jdk_apple_silicon",
++        severity: CrashSeverity::Critical,
++        pattern: r"~StubRoutines::SafeFetch32",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "jvm_itself_failed",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?m)^#\s*[CJV]\s+\[?(?P<library>jvm\.dll|libjvm\.so)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "jvm_problematic_frame",
++        severity: CrashSeverity::Warning,
++        pattern: r"(?m)^#\s*(?:C|J|V|j)\s+(?P<frame>.+)$",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++    Rule {
++        id: "jvm_signal",
++        severity: CrashSeverity::Note,
++        pattern: r"(?m)^#\s*(?P<signal>(?:EXCEPTION_|SIG)[A-Z_]+) \(0x[0-9a-fA-F]+\)",
++        also: None,
++        unless: None,
++        kinds: &[CrashSourceKind::JvmError],
++    },
++];
++
++type CompiledRule = (Regex, Option<Regex>, Option<Regex>);
++
++static COMPILED: LazyLock<Vec<CompiledRule>> = LazyLock::new(|| {
++    let compile = |pattern: &str| {
++        Regex::new(pattern).expect("a crash rule pattern is a valid regex")
++    };
++
++    RULES
++        .iter()
++        .map(|rule| {
++            (
++                compile(rule.pattern),
++                rule.also.map(&compile),
++                rule.unless.map(&compile),
++            )
++        })
++        .collect()
++});
++
++/// Everything the rules recognise in one file's worth of text.
++///
++/// A rule speaks once per file, on the first line it matched: a mixin failure
++/// that took ten mods down with it is one thing that went wrong, not ten.
++pub fn findings_in(
++    text: &str,
++    kind: CrashSourceKind,
++    source_name: &str,
++) -> Vec<CrashFinding> {
++    let mut findings = Vec::new();
++
++    for (rule, (pattern, also, unless)) in RULES.iter().zip(COMPILED.iter()) {
++        if !rule.kinds.is_empty() && !rule.kinds.contains(&kind) {
++            continue;
++        }
++
++        if let Some(also) = also
++            && !also.is_match(text)
++        {
++            continue;
++        }
++
++        if let Some(unless) = unless
++            && unless.is_match(text)
++        {
++            continue;
++        }
++
++        let Some(captures) = pattern.captures(text) else {
++            continue;
++        };
++
++        let mut values = BTreeMap::new();
++        for name in pattern.capture_names().flatten() {
++            if let Some(value) = captures.name(name) {
++                values.insert(
++                    name.to_string(),
++                    value.as_str().trim().to_string(),
++                );
++            }
++        }
++
++        findings.push(CrashFinding {
++            rule: rule.id.to_string(),
++            severity: rule.severity,
++            source: kind,
++            source_name: source_name.to_string(),
++            evidence: evidence_line(
++                text,
++                captures.get(0).map_or(0, |m| m.start()),
++            ),
++            values,
++        });
++    }
++
++    findings
++}
++
++/// The line the match sits on, trimmed and shortened to something readable.
++fn evidence_line(text: &str, at: usize) -> String {
++    let start = text[..at].rfind('\n').map_or(0, |index| index + 1);
++    let end = text[at..].find('\n').map_or(text.len(), |index| at + index);
++
++    let line = text[start..end].trim();
++    if line.chars().count() <= 300 {
++        return line.to_string();
++    }
++
++    line.chars().take(300).collect::<String>() + "…"
++}
++
++/// Reads what the last run left behind and says what it recognises.
++#[tracing::instrument]
++pub async fn analyze_instance(
++    instance_id: &str,
++) -> crate::Result<CrashDiagnosis> {
++    let state = State::get().await?;
++
++    let instance_path: Option<String> =
++        sqlx::query_scalar("SELECT path FROM instances WHERE id = ?")
++            .bind(instance_id)
++            .fetch_optional(&state.pool)
++            .await?;
++    let Some(instance_path) = instance_path else {
++        return Ok(CrashDiagnosis::default());
++    };
++
++    let instance_dir = state.directories.instances_dir().join(&instance_path);
++    let logs_dir = state.directories.instance_logs_dir(&instance_path);
++    let crash_reports_dir = state.directories.crash_reports_dir(&instance_path);
++
++    let mut diagnosis = CrashDiagnosis::default();
++
++    // The log the instance last wrote is what the other two are dated against:
++    // the game writes a crash report as it goes down, moments after the last
++    // line of it.
++    let latest_log = logs_dir.join("latest.log");
++    let log_modified = if latest_log.is_file() {
++        Some(modified_seconds(&latest_log).await)
++    } else {
++        None
++    };
++
++    // The game's own report first, when it belongs to the same run: it names
++    // the exception, which the log around it often does not.
++    if let Some(report) = newest_file(&crash_reports_dir, |name| {
++        name.starts_with("crash-") && name.ends_with(".txt")
++    })
++    .await
++        && is_same_run(&report, log_modified).await
++    {
++        read_into(
++            &mut diagnosis,
++            &report,
++            CrashSourceKind::CrashReport,
++            ReadFrom::Start(LOG_TAIL_BYTES),
++        )
++        .await;
++    }
++
++    // Then the JVM's, which exists only when the process died under the game.
++    if let Some(jvm_error) = newest_file(&instance_dir, |name| {
++        name.starts_with("hs_err_pid") && name.ends_with(".log")
++    })
++    .await
++        && is_same_run(&jvm_error, log_modified).await
++    {
++        read_into(
++            &mut diagnosis,
++            &jvm_error,
++            CrashSourceKind::JvmError,
++            ReadFrom::Start(JVM_ERROR_HEAD_BYTES),
++        )
++        .await;
++    }
++
++    // And the log itself, which is where anything the other two missed was
++    // printed on the way down.
++    if latest_log.is_file() {
++        read_into(
++            &mut diagnosis,
++            &latest_log,
++            CrashSourceKind::Log,
++            ReadFrom::End(LOG_TAIL_BYTES),
++        )
++        .await;
++    }
++
++    finish(&mut diagnosis);
++    Ok(diagnosis)
++}
++
++/// The same, for text the caller already has — a log the player is looking at,
++/// or the console buffer of a run that has not been written out yet.
++pub fn analyze_text(
++    text: &str,
++    kind: CrashSourceKind,
++    source_name: &str,
++) -> CrashDiagnosis {
++    let mut diagnosis = CrashDiagnosis {
++        findings: findings_in(text, kind, source_name),
++        sources: vec![CrashSourceFile {
++            kind,
++            name: source_name.to_string(),
++            modified: 0,
++        }],
++    };
++
++    finish(&mut diagnosis);
++    diagnosis
++}
++
++/// Worst first, and no more than a screenful.
++fn finish(diagnosis: &mut CrashDiagnosis) {
++    let order: Vec<&str> = RULES.iter().map(|rule| rule.id).collect();
++
++    diagnosis.findings.sort_by(|a, b| {
++        b.severity.cmp(&a.severity).then_with(|| {
++            let index = |rule: &str| {
++                order
++                    .iter()
++                    .position(|id| *id == rule)
++                    .unwrap_or(usize::MAX)
++            };
++            index(&a.rule).cmp(&index(&b.rule))
++        })
++    });
++
++    let mut seen = Vec::new();
++    diagnosis.findings.retain(|finding| {
++        if seen.contains(&finding.rule) {
++            return false;
++        }
++        seen.push(finding.rule.clone());
++        true
++    });
++
++    diagnosis.findings.truncate(MAX_FINDINGS);
++}
++
++/// Whether a file was written closely enough to the log to be about the run
++/// the log is of.
++///
++/// With no log to date it against there is nothing to compare, and the newest
++/// report is the best guess there is.
++async fn is_same_run(path: &Path, log_modified: Option<u64>) -> bool {
++    let Some(log_modified) = log_modified else {
++        return true;
++    };
++
++    let written = modified_seconds(path).await;
++    if written == 0 || log_modified == 0 {
++        return true;
++    }
++
++    written.abs_diff(log_modified) <= SAME_RUN_SECONDS
++}
++
++enum ReadFrom {
++    /// The first bytes of the file.
++    Start(u64),
++    /// The last bytes of the file.
++    End(u64),
++}
++
++async fn read_into(
++    diagnosis: &mut CrashDiagnosis,
++    path: &Path,
++    kind: CrashSourceKind,
++    from: ReadFrom,
++) {
++    let name = path
++        .file_name()
++        .map_or_else(String::new, |name| name.to_string_lossy().to_string());
++
++    match read_part(path, from).await {
++        Ok(text) => {
++            diagnosis.findings.extend(findings_in(&text, kind, &name));
++            diagnosis.sources.push(CrashSourceFile {
++                kind,
++                name,
++                modified: modified_seconds(path).await,
++            });
++        }
++        Err(error) => {
++            // A file that cannot be read says nothing about the crash, and
++            // failing the whole diagnosis over it would say even less.
++            tracing::warn!(
++                "Could not read {} for diagnosis: {error}",
++                path.display()
++            );
++        }
++    }
++}
++
++async fn read_part(path: &Path, from: ReadFrom) -> crate::Result<String> {
++    use tokio::io::{AsyncReadExt, AsyncSeekExt, SeekFrom};
++
++    let mut file = tokio::fs::File::open(path)
++        .await
++        .map_err(|e| IOError::with_path(e, path))?;
++    let length = file
++        .metadata()
++        .await
++        .map_err(|e| IOError::with_path(e, path))?
++        .len();
++
++    let (offset, wanted) = match from {
++        ReadFrom::Start(wanted) => (0, wanted.min(length)),
++        ReadFrom::End(wanted) => {
++            (length.saturating_sub(wanted), wanted.min(length))
++        }
++    };
++
++    if offset > 0 {
++        file.seek(SeekFrom::Start(offset))
++            .await
++            .map_err(|e| IOError::with_path(e, path))?;
++    }
++
++    let mut bytes = vec![0; wanted as usize];
++    file.read_exact(&mut bytes)
++        .await
++        .map_err(|e| IOError::with_path(e, path))?;
++
++    // A log is whatever encoding the machine writes in, and a crash is no time
++    // to be strict about it.
++    Ok(String::from_utf8_lossy(&bytes).into_owned())
++}
++
++async fn modified_seconds(path: &Path) -> u64 {
++    let Ok(metadata) = io::metadata(path).await else {
++        return 0;
++    };
++
++    metadata
++        .modified()
++        .ok()
++        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
++        .map_or(0, |since| since.as_secs())
++}
++
++/// The most recently written file in `dir` whose name the filter accepts.
++async fn newest_file(
++    dir: &Path,
++    accept: impl Fn(&str) -> bool,
++) -> Option<PathBuf> {
++    let mut entries = tokio::fs::read_dir(dir).await.ok()?;
++    let mut newest: Option<(u64, PathBuf)> = None;
++
++    while let Ok(Some(entry)) = entries.next_entry().await {
++        let path = entry.path();
++        let Some(name) = path.file_name().map(|name| name.to_string_lossy())
++        else {
++            continue;
++        };
++        if !accept(name.as_ref()) {
++            continue;
++        }
++
++        let modified = modified_seconds(&path).await;
++        if newest.as_ref().is_none_or(|(at, _)| modified >= *at) {
++            newest = Some((modified, path));
++        }
++    }
++
++    newest.map(|(_, path)| path)
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn rules_matching(text: &str, kind: CrashSourceKind) -> Vec<String> {
++        findings_in(text, kind, "test")
++            .into_iter()
++            .map(|finding| finding.rule)
++            .collect()
++    }
++
++    #[test]
++    fn every_rule_pattern_compiles() {
++        assert_eq!(COMPILED.len(), RULES.len());
++    }
++
++    #[test]
++    fn a_mod_list_is_not_a_diagnosis() {
++        // What a perfectly healthy NeoForge run looks like: Connector installed
++        // for something else, and the official builds of the rendering mods
++        // beside it. Naming Connector here is what the rule used to do, and it
++        // sent people to replace mods that were doing their job.
++        let text = "[12:00:01] [main/INFO]: Loading 214 mods:\n\t- connectormod 1.0\n\t- sodium 0.6.0+mc1.21.1-neoforge\n\t- iris 1.8.0+mc1.21.1-neoforge\n[12:00:44] [Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space";
++        let matched = rules_matching(text, CrashSourceKind::Log);
++
++        assert!(!matched.contains(&"connector_fabric_mod".to_string()));
++        assert!(matched.contains(&"out_of_memory_heap".to_string()));
++    }
++
++    #[test]
++    fn connector_is_named_when_it_is_the_one_that_failed() {
++        let text = "[12:00:03] [main/ERROR]: Connector failed to transform mod file sodium-fabric.jar\ndev.su5ed.sinytra.connector.ConnectorException: no";
++        assert!(
++            rules_matching(text, CrashSourceKind::Log)
++                .contains(&"connector_fabric_mod".to_string())
++        );
++    }
++
++    #[test]
++    fn a_heap_that_ran_out_is_named() {
++        let text = "[15:04:22] [Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space";
++        assert!(
++            rules_matching(text, CrashSourceKind::Log)
++                .contains(&"out_of_memory_heap".to_string())
++        );
++    }
++
++    #[test]
++    fn a_missing_fabric_dependency_names_both_mods() {
++        let text = "Incompatible mods found!\n\t- Mod 'Sodium' (sodium) 0.5.3 requires any version of fabric-api, which is missing!";
++        let findings = findings_in(text, CrashSourceKind::Log, "latest.log");
++        let finding = findings
++            .iter()
++            .find(|finding| finding.rule == "fabric_missing_dependency")
++            .expect("the missing dependency should have been recognised");
++
++        assert_eq!(finding.values["mod_name"], "Sodium");
++        assert_eq!(finding.values["mod_id"], "sodium");
++        assert_eq!(finding.values["dependency"], "fabric-api");
++    }
++
++    #[test]
++    fn a_java_that_is_too_old_reports_both_versions() {
++        let text = "java.lang.UnsupportedClassVersionError: com/example/Mod has been compiled by a more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only recognizes class file versions up to 61.0";
++        let findings = findings_in(text, CrashSourceKind::Log, "latest.log");
++        let finding = findings
++            .iter()
++            .find(|finding| finding.rule == "java_too_old")
++            .expect("the version mismatch should have been recognised");
++
++        assert_eq!(finding.values["class_version"], "65");
++        assert_eq!(finding.values["runtime_version"], "61");
++    }
++
++    #[test]
++    fn a_driver_is_only_blamed_in_the_jvms_own_report() {
++        let text = "# C  [nvoglv64.dll+0x8ad2f0]";
++
++        assert!(
++            rules_matching(text, CrashSourceKind::JvmError)
++                .contains(&"gpu_driver_nvidia".to_string())
++        );
++        assert!(
++            !rules_matching(text, CrashSourceKind::Log)
++                .contains(&"gpu_driver_nvidia".to_string())
++        );
++    }
++
++    #[test]
++    fn a_rule_that_needs_a_second_signal_waits_for_it() {
++        let quiet = "[12:00:00] [main/INFO]: Loading net.optifine.Config";
++        let crashed = "[12:00:00] [main/INFO]: net.optifine.Config\njava.lang.RuntimeException: Mixin apply failed";
++
++        assert!(
++            !rules_matching(quiet, CrashSourceKind::Log)
++                .contains(&"optifine_present".to_string())
++        );
++        assert!(
++            rules_matching(crashed, CrashSourceKind::Log)
++                .contains(&"optifine_present".to_string())
++        );
++    }
++
++    #[test]
++    fn the_worst_finding_is_the_first_one() {
++        let text = "Description: Rendering overlay\njava.lang.OutOfMemoryError: Java heap space";
++        let diagnosis =
++            analyze_text(text, CrashSourceKind::CrashReport, "crash.txt");
++
++        assert_eq!(diagnosis.findings[0].rule, "out_of_memory_heap");
++        assert_eq!(diagnosis.findings[0].severity, CrashSeverity::Critical);
++    }
++
++    #[test]
++    fn a_rule_speaks_once_per_diagnosis() {
++        let text = "java.util.zip.ZipException: zip END header not found\njava.util.zip.ZipException: error in opening zip file";
++        let diagnosis = analyze_text(text, CrashSourceKind::Log, "latest.log");
++
++        assert_eq!(
++            diagnosis
++                .findings
++                .iter()
++                .filter(|finding| finding.rule == "corrupted_archive")
++                .count(),
++            1
++        );
++    }
++
++    #[test]
++    fn evidence_is_the_line_the_rule_read() {
++        let text = "[15:04:22] [main/INFO]: starting\n[15:04:23] [main/ERROR]: java.lang.OutOfMemoryError: Java heap space\n[15:04:24] [main/INFO]: stopping";
++        let diagnosis = analyze_text(text, CrashSourceKind::Log, "latest.log");
++
++        assert_eq!(
++            diagnosis.findings[0].evidence,
++            "[15:04:23] [main/ERROR]: java.lang.OutOfMemoryError: Java heap space"
++        );
++    }
++
++    #[test]
++    fn nothing_recognised_is_no_findings_at_all() {
++        let text = "[15:04:22] [main/INFO]: Stopping!";
++        assert!(
++            analyze_text(text, CrashSourceKind::Log, "latest.log").is_empty()
++        );
++    }
++}
+diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
+index ade3ca8..566810b 100644
+--- a/packages/app-lib/src/api/mod.rs
++++ b/packages/app-lib/src/api/mod.rs
+@@ -1,5 +1,6 @@
+ //! API for interacting with Theseus
+ pub mod cache;
++pub mod crash_analysis;
+ pub mod ely_skins;
+ pub mod friends;
+ pub mod handler;
