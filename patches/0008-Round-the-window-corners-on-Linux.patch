@@ -11,10 +11,10 @@ Subject: [PATCH] Round the window corners on Linux
  4 files changed, 53 insertions(+), 1 deletion(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index a9e3945..5a32c65 100644
+index 2f6cdce..9412821 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -529,6 +529,16 @@ watch([os, isFullscreen], ([osName, fullscreen]) => {
+@@ -540,6 +540,16 @@ watch([os, isFullscreen], ([osName, fullscreen]) => {
  	document.documentElement.classList.toggle('mac-traffic-lights', osName === 'MacOS' && !fullscreen)
  })
  

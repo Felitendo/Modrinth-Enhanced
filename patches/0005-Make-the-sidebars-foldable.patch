@@ -16,6 +16,11 @@ restart without needing a settings migration:
   works, and still seeds the state. Its label was pointing at the wrong
   message ("Next image"), which is fixed here too.
 
+Once the fold state is saved, a check pops onto the button and its
+tooltip says it is remembered after a restart, since nothing else shows
+that. On pages that need the sidebar (browse, projects, users) the button
+stays in place, disabled, instead of vanishing and shifting the title bar.
+
 None of these three reach Modrinth. Preference syncing maps a fixed list
 of named fields in both directions, and these are not in it, so they are
 neither sent nor overwritten by another device.
@@ -25,25 +30,26 @@ page headed "Sync features across devices" and would otherwise look like
 it syncs. The other two are not settings entries - a heading and a title
 bar button - so nothing there promises anything.
 ---
- apps/app-frontend/src/App.vue                 | 67 ++++++++++++++++---
- .../ui/settings/display/FeaturesSettings.vue  | 28 ++++++++
- .../src/composables/use-app-settings.ts       |  3 +
- packages/app-lib/src/state/settings.rs        |  3 +
- 4 files changed, 92 insertions(+), 9 deletions(-)
+ apps/app-frontend/src/App.vue                 | 153 ++++++++++++++++--
+ .../ui/settings/display/FeaturesSettings.vue  |  28 ++++
+ .../src/composables/use-app-settings.ts       |   3 +
+ packages/app-lib/src/state/settings.rs        |   3 +
+ 4 files changed, 172 insertions(+), 15 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index e5c6fd4..a9e3945 100644
+index e5c6fd4..2f6cdce 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -10,6 +10,7 @@ import {
+@@ -10,6 +10,8 @@ import {
  } from '@modrinth/api-client'
  import {
  	ArrowLeftRightIcon,
++	CheckIcon,
 +	ChevronDownIcon,
  	ChevronLeftIcon,
  	ChevronRightIcon,
  	CompassIcon,
-@@ -254,12 +255,31 @@ const credentials = ref()
+@@ -254,12 +256,41 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
@@ -60,11 +66,16 @@ index e5c6fd4..a9e3945 100644
 +		sidebarToggled.value = !collapsed
  	},
 +	{ immediate: true },
- )
++)
 +watch(
 +	() => appSettings.toggleSidebar,
 +	(hide) => setSidebarCollapsed(hide),
-+)
+ )
++
++// Briefly shows a check on the fold button once the state is saved, so it is
++// clear the choice is remembered.
++const sidebarSaved = ref(false)
++let sidebarSavedTimeout
 +
 +function setSidebarCollapsed(collapsed) {
 +	appSettings.featureFlags.right_sidebar_collapsed = collapsed
@@ -73,12 +84,17 @@ index e5c6fd4..a9e3945 100644
 +			settings.feature_flags.right_sidebar_collapsed = collapsed
 +			return setSettings(settings)
 +		})
++		.then(() => {
++			sidebarSaved.value = true
++			clearTimeout(sidebarSavedTimeout)
++			sidebarSavedTimeout = setTimeout(() => (sidebarSaved.value = false), 1600)
++		})
 +		.catch(handleError)
 +}
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -358,6 +378,21 @@ useQuery({
+@@ -358,6 +389,21 @@ useQuery({
  // ad and the gradient being drawn above it.
  const showAd = computed(() => false)
  const adConsentAvailable = computed(() => false)
@@ -100,16 +116,24 @@ index e5c6fd4..a9e3945 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -588,6 +623,8 @@ const messages = defineMessages({
+@@ -588,6 +634,16 @@ const messages = defineMessages({
  	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
  	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
  	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
 +	hideSidebar: { id: 'app.navigation.hide-sidebar', defaultMessage: 'Hide sidebar' },
 +	showSidebar: { id: 'app.navigation.show-sidebar', defaultMessage: 'Show sidebar' },
++	sidebarRemembered: {
++		id: 'app.navigation.sidebar-remembered',
++		defaultMessage: 'Remembered after restart',
++	},
++	sidebarRequired: {
++		id: 'app.navigation.sidebar-required',
++		defaultMessage: 'This page needs the sidebar',
++	},
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2252,6 +2289,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2252,6 +2308,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -117,26 +141,61 @@ index e5c6fd4..a9e3945 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2378,12 +2416,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2377,16 +2434,44 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 				<Breadcrumbs />
  			</div>
  			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
- 				<IconButton
+-				<IconButton
 -					v-if="!forceSidebar && appSettings.toggleSidebar"
-+					v-if="!forceSidebar"
-+					v-tooltip="
-+						formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)
-+					"
- 					:type="sidebarToggled ? 'base' : 'quiet'"
+-					:type="sidebarToggled ? 'base' : 'quiet'"
 -					:label="formatMessage(messages.nextImage)"
-+					:label="formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)"
- 					class="mr-3 transition-transform"
- 					:class="{ 'rotate-180': !sidebarToggled }"
+-					class="mr-3 transition-transform"
+-					:class="{ 'rotate-180': !sidebarToggled }"
 -					@click="sidebarToggled = !sidebarToggled"
-+					@click="setSidebarCollapsed(sidebarToggled)"
++				<!--
++					Stays in place on pages that need the sidebar, so the title bar does
++					not shift. The tooltip sits on the wrapper since a disabled button
++					gets no hover events.
++				-->
++				<span
++					v-tooltip="
++						formatMessage(
++							forceSidebar
++								? messages.sidebarRequired
++								: sidebarSaved
++									? messages.sidebarRemembered
++									: sidebarToggled
++										? messages.hideSidebar
++										: messages.showSidebar,
++						)
++					"
++					class="relative mr-3 flex"
  				>
- 					<RightArrowIcon />
- 				</IconButton>
-@@ -2502,10 +2543,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+-					<RightArrowIcon />
+-				</IconButton>
++					<IconButton
++						:type="sidebarVisible ? 'base' : 'quiet'"
++						:label="formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)"
++						:disabled="forceSidebar"
++						class="transition-transform"
++						:class="{ 'rotate-180': !sidebarVisible }"
++						@click="setSidebarCollapsed(sidebarToggled)"
++					>
++						<RightArrowIcon />
++					</IconButton>
++					<Transition name="sidebar-saved">
++						<span
++							v-if="sidebarSaved && !forceSidebar"
++							class="sidebar-saved-badge pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-brand text-brand-inverted"
++						>
++							<CheckIcon class="size-3" stroke-width="3" />
++						</span>
++					</Transition>
++				</span>
+ 				<div class="flex mr-3">
+ 					<Suspense>
+ 						<AppActionBar />
+@@ -2502,10 +2587,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
@@ -158,6 +217,43 @@ index e5c6fd4..a9e3945 100644
  							<NewsArticleCard
  								v-for="(item, index) in news"
  								:key="`news-${index}`"
+@@ -2743,6 +2836,36 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 	display: contents;
+ }
+ 
++@media (prefers-reduced-motion: no-preference) {
++	.sidebar-saved-enter-active {
++		transition: transform 0.35s cubic-bezier(0.15, 1.4, 0.64, 0.96);
++	}
++
++	.sidebar-saved-leave-active {
++		transition:
++			transform 0.2s ease,
++			opacity 0.2s ease;
++	}
++
++	.sidebar-saved-enter-from,
++	.sidebar-saved-leave-to {
++		transform: scale(0);
++		opacity: 0;
++	}
++
++	.sidebar-saved-badge :deep(path) {
++		stroke-dasharray: 20;
++		stroke-dashoffset: 20;
++		animation: sidebar-saved-draw 0.3s 0.15s ease-out forwards;
++	}
++}
++
++@keyframes sidebar-saved-draw {
++	to {
++		stroke-dashoffset: 0;
++	}
++}
++
+ @media (prefers-reduced-motion: no-preference) {
+ 	.nav-button-animated-enter-active {
+ 		transition: all 0.5s cubic-bezier(0.15, 1.4, 0.64, 0.96);
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 index 1d3e379..ae88550 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
