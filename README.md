@@ -60,6 +60,7 @@ sudo dnf install "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-E
 | `0021-Show-and-change-skins-of-custom-...` | A custom server account's skin is shown and changed on the skin page, and its head in the account list.                                     |
 | `0022-Sign-in-to-custom-servers-in-...`    | Servers with Yggdrasil Connect, such as LittleSkin, sign in on their own page, with two-factor authentication.                              |
 | `0023-Browse-LittleSkin-s-skin-library`    | LittleSkin's skin library in the Browse tab, with search, sorting and likes.                                                                |
+| `0024-Offer-the-launchers-instances-...`   | Every launcher the importers read is offered, with the folder it keeps instances in.                                                        |
 
 ### Offline accounts
 
@@ -180,6 +181,12 @@ instead, because their skin lists are bot-protected or not meant for other progr
 you open there is previewed and can be added.
 
 ### Instances and crashes
+
+Importing instances offers every launcher the importers read — Prism Launcher, MultiMC, PolyMC,
+ATLauncher, GDLauncher and CurseForge — whether they are installed or not, each with the folder it
+keeps its instances in on this system, Flatpak and macOS bundles included, and each with its own
+logo. Upstream listed only the launchers it found, and left the rest to a path typed in by hand.
+MultiMC keeps a plain badge instead: its branding may not be passed on.
 
 A running instance can be started again from the button next to Stop, as whichever account is
 selected, and the Logs tab then shows a console for each copy.

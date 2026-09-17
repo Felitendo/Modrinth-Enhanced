@@ -135,6 +135,12 @@ check "the launcher turns it on" \
 check "the skins folder can be opened" \
 	contains "$WORKTREE/apps/app/build.rs" '"show_player_skins_folder",'
 
+log "Importing instances"
+check "every launcher is offered, installed or not" \
+	contains "$WORKTREE/packages/app-lib/src/api/pack/import/mod.rs" 'pub fn launcher_suggestions'
+check "the import stage shows them" \
+	contains "$WORKTREE/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue" 'otherLaunchers'
+
 log "Another copy of a running instance"
 check "a running instance can start again" \
 	contains "$WORKTREE/packages/app-lib/src/api/instance/run.rs" 'pub async fn run_additional'

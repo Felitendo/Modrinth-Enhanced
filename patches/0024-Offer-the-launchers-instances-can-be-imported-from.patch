@@ -1,0 +1,881 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Fri, 18 Sep 2026 00:03:21 +0200
+Subject: [PATCH] Offer the launchers instances can be imported from
+
+Importing only listed the launchers that were found and had instances.
+Anyone whose launcher sits somewhere else, or who has not installed it
+where the launcher usually goes, was left with an empty list and a path
+to type in by hand.
+
+Every launcher the importers read is offered now, installed or not:
+Prism Launcher, MultiMC, PolyMC, ATLauncher, GDLauncher and CurseForge,
+each with the folder it keeps its instances in on this system, Flatpak
+and macOS bundles included. Picking one reads that folder; with nothing
+there, its path lands in the field to be corrected. PolyMC and other
+MultiMC forks are read by Prism's importer, so the name shown and the
+importer used are no longer the same thing.
+
+The initials in a badge tell the entries apart without carrying anyone
+else's logo around.
+---
+ apps/app-frontend/src/helpers/import.js       |   6 +
+ .../src/providers/setup/creation-modal.ts     |   7 +-
+ .../src/providers/setup/instance-import.ts    |  26 +++-
+ apps/app/build.rs                             |   1 +
+ apps/app/src/api/import.rs                    |   8 +
+ packages/app-lib/src/api/pack/import/mod.rs   | 146 ++++++++++++++----
+ packages/ui/src/assets/launchers/README.md    |  16 ++
+ .../ui/src/assets/launchers/atlauncher.svg    |   1 +
+ .../ui/src/assets/launchers/gdlauncher.png    | Bin 0 -> 7218 bytes
+ packages/ui/src/assets/launchers/polymc.svg   |  21 +++
+ .../src/assets/launchers/prism-launcher.svg   |  57 +++++++
+ .../components/ImportInstanceStage.vue        | 109 ++++++++++++-
+ .../components/LauncherMark.vue               |  47 ++++++
+ packages/ui/src/providers/instance-import.ts  |  14 ++
+ 14 files changed, 417 insertions(+), 42 deletions(-)
+ create mode 100644 packages/ui/src/assets/launchers/README.md
+ create mode 100644 packages/ui/src/assets/launchers/atlauncher.svg
+ create mode 100644 packages/ui/src/assets/launchers/gdlauncher.png
+ create mode 100644 packages/ui/src/assets/launchers/polymc.svg
+ create mode 100644 packages/ui/src/assets/launchers/prism-launcher.svg
+ create mode 100644 packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
+
+diff --git a/apps/app-frontend/src/helpers/import.js b/apps/app-frontend/src/helpers/import.js
+index 34cf250..bfc728e 100644
+--- a/apps/app-frontend/src/helpers/import.js
++++ b/apps/app-frontend/src/helpers/import.js
+@@ -45,6 +45,12 @@ export async function is_valid_importable_instance(instanceFolder, launcherType)
+ 	})
+ }
+ 
++/// Gets every launcher instances can be imported from, with the folder each one
++/// uses on this system, whether it is installed or not
++export async function launcher_suggestions() {
++	return await invoke('plugin:import|launcher_suggestions')
++}
++
+ /// Gets the default path for the given launcher type
+ /// null if it can't be found or doesn't exist
+ /// eg: get_default_launcher_path("MultiMC")
+diff --git a/apps/app-frontend/src/providers/setup/creation-modal.ts b/apps/app-frontend/src/providers/setup/creation-modal.ts
+index 964b17c..53ba797 100644
+--- a/apps/app-frontend/src/providers/setup/creation-modal.ts
++++ b/apps/app-frontend/src/providers/setup/creation-modal.ts
+@@ -113,7 +113,12 @@ export function setupCreationModal(
+ 					if (!launcher || instanceSet.size === 0) continue
+ 					for (const name of instanceSet) {
+ 						importCount += 1
+-						const job = await import_instance(launcher.name, launcher.path, name).catch(handleError)
++						// PolyMC and other forks are read by another launcher's importer.
++						const job = await import_instance(
++							launcher.launcher ?? launcher.name,
++							launcher.path,
++							name,
++						).catch(handleError)
+ 						if (job) {
+ 							importedInstanceId = installJobInstanceId(job)
+ 						}
+diff --git a/apps/app-frontend/src/providers/setup/instance-import.ts b/apps/app-frontend/src/providers/setup/instance-import.ts
+index 851e44d..752832c 100644
+--- a/apps/app-frontend/src/providers/setup/instance-import.ts
++++ b/apps/app-frontend/src/providers/setup/instance-import.ts
+@@ -2,9 +2,9 @@ import { type AbstractWebNotificationManager, provideInstanceImport } from '@mod
+ import { open } from '@tauri-apps/plugin-dialog'
+ 
+ import {
+-	get_default_launcher_path,
+ 	get_importable_instances,
+ 	import_instance,
++	launcher_suggestions,
+ } from '@/helpers/import.js'
+ 
+ export function setupInstanceImportProvider(notificationManager: AbstractWebNotificationManager) {
+@@ -12,15 +12,18 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
+ 
+ 	provideInstanceImport({
+ 		async getDetectedLaunchers() {
+-			const launcherNames = ['MultiMC', 'GDLauncher', 'ATLauncher', 'Curseforge', 'PrismLauncher']
+ 			const launchers = []
+-			for (const name of launcherNames) {
++			for (const suggestion of await launcher_suggestions()) {
++				if (!suggestion.installed || !suggestion.path) continue
+ 				try {
+-					const path = await get_default_launcher_path(name)
+-					if (!path) continue
+-					const instances = await get_importable_instances(name, path)
++					const instances = await get_importable_instances(suggestion.launcher, suggestion.path)
+ 					if (instances?.length > 0) {
+-						launchers.push({ name, path, instances })
++						launchers.push({
++							name: suggestion.name,
++							launcher: suggestion.launcher,
++							path: suggestion.path,
++							instances,
++						})
+ 					}
+ 				} catch {
+ 					// Skip launchers that fail detection
+@@ -28,6 +31,15 @@ export function setupInstanceImportProvider(notificationManager: AbstractWebNoti
+ 			}
+ 			return launchers
+ 		},
++		async getLauncherSuggestions() {
++			const suggestions = await launcher_suggestions()
++			return suggestions.map((suggestion) => ({
++				name: suggestion.name,
++				launcher: suggestion.launcher,
++				path: suggestion.path ?? '',
++				installed: suggestion.installed,
++			}))
++		},
+ 		async getImportableInstances(launcherName: string, path: string) {
+ 			return (await get_importable_instances(launcherName, path)) ?? []
+ 		},
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 8cb21f2..8e8a0f8 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -108,6 +108,7 @@ fn main() {
+                         "get_importable_instances",
+                         "is_valid_importable_instance",
+                         "get_default_launcher_path",
++                        "launcher_suggestions",
+                     ])
+                     .default_permission(
+                         DefaultPermissionRule::AllowAllCommands,
+diff --git a/apps/app/src/api/import.rs b/apps/app/src/api/import.rs
+index 773fcb2..cda652f 100644
+--- a/apps/app/src/api/import.rs
++++ b/apps/app/src/api/import.rs
+@@ -11,6 +11,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+             get_importable_instances,
+             is_valid_importable_instance,
+             get_default_launcher_path,
++            launcher_suggestions,
+         ])
+         .build()
+ }
+@@ -39,6 +40,13 @@ pub async fn is_valid_importable_instance(
+     )
+ }
+ 
++/// Returns every launcher that can be imported from, installed or not, with
++/// the folder each one keeps its instances in on this system.
++#[tauri::command]
++pub async fn launcher_suggestions() -> Result<Vec<import::LauncherSuggestion>> {
++    Ok(import::launcher_suggestions())
++}
++
+ /// Returns the default path for the given launcher type
+ /// None if it can't be found or doesn't exist
+ #[tauri::command]
+diff --git a/packages/app-lib/src/api/pack/import/mod.rs b/packages/app-lib/src/api/pack/import/mod.rs
+index 72f315d..15da6da 100644
+--- a/packages/app-lib/src/api/pack/import/mod.rs
++++ b/packages/app-lib/src/api/pack/import/mod.rs
+@@ -247,36 +247,130 @@ async fn import_instance_inner(
+ pub fn get_default_launcher_path(
+     r#type: ImportLauncherType,
+ ) -> Option<PathBuf> {
+-    let path = match r#type {
+-        ImportLauncherType::MultiMC => {
+-            return find_multimc_path();
+-        }
+-        ImportLauncherType::PrismLauncher => {
+-            Some(dirs::data_dir()?.join("PrismLauncher"))
+-        }
+-        ImportLauncherType::ATLauncher => {
+-            Some(dirs::data_dir()?.join("ATLauncher"))
+-        }
+-        ImportLauncherType::GDLauncher => {
+-            Some(dirs::data_dir()?.join("gdlauncher_next"))
+-        }
+-        ImportLauncherType::Curseforge => {
+-            let home = dirs::home_dir()?;
+-            let primary = home.join("curseforge").join("minecraft");
+-            if primary.exists() {
+-                return Some(primary);
++    let name = match r#type {
++        ImportLauncherType::MultiMC => "MultiMC",
++        ImportLauncherType::PrismLauncher => "Prism Launcher",
++        ImportLauncherType::ATLauncher => "ATLauncher",
++        ImportLauncherType::GDLauncher => "GDLauncher",
++        ImportLauncherType::Curseforge => "CurseForge",
++        ImportLauncherType::Unknown => return None,
++    };
++
++    installed_path(r#type, name)
++}
++
++/// A launcher instances can be imported from, and where it keeps them.
++#[derive(Debug, Clone, Serialize)]
++pub struct LauncherSuggestion {
++    /// The importer that reads this launcher's instances.
++    pub launcher: String,
++    pub name: String,
++    /// Where it is, or where it would be on this system.
++    pub path: Option<PathBuf>,
++    /// Whether it is actually there.
++    pub installed: bool,
++}
++
++/// The launchers worth offering, with the importer each one is read by.
++///
++/// PolyMC and other MultiMC forks keep their instances the way Prism does, so
++/// that importer reads them as well.
++const SUGGESTED_LAUNCHERS: &[(ImportLauncherType, &str)] = &[
++    (ImportLauncherType::PrismLauncher, "Prism Launcher"),
++    (ImportLauncherType::MultiMC, "MultiMC"),
++    (ImportLauncherType::PrismLauncher, "PolyMC"),
++    (ImportLauncherType::ATLauncher, "ATLauncher"),
++    (ImportLauncherType::GDLauncher, "GDLauncher"),
++    (ImportLauncherType::Curseforge, "CurseForge"),
++];
++
++/// Every launcher that can be imported from, whether it is installed or not:
++/// one that is not still gets the folder it would be in, to start looking from.
++pub fn launcher_suggestions() -> Vec<LauncherSuggestion> {
++    SUGGESTED_LAUNCHERS
++        .iter()
++        .map(|&(launcher, name)| {
++            let installed = installed_path(launcher, name);
++            LauncherSuggestion {
++                launcher: launcher.to_string(),
++                name: name.to_owned(),
++                path: installed
++                    .clone()
++                    .or_else(|| launcher_paths(name).into_iter().next()),
++                installed: installed.is_some(),
+             }
+-            Some(dirs::document_dir()?.join("curseforge").join("minecraft"))
+-        }
+-        ImportLauncherType::Unknown => None,
++        })
++        .collect()
++}
++
++/// Where a launcher of this name actually is, if it is installed.
++fn installed_path(r#type: ImportLauncherType, name: &str) -> Option<PathBuf> {
++    let paths = launcher_paths(name);
++
++    // MultiMC is unpacked wherever the player put it, so its own config file is
++    // what tells one of those places from any other folder of that name.
++    if r#type == ImportLauncherType::MultiMC {
++        return paths
++            .into_iter()
++            .find(|path| path.join("multimc.cfg").exists());
++    }
++
++    paths.into_iter().find(|path| path.exists())
++}
++
++/// Everywhere a launcher of this name keeps its data on this system, likeliest
++/// first.
++fn launcher_paths(name: &str) -> Vec<PathBuf> {
++    let data = dirs::data_dir();
++    let home = dirs::home_dir();
++    // Flatpak gives each app a data directory of its own.
++    let flatpak = |app: &str, folder: &str| {
++        home.as_ref().map(|home| {
++            home.join(".var")
++                .join("app")
++                .join(app)
++                .join("data")
++                .join(folder)
++        })
+     };
+-    let path = path?;
+-    if path.exists() { Some(path) } else { None }
++
++    match name {
++        "Prism Launcher" => [
++            data.map(|data| data.join("PrismLauncher")),
++            flatpak("org.prismlauncher.PrismLauncher", "PrismLauncher"),
++        ]
++        .into_iter()
++        .flatten()
++        .collect(),
++        "PolyMC" => [
++            data.map(|data| data.join("PolyMC")),
++            flatpak("org.polymc.PolyMC", "PolyMC"),
++        ]
++        .into_iter()
++        .flatten()
++        .collect(),
++        "MultiMC" => multimc_paths(),
++        "ATLauncher" => data
++            .map(|data| vec![data.join("ATLauncher")])
++            .unwrap_or_default(),
++        "GDLauncher" => data
++            .map(|data| vec![data.join("gdlauncher_next")])
++            .unwrap_or_default(),
++        "CurseForge" => [
++            home.map(|home| home.join("curseforge").join("minecraft")),
++            dirs::document_dir()
++                .map(|docs| docs.join("curseforge").join("minecraft")),
++        ]
++        .into_iter()
++        .flatten()
++        .collect(),
++        _ => Vec::new(),
++    }
+ }
+ 
+-/// Searches common locations for a MultiMC installation.
++/// The common locations for a MultiMC installation.
+ /// MultiMC stores data in its own application directory (not a standard data dir)
+-fn find_multimc_path() -> Option<PathBuf> {
++fn multimc_paths() -> Vec<PathBuf> {
+     let mut candidates: Vec<PathBuf> = Vec::new();
+ 
+     // Linux/macOS: ~/.local/share/multimc is the typical location
+@@ -318,8 +412,6 @@ fn find_multimc_path() -> Option<PathBuf> {
+     }
+ 
+     candidates
+-        .into_iter()
+-        .find(|p| p.join("multimc.cfg").exists())
+ }
+ 
+ /// Checks if this PathBuf is a valid instance for the given launcher type
+diff --git a/packages/ui/src/assets/launchers/README.md b/packages/ui/src/assets/launchers/README.md
+new file mode 100644
+index 0000000..33a2c0a
+--- /dev/null
++++ b/packages/ui/src/assets/launchers/README.md
+@@ -0,0 +1,16 @@
++# Launcher logos
++
++The logos of the launchers instances can be imported from, shown beside their name in the import
++dialog.
++
++| File                 | From                                                                                          | Licence                                                                    |
++| -------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
++| `prism-launcher.svg` | [PrismLauncher/PrismLauncher](https://github.com/PrismLauncher/PrismLauncher), `program_info` | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), unchanged |
++| `polymc.svg`         | [PolyMC/PolyMC](https://github.com/PolyMC/PolyMC), `program_info`                             | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), unchanged |
++| `atlauncher.svg`     | [ATLauncher/ATLauncher](https://github.com/ATLauncher/ATLauncher), `packaging/linux`          | GPL-3.0, unchanged                                                         |
++| `gdlauncher.png`     | [gorilla-devs/GDLauncher](https://github.com/gorilla-devs/GDLauncher), `public/icon.png`      | GPL-3.0, scaled down to 128×128                                            |
++
++CurseForge's logo is the one Modrinth already ships in `@modrinth/assets`.
++
++MultiMC has none here: its name and logo may not be redistributed, so it keeps a plain badge with
++its initials.
+diff --git a/packages/ui/src/assets/launchers/atlauncher.svg b/packages/ui/src/assets/launchers/atlauncher.svg
+new file mode 100644
+index 0000000..5dd0000
+--- /dev/null
++++ b/packages/ui/src/assets/launchers/atlauncher.svg
+@@ -0,0 +1 @@
++<svg viewBox="0 0 2084 2084" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2"><g fill-rule="nonzero"><path d="M1041.67 81.38l272.437 159.032-825.246 478.685-272.438-157.971L1041.67 81.38zm87.28 371.074l274.024-159.032 463.937 271.945-276.14 153.73-461.821-266.643z" fill="#3b3b3b"/><path d="M216.42 561.126v961.081l825.247 479.746V1684.95l-551.222-321.774-1.587-644.079L216.42 561.126z" fill="#2e2e2e"/><path d="M1866.91 1517.97l-825.246 483.986v-317.003l550.164-320.714-1.058-645.139 276.14-153.73v952.6z" fill="#333"/><path d="M1590.77 719.097l-549.106 310.112v165.393l214.246-122.984v488.757l138.599-81.106V989.451l196.261-115.563V719.097z" fill="#89c236"/><path d="M488.858 719.097l1.587 644.079 152.353 90.118v-198.79l230.645 132.527v199.319l168.753 98.6v-655.741L488.858 719.097zm383.527 531.166l-227.471-131.466v-150.02l227.471 127.225v154.261z" fill="#7baf31"/></g></svg>
+\ No newline at end of file
+diff --git a/packages/ui/src/assets/launchers/gdlauncher.png b/packages/ui/src/assets/launchers/gdlauncher.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..9d369eb6d30a38821f97569a41fbb0f2346f7fc6
+GIT binary patch
+literal 7218
+zcmeAS@N?(olHy`uVBq!ia0y~yU}ykg4mJh`hQoG=rx_Tee|ow&hE&{o8(UoydUfi*
+zYxjQNanGCA(tbeW#|sU9S5EzjUAHpby#k%~{##c1;ihEv>e4LTg!DtI23uRMrMtfh
+z$qudg%ONx+uwaW<PRoZN8HEK+9ZFIxPC}Eai_hPzJ}dwHp7(+V&l8XDJ$bjksNVAX
+zoZ|0M>1*@r???S+csWtdwyed8Y2gG9f0y&pB0PH2KJsteuW74mn_y!8=f+Coww}3G
+z$tOPkyB^&3#`2<_%Bj=g3s+_BkSu;Gdy`pz$DjL*A4NLyWG%i3y+7cnY`*W`Cw*mx
+zU=5bQxVUq+N+RDFE_WvsNKBm;x0*5G%$CT@oFbD>S>5h5V`P|eocrw!Ysr{Bc`yIC
+ze#{7n+BLN?X>wVE$lqLH^|qAC%8ifPe$N!{IARm@%4o5y#A6GVNel-PbX$U)v^G3m
+zlVs+aJ$-5j!+|56ilK3FYZwb|F$SrfXHU({T*=nZz5H*|gv4yKjyy4^LmOwCFtRLK
+ze9?Y$V#Cy@Q;%gd{N!}}cE{BF{q5Q}mY4Y^oH=d9prL2>xXJ$e=C`|rnT(fg`ZOnF
+z#>|rfb7j68I16tKkh9M`zOL~g(<UYU&}nu8d3FD`Fsocm;9~Q3RXQ(zZbzGki1$;;
+zRd3ZKl1&7+a(yt`Eav2qS-Eg-hUjL_wc61eo^aT4NHtizW$>K(JY96c0UMz#q0Nog
+zwmCPjtmxf8c_yRo(xn|NH!QSoEXa7f>8JE=Zo38VCOqfn`oDI6)BkXvKgpW9PhDo4
+zH2ya`zuoe{hC~7F{_w0^>my%QG=JDDeOm61($$ZQOOxjDGivDRnX$6|&su3*b@y0H
+zyynxF&s~%go`tplzP5x_Y0|03&5vDHcNVVy{PLiE&Yd6b)*@V;k3^2JPg(V_&gbEo
+zlP*c?rd;z_yV$_Znk8s%lf{8PfgsP9jn}^IK9lxs*QQC~L58{kt1fIWY%u@z+qlhB
+ztXT1hiNS)oE7Y1Ys^{6aRva)0s#M`<xae&<^XBXLm<?ZVRQp*USoyS)xxwB4Z|1%Q
+zYa|)!)TTTwUL?rOa3!vC-`l(d28YU;Ll$K$2M)Kr7GD$p?F3_Z30GIjF?OTK&ovwJ
+z@BcV*amS&V_DT<{{i5c*mwKzQIM>%@Qpc`4jhbdXWhM@CPd~;nZTt7~%V#~yJ?X!#
+z--m{V&P*`SSl#64B=m}V%9F}}Tun37r<mT$*lk%md(Fh|{tKtXdXm?t%~({Ls+zB+
+zZMPuh%;(3;&RDhU&T@9SE+{Bty^2%7qe*?=(+>=8k#Z-`Bs@z$`OI?a>F4h~%xV-S
+zJ1vXd$`yK@&;0TFU#VgL6Q|!}_Vnk>>@_MAmR>xwBjuFDe~&l;w`}HQ1>N_oKF^jl
+zI;&N%)joby9<TkolI4tu)AiHmrs#ZmyW>#gb;FFlEo+Kpc5~ig`(@V2+@z+sWYeAt
+z+x9jeDAqdt%zie{7NgSAdGe)Sdp-trRXRn5Zzx<)dg=Mk;6v;|TCPq9Gk*K7^}X0O
+zU2M%euNsF~*ZY0DeyzLQ`b9+WgR-K?+<;}S+l!miHf=u4W0O}>a<6UryZ>vnGg4pW
+z%q)9!M7rkTpUdwQI%Wn%{`50BbS7t)_l|tkwK`LdyWiT#Z{XAU|G@P9`ug=+mu7A<
+zE=`*!A8WBWK;Z1uQ`RxJeGTqZe#yOL#dJeZWvaHdd9LA^&DW<-ol+`h_rid^<EaTd
+zgWkV?XS#VV+bCXn@@-<~?nIjmHEZd|dz3o5ukDHWbZ=wv%rATwY}$M0e%f5O#^{~m
+z1^<?yX~Mk{MbkZBru7IvZkAa4<_1rkhu`D;YkKuNb}jzExK+D0I@ERP(xp|8j&y3>
+z$^Ns}<<I+|%3tMMd~W-GYz&c;-y;0CX=dG9`yIdbpFVwhZi0b^cRSzHZ->~g+&jJN
+zV(aF0A_r_TE8Q~H6)!Kd&cEfO?X5bM{Z?O|fy2dLn|^BFF23pU*7bhh&R62jo{>jg
+zK1nUmPQ8^U!T)HJF+<wk7Fp{p@1Fi%b*njS*|z6DkFqJuGpG!k_jX}?Q^E2HTFQ|r
+zxAI=Fu@%-VnCoUBw`tLz+g;($uJ2gAHv6`Ub@1!iTKz9>Coem<Cz2yjWs2#J-50m7
+zbkLSQ{_lu{asJ&+lhpgx&VO-%!yxOGt#Ipu|5Gl_D)5=^Yjvl5*PAs9w#Fv%{5{^5
+zx?l7C3JwQ`$Bz!}{w=Yo&Rb=jy3h;5FS%S7PMu*p^DOh=H~s5V{=Qp1BXhr*P>0yF
+z8b$%>X{^)C3-*@DyuA@9J2~_6G56^w&oy-{Np{~_CX-vqd|i4PE5pX@&FkeCP5pSN
+zaFO8KIO&%$^G)g=+&a|hX2P*HiN{r2nQy6MT+sD}9%;_9&lp}_{M+U=^%<)YQ%6jO
+zGpELzSD7-CgRQ=2b_d3kw7hyG@v7)GL+~PFm6fs%9E?m4GI}$vv@PcCF?^>Ztk9vb
+zv}LKvlt}_jN#_zS-23<7*L()S1fIi%COPiT*}R8qp3G}$n8YOK?dZwLcBk6U+Tk_N
+z`C|+ADe@%q6m4d<NOq8)b4^{`GE#Db4(suYEAly#{~xS+V_m?(&L`_;afwBf<&Pb|
+zj(6kCM4tJN_6l@xY<sI9)9E11y#IXnpF2KZ&YpLD9~XIo>&L<=ExFb!*5)6X9xr?7
+zUM+j!igk=m94Wu{Dkx66Bsl3D;}Ve-_A+h9gLc&1DX4iqTe;xjh0O*F^5vG;*rlvo
+zn}1|^_5MT8-tOM`?Qj2vm9K<rN*9Qon#A#AFT;wfll5B|4rFkcAKYmA>&f$knuC=R
+z){mqu{_k-FdEiM(s?7J@QPOYjhBy0$%0I6E|I02c|4!eEyDe*c?6;U@vRedpuyV9#
+zNgE`75%^Q`OQlD`=*Nm=AD!)T2iaH@IV>Y3E&kte1mPbKuTEc7Rj+$5Znx;^`*#|A
+zLw6rIbAsmwW14x){4*a6*A(th<WV}*>U{pl6m7SMmo^^0u)h4<eVKfo#g*ICl{_>H
+zs{Yr^xo0mQyw6nXeg1Ejex0bsuCKQz%$+*%fNmzc1=}mxyq*W&r1y2t|MPjOyYD&$
+zbDrb9#e1q|SqP{oeR(~%`N5Nq9DZ{BUA(tHe7O`F@%J73h9xcc-&;Nm)>!IbA=A3n
+z^jN=*_;vr?Ji>0gmbY$f%-*s6k=28b9HD)d(v1d5CldaAymx!UhnZ6&ew^`2N&7Kr
+znWcxS_qp|}^N*~#&1Jav!={LP&mtt2g(-eI@<h6A3X`xK@4=Qp=MPm!e^;bj<f{4b
+z@%f3fd@@^$I_mc?`(|*?Hd~?2s#a*9ZQ_wY#n=vE>EABjRg%xWS|)$U|KCrq6xNy<
+z|J#jH(o<Df)dEgV_{@LR^uhdPJ_o)WI{hGnSJQ8;;0fNt?rQTpKD^~rF7P~9`D6X^
+z_@l<B@3kEd+Mx6O`R#4ZE8ad>mc8!4+w1k>l6Cnyt9JNRD80F;6>$1pR$A4=)EisV
+z<>Mma8t=Sun4ZjZ@#q;*C0{c(-WScg^LBEzNd|FjN$2bo$n#!k#wJ;(pLQpzgS{)S
+z>Hc%aC7N9x!6J3@+4)88wn%OlQ#$;<wa>Cwy73nOV-LlI8HLw%!xJww*maoPjJ@|!
+zZI{^>;X@DAeCC%)8X4Cl9F{dx4B{{_-eUIS+7Ipz&sn!Gj(;EX<@MZdd;J}<_oeC?
+zx0pScAzU`)@aDvnv>yhww^BLUXD4MYWnadi<Ye;d!IpiMGfWCqW?XzYS<s(1N_vj*
+z4tue?_38`@{MYAX<oa1&*?#5a%tlXP_eUGW<J|u~G?+4J?zxn*N)`bZ4);YG5_M*u
+zikLV{?ndr7Y_QmWea@GcQ{OI=)3iGKai(OYC8G$Bz4SwmE3tRK>=1F#bC9<Dqhnw-
+z|FpQFvqAB4X@zydJu-FEb_*?#o53_ga@x`ly$Am$C!JrpEn@4!0~>qAp9Zg~RW929
+zzxUu@;VGs4-3-SJjQ+%ZIeR|Sk9FIv&Mk$l@>$<@E^e#V?TdYV;<?$Sc`s(qZ|2$m
+zeahFaDa8#xHl2CCRp7*jtt+ie`y?NoKDOemirwP5!Crr2jJ7Q)Szr33ID5V5|Fw-g
+z@-=bV8{fQ%bP-_o;)?Lvwp2yTrDfJHH=WvQ;cNN#dz(vnPn_pWc-12K<G7)-aGT}T
+z&fL1b>(@dPBai;J2)Nx4cayQlE?;0-Y?b1tO-4!Iuk0$0_Hy#PxOB~iS6%`ucn@D(
+z`#QDb^XuF8YmcpQKm8%|t7C;NR}e={RIR}4?X^we+S?!4ubbauw=;726PAzf>q=M1
+z{r~xeYtQCN^(iI2-)`<}jtJk%efs`S`!oLw70=o3mG{wRT)NnF%R@cZ#zm_c7AQ1&
+z1dH@OR9hf=sUutD!Aa5V4;SavzL-D1*=Ik0oVVhG?+W_b%%Zc)AN8?|KTe2so_*Qz
+zk2U*ise<Fp-GLh`)jw@A68KR4V5^AHU%M~o&mVNJ{`T;sXtu+ZPp^;kXK|P-UJ_|l
+zxcIq(L6f8Rp~kB3*Ui?y&$?+PbzqCP{*g%Ls>QpO@onWzv^duAAgTM$8wR^O!M(r5
+z|Em_(%${H;_%8mBc+HOGQa^7pnuj+(kZ8WuX0R&zRl&7}do#*jwst;_o^zPt&F%Q^
+zV+A6cxNja<m(0YfD7E$D#dUi%EdIX{d;M4`?Si2*+vAywW^Z`4mp?FaEBE`_FOuKn
+zt$KLYvp2DP+GO-$dhhLz&H25DHW;%XkjOK<EMZ^vdfnb1r;oioahmJMsRKMxvz1=V
+zo!$BI@cBbK7N$Si)csG+lF{BG&ijJXZ{vpkvbU}#S;`Y0vYLFi5ztt2piS5MWAo~L
+zH&@yC8tP0C{_yw}r*gs97Qq$kRvtdJHMC;mAKN!~<GbT-N^aPC@U`@|<Qp@YlU${*
+zT*{4R5Qw|KL3W$jgr<TG>jasro<ErOKDJ5wIG^kOJ#Q8lcxD&bAMJ`Z&$-EYG1zfI
+zV%z=a2X{x?x%tL2f7%r7&VGERjj%q`$<xPp!}|_T@zy(#d|G?MoAt97EOEH19>2ps
+zU7JNtkwpT;aqw*Xb&R8FdjFCAJ~JEQHX0dR?s3iO{TSOhGa&eOL;3a^p8e-PZw>Xj
+zE5vMIY%}f9^!Td}zV6TSYPlEIZSABo$5FaDE>d#F&%^H%zV%L4?AWmTm%=M)CC)`F
+zTor^JYMohjujY3WNc`42+3<7weaH1{dRTrc3(2r-oyEZ1a9!K%;pz2R4_>bHNvJWZ
+zk>ij1F~3~M#V`7~(mS3rJjW$`q^x;9=j*n(d%EQ8zWTiThMA35(!aH>Gfc`PWQtw1
+z@_ug;;#7Ls`oEIhu7A0A<N>|)97$<E{>tUt{wNt2vy;t!#;3Ev(^5M*x;Ty*=*brH
+zx&8b5lH-Ss?z4Z7kAFFN^2q0f(Gw&WXN6i{;gERzZ<~00WOJ^yopYRD+WB=HUG9x%
+zc;v<OqB{5f&Wc&NO?DoaB1hZJwI}lr3wyh)`#AIVQa{DG#XHLHJL<$d5o;^^dU?JG
+z-+?n5rW{(hi>*bj!j7$DN9?CX8O;9wx3`FHojmOU)3poC`VRtPnRTvi-D$samh)D_
+z6X(7xPC9Hh#U_eP(Pa(G?%I~+>we^Y-t+zw7n5rLw1r8B%~H~TS%+-(Ir%QZUHZw>
+zlt(X@<|jT}G<D-D*~udQCs*41Y`eQ>f5AmBo4sFjpFB-D<hkhGf+bnJmv1SUTMO^6
+z{}p;8>hU>gb@c<m)uAtD&G=E2lhJQpu`N6{>CZe>LAk0=qBg(YWS=;D&S!hu)|5w|
+zHZfOxnK^aEy?Tz#?{{3gdgk`RjLC&b%-s<)&#esmeMC0WtI=a}@6P@4J)5RZ)qCWB
+z=-GuOcNCnYoA=!DnX-4AnEAcG2HW2Mu}S>1%`a)rgUWxsUsv4OrTy{B@yH#g*6#lB
+zNBVWNkHp*;`xv*sDEWQveBtA}{EOdg-Fo7*uis<!uY8J8(qB$-Cfq(}yW`=z_K(Yt
+z<{v04X?m0C8yz~QVP$s5gN3U3iIGQ_rLF48ev>LX`@@Av+XJo(WST0b&YI}5Z81p4
+zgSOrB$F|L_zM!o>p(N2hbz4W_7RR>x>}ki|%T;q;eqSZ9T5J23UD?NX%+6Vq^qH?^
+zvDvqG>wCZc=HyVkQ}*ufRu1>vkeqvkSIVO<*KS!=#J%kPSB1LoH@p+lQhwBWvi=Av
+z>Xs1q5&TqSv@!Si^Bu|O9`C4lvUA6~SKfu52P-FhdcE@IkN@HM|0KLPWUTIV>?&ZX
+zoVjj8uz25t3lH5i6gO0zKK|p~j)%HYOvkKy@7>%Xdw$;+vuk^PGqwnvIDN9kP;F&7
+zo99Z~rWtpqOn6wXdH0mB{Gyt-VKHC%7k|86ooBJKOXB*=#oL<u?e4R$U%KGyMeBBn
+z!xv^f+$v&sYcqe~?LyaClNk>EFn#~?t#QTA-mf33bW_-BI=@WSQeIldX?)ByChR~z
+z&wTOScDKKOZSmcFY2B<}ZW9zze%PG&QZ3w`@@wyj50wswbWM7vPnyfaab*3@*PClk
+ze5jl#`a%7j{!}-wJmK`7#>BSk$y;~))4P-6EX{oTqD6Xwe1-1R2-XVS)?&7Ah32(J
+zY!6r5ePrdj{&>;(WFIZR)U5ZyHzs-ZA8+H?FYe`K5%swG@%j91n>(_fz3;V`@4FTd
+zr1aqPwjJS$p}g~hBpy@*#tK|WvF5z=)a9quz9p|G&+h#5hM{e~CByVN^<_!=O&0P6
+zCx50t{?vW$s5pDpMQd~8jU_gb*)y)O`EFx&bXa9{P4o9DGfh=KdA`MpcUs=~*!$g^
+z`EXSgci!x_J3jSE%`2bH_GNVVc=o>Y+lK|lq7(hxbQUPyX*t|}ctX%JWry@`ogl6&
+zS7eXvV{V@?_oe;HzmNSt-T!*hcAM?{75k0<-ea+_k=)P|pMAg4dBsZWH*O0=co~&S
+zl^YzKlZCgvy>a=`+N8(3JLhhR*)96~=C)*hDXH03x%rJ-m}Mq+bT*Wm<@o2^y!Pqt
+z5x;G+Ij7GH?>7qy-{=?1Zt&*Pk?ecF8GdKKin=<h^wrr#2mZ~nT2uL+Ips&~+C{yW
+z`7ZQnGoGHb;$D3Brt8<5l3Ewcb#xOHJQWw+{p#=54LY2D?hSf68oWO~-0{wT?BH9w
+zNMMWd?8p`cnH4LK7whlsJ=387bjJR?rwkvTO?t(=b;tXU(~|=alxTc(aRIRdYZq)g
+zJ=>~k53@p?+cePwo339^I@x8acl-H^vi*IJcj!EvB$~b9&DX6b&T=i8^5XK^c**1&
+z3fd2jua}Q(+OD<TL38@2-2QgseMeUZ3FU|89b7LT`H0ItXV>8?rTpw2m$!L&-Kl*)
+zx#H{E-hiMcj^!a;Pv6~T*3kU;Dq6bm`(FQJ=e#{Wp1A)vPU`5HfFK91#+j<!9}Wng
+z7VN#nxzBzdZ;p4j4MVx`ii|7AnEiE*pPA%3VdM3K1?3y<f+Dyr486opocZvu|NMV_
+zP^PN;bGZJ9=;QPDU289Y{LUw<EPYJc{;_rM{+(6Ea<%VFbN(fm7j0&G_q%@A#E;Q$
+z8C;rXMygk<BrsH3&iqkuJ?@U>cmEv)FJ{iDsboARKBwK7?Tg*Zv<vg!-R-|Bz5Vgj
+z?Pf{ASM@wJCoSsSd{lp$+Cf=yMhUOVnjq_KX>ESbwzp^HKIkuH{eS<P|AxfReovmV
+z7*r(0&#82?pL5OndZ-}d6<NN=r~jJX`1;bW=F?BRD_6`8B%hq3`7x=jZ*NrGt;Fc1
+z@p83I=Jl3+ZoyX?-&!OTKk>C^DL=2|tyy8KwXwSV(qx;rA3nX1`}*t0j)k0GwwIrJ
+zchBLhtn%MqKOW1-^RT&s$36{%)9>lDXb7E>dUL}!A-Uw&-9vLHJa3(F>eC^MZ|cWp
+zRKA`z)rOJbU_!vOY13w1dog*fSy*VOD0{PGWaw7W`T769RX3lX^<j(iF@eCwEjDqB
+zWtkgRuD;)T=`T+{!-h{kRAxv=&b}WRxG(YSr%9#^!3GhkkNMNw-5M6V8SIFdHZAV8
+zTl4BV!zoijeN@&nGQ4#$6=a!E))H)Hd)VXY#CPiO!IQqNj?tGNX)eFkDeSyy&z>8F
+z9}o6;2A$X$6t#Fu-yw;)LO&ELKko?%s#>shucNeW_2Esd+6)Pgj!e+f*T1$rs_&BC
+z&#Le5ikbsFSbl#K&DW`YbGZ1|DSP+5%-;ncDy9A`>M1)ByEy1q=~vyj^OHB&)E#uI
+zPwd%wyuRRTZgyPtyTg$2!CQYrHs<Lk+*zm0=3>IogFXt?W$2Y@Jij24{pm-}#};PI
+z;*&1_n7#G1{5rd`yxYa8R}_`S7RfN|`0?9V-^k~4OTgrryj!-(GNnk#%WUnPGVM~3
+z3)3-+^&F2Dnd(p5Q~oBV?8v1Z%JmYg%}bT|g51Q<>4>-#Fa5-Ky-c|0qHW#H6KA40
+zG?zYYEt|DX;@QpDr@c<~G3;5u*kL_M`sEKnuAPeeciixqQ_-wHr~Z~Ki(#;q_We$`
+z88dzTi(4w@h0Doj9=AJSp!$zF{@=bme^z>Y{`rchXw7A}&oXAOUhVc1zZC3ppuZ(x
+ziq@8*>Py>?S)4iW*v<WUZpF)g=dHBPtM@X?l;5mC9%S5lId*#QnFQUXK`J6W+wNbv
+zC6Zf_dGOV@m}^U$m}SJ}d$i}2$~HgqIBm6j_r+6ZUq<KNw&t)|zA5M5=DAa!Pn;v_
+zcx36)>#qVdR1Ww|P5nH7>MhBa78fmD7R6Qm5jrEY*dciOzSOj*AH9_V-&<U?46;_%
+zKK;y|JB_Q=X(M~X4sF&=OC-)}o-GVcn|oO7tm2~A9UOhKS6Q~y&i|&Dn4dW1>BNn;
+z9P?CXKM&EHzkjjqi`#iG8IB)jPv%OGa}@a8vgw#~?((KLcYKy@O^~TJJuI?TTf1_z
+z_U9TcONXSJ5^Gj1l8{<f*lL`gDC8OxnQn1W%|Kn=u48Jl=hKf)*58&NNsCL3JUO4C
+zz(8WkQs?%fbe-3`+L>kc=9n;4e7Q3J8TYAKj1SVCBJI?r3^)44PGm94?b)|gnL*Ah
+zW`DxpP40X$(e{lhx|2MAU9?H>`}eOWanjKk4oluUQ#TbG&z!~}u{UJ$%)S4PvPMtV
+zJ->Vp^Be|wA2p%krCZ$0CeIChp5uGK&v@py*fitn*vOOGCucq1-Oa4>!I8tEuyCWM
+z#*c9CxffrXsr~WN^tV@+>I`19iTP#pN*g;1zb&&QzFW<g`*ZkMZ~YeMg%dQ~o?qB*
+zdz-P(SzBD>Uvxd||MfF|91n^*)oGT=v|WDfnH-5Dryfs@y3J>3`%0na{jp8#`(JSV
+zGJDIQ?!leB{G66TW2MTKCEq5_?Vpx;6FyH7Y<Q>Ko!vrjt<AE6W2P>PBDBs2gqP+0
+z-E?tkrmN4g-Y~=27j|u8^`6wY&)3?4JLP%d!TG;$e!I)rC>a!4>1T50Ov=7>vroRQ
+zNLpx9cd0LyxtTS^Rc@6|t-_s|M!B~bZ*j`U*t`{Q=84|ySh88*(~-MA?kBfMCDb`h
+zuq{7(>37-ks(J4V`3h=k42qd1&T#jNE%PxKo>hJmF-24|-R6F<tin8T7XynPp&tpi
+z*1Tll@=Trk)@3#WgW<0-_2%yDx^wrx@R)c1l*4z<?=Mzt`tU^VX-sJ7sf7U^Q>L#!
+z^!)a|zyA(6irZ!`DPWLdRyw}HSiYCnd`)!S|EdN}k*0_pAIg}g7++ev`(g7@&gJsf
+zrN<_03{K~<y!Zdo;%fe^yf-)QzZCi^XYQmpG2+%z_o^>PKK_5cChAIJI^!Y+1_lOC
+LS3j3^P6<r_Bp?1#
+
+literal 0
+HcmV?d00001
+
+diff --git a/packages/ui/src/assets/launchers/polymc.svg b/packages/ui/src/assets/launchers/polymc.svg
+new file mode 100644
+index 0000000..c192d50
+--- /dev/null
++++ b/packages/ui/src/assets/launchers/polymc.svg
+@@ -0,0 +1,21 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!-- Created with Inkscape (http://www.inkscape.org/) -->
++<svg width="64" height="64" version="1.1" viewBox="0 0 16.933 16.933" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
++ <defs>
++  <linearGradient id="linearGradient84726" x1="4.4979" x2="12.435" y1="3.8011" y2="9.5681" gradientUnits="userSpaceOnUse">
++   <stop stop-color="#88b858" offset="0"/>
++   <stop stop-color="#72b147" offset=".5"/>
++   <stop stop-color="#5a9a30" offset="1"/>
++  </linearGradient>
++ </defs>
++ <g>
++  <path d="m3.561 16.016s0-3.5642 4.9056-3.5642c4.9069 0 4.9056 3.5642 4.9056 3.5642z" fill="#765338"/>
++  <path d="m8.4667 12.452-4.9056 3.5642-3.0319-9.3311z" fill="#b7835a"/>
++  <path d="m8.4667 12.452 7.9375-5.7669-3.0319 9.3311z" fill="#5b422d"/>
++  <path d="m8.8308 12.716-0.36417 0.26458-0.36417-0.26458c0-0.26458 0.36417-0.26458 0.36417-0.26458s0.36417 0 0.36417 0.26458z" fill="#72b147"/>
++  <path d="m8.4667 12.452s-2e-7 -5.7669 7.9375-5.7669l-0.22507 0.69269-0.91853 1.1965-0.91853 0.13819-0.91853 1.1965-0.91853 0.13819-0.91853 1.1965-0.91853 0.13819-0.91853 1.1965-0.91853 0.13819z" fill="#5a9a30"/>
++  <path d="m8.1025 12.716-0.91853-0.13819-0.91853-1.1965-0.91853-0.13819-0.91853-1.1965-0.91853-0.13819-0.91853-1.1965-0.91853-0.13819-0.91853-1.1965-0.22507-0.69269c7.9375 1e-7 7.9375 5.7669 7.9375 5.7669z" fill="#88b858"/>
++  <path d="m0.52917 6.6846 7.9375 5.7669 7.9375-5.7669-7.9375-5.7669z" fill="url(#linearGradient84726)"/>
++ </g>
++ <path d="m0.75424 7.3773-0.22507-0.69269 7.9375 5.7669 7.9375-5.7669-0.22507 0.69269-7.7124 5.6034z" fill-opacity="0"/>
++</svg>
+diff --git a/packages/ui/src/assets/launchers/prism-launcher.svg b/packages/ui/src/assets/launchers/prism-launcher.svg
+new file mode 100644
+index 0000000..aeee843
+--- /dev/null
++++ b/packages/ui/src/assets/launchers/prism-launcher.svg
+@@ -0,0 +1,57 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!-- Created with Inkscape (http://www.inkscape.org/) -->
++<svg width="48" height="48" version="1.1" viewBox="0 0 12.7 12.7" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
++ <title>Prism Launcher Logo</title>
++ <g stroke-width=".26458">
++  <path d="m6.35 6.35" fill="#99cd61"/>
++  <path d="m6.35 0.52917-2.5208 4.3656 2.5208 1.4552 2.5203-1.4552 0.10955-3.0996c-1.1511-0.66459-2.3388-1.2661-2.6298-1.2661z" fill="#df6277"/>
++  <path d="m8.9798 1.7952-2.6298 4.5548 2.5203 1.4552 2.5208-4.3656c-0.14552-0.25205-1.2601-0.97975-2.4112-1.6443z" fill="#fb9168"/>
++  <path d="m11.391 3.4396-5.041 2.9104 2.5203 1.4552 2.7389-1.4552c0-1.3292-0.072554-2.6584-0.21808-2.9104z" fill="#f3db6c"/>
++  <path d="m6.35 6.35v2.9104h5.041c0.14552-0.25205 0.21807-1.5812 0.21808-2.9104h-5.2591z" fill="#7ab392"/>
++  <path d="m6.35 6.35v2.9104l2.6298 1.6443c1.1511-0.66459 2.2657-1.3923 2.4112-1.6443l-5.041-2.9104z" fill="#4b7cbc"/>
++  <path d="m6.35 6.35-2.5208 1.4552 2.5208 4.3656c0.29104 0 1.4787-0.60148 2.6298-1.2661l-2.6298-4.5548z" fill="#6f488c"/>
++  <path d="m3.8292 4.8948-2.5203 4.3656c0.29104 0.5041 4.459 2.9104 5.041 2.9104v-5.8208l-2.5208-1.4552z" fill="#4d3f33"/>
++  <path d="m1.309 3.4396c-0.29104 0.5041-0.29104 5.3167 0 5.8208l5.041-2.9104v-2.9104h-5.041z" fill="#7a573b"/>
++  <path d="m6.35 0.52917c-0.58208-2e-8 -4.75 2.4063-5.041 2.9104l5.041 2.9104v-5.8208z" fill="#99cd61"/>
++ </g>
++ <g transform="matrix(.88 0 0 .88 -10.906 -1.2421)">
++  <g transform="translate(13.26 2.2776)">
++   <path transform="matrix(.96975 0 0 .96975 .1921 .1921)" d="m6.3498 2.9393c-0.34105 0-2.7827 1.4099-2.9532 1.7052l2.9532 5.1157 2.9538-5.1157c-0.17052-0.29535-2.6127-1.7052-2.9538-1.7052z" fill="#fff" stroke-width=".26458"/>
++  </g>
++  <path d="m16.746 6.9737 2.8639 4.9609c0.33073 0 2.6991-1.3672 2.8644-1.6536 0.16536-0.28642 0.16536-3.0209 0-3.3073l-2.8644 1.6536z" fill="#dfdfdf" stroke-width=".26458"/>
++ </g>
++ <path d="m3.8299 4.8948c-0.14551 0.25205-0.14553 2.6584 0 2.9104 0.14553 0.25204 2.2292 1.4552 2.5203 1.4552v-2.9104z" fill="#d6d2d2" stroke-width=".26458"/>
++ <metadata>
++  <rdf:RDF>
++   <cc:Work rdf:about="">
++    <dc:title>Prism Launcher Logo</dc:title>
++    <dc:date>19/10/2022</dc:date>
++    <dc:creator>
++     <cc:Agent>
++      <dc:title>Prism Launcher</dc:title>
++     </cc:Agent>
++    </dc:creator>
++    <dc:contributor>
++     <cc:Agent>
++      <dc:title>AutiOne, Boba, ely, Fulmine, gon sawa, Pankakes, tobimori, Zeke</dc:title>
++     </cc:Agent>
++    </dc:contributor>
++    <dc:source>https://github.com/PrismLauncher/PrismLauncher</dc:source>
++    <dc:publisher>
++     <cc:Agent>
++      <dc:title>Prism Launcher</dc:title>
++     </cc:Agent>
++    </dc:publisher>
++    <cc:license rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/"/>
++   </cc:Work>
++   <cc:License rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
++    <cc:permits rdf:resource="http://creativecommons.org/ns#Reproduction"/>
++    <cc:permits rdf:resource="http://creativecommons.org/ns#Distribution"/>
++    <cc:requires rdf:resource="http://creativecommons.org/ns#Notice"/>
++    <cc:requires rdf:resource="http://creativecommons.org/ns#Attribution"/>
++    <cc:permits rdf:resource="http://creativecommons.org/ns#DerivativeWorks"/>
++    <cc:requires rdf:resource="http://creativecommons.org/ns#ShareAlike"/>
++   </cc:License>
++  </rdf:RDF>
++ </metadata>
++</svg>
+diff --git a/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue b/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
+index a4dfcdb..5384d29 100644
+--- a/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
++++ b/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
+@@ -51,6 +51,7 @@
+ 							@update:model-value="toggleLauncherAll(launcher, $event)"
+ 							@click.stop
+ 						/>
++						<LauncherMark :name="launcher.name" />
+ 						<span class="font-semibold text-contrast">{{ launcher.name }}</span>
+ 					</button>
+ 
+@@ -75,6 +76,30 @@
+ 				</div>
+ 			</div>
+ 
++			<!-- Launchers that were not found, with where they usually are -->
++			<div v-if="otherLaunchers.length > 0" class="flex flex-col gap-2">
++				<span class="text-sm font-semibold text-secondary">
++					{{ formatMessage(messages.otherLaunchers) }}
++				</span>
++				<button
++					v-for="suggestion in otherLaunchers"
++					:key="suggestion.name"
++					class="button-base flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-solid border-surface-4 bg-surface-2 p-3 text-left"
++					:disabled="scanning === suggestion.name"
++					@click="useSuggestion(suggestion)"
++				>
++					<LauncherMark :name="suggestion.name" />
++					<span class="flex min-w-0 flex-col">
++						<span class="font-semibold text-contrast">{{ suggestion.name }}</span>
++						<span class="truncate text-xs text-secondary">
++							{{ suggestion.path || formatMessage(messages.suggestionNoPath) }}
++						</span>
++					</span>
++					<SpinnerIcon v-if="scanning === suggestion.name" class="ml-auto size-5 animate-spin" />
++					<PlusIcon v-else class="ml-auto size-5 shrink-0 text-secondary" />
++				</button>
++			</div>
++
+ 			<!-- Add launcher path -->
+ 			<div v-if="!showAddPath">
+ 				<Button class="w-full" @click="showAddPath = true">
+@@ -99,18 +124,25 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { ChevronRightIcon, FolderSearchIcon, SearchIcon } from '@modrinth/assets'
++import {
++	ChevronRightIcon,
++	FolderSearchIcon,
++	PlusIcon,
++	SearchIcon,
++	SpinnerIcon,
++} from '@modrinth/assets'
+ import { defineMessages, useVIntl } from '@modrinth/ui'
+ import { computed, onMounted, ref, watch } from 'vue'
+ 
+ import { Button, IconButton } from '#ui/components/base/buttons'
+ 
+ import { injectInstanceImport, injectNotificationManager } from '../../../../providers'
+-import type { ImportableLauncher } from '../../../../providers/instance-import'
++import type { ImportableLauncher, LauncherSuggestion } from '../../../../providers/instance-import'
+ import Checkbox from '../../../base/Checkbox.vue'
+ import Collapsible from '../../../base/Collapsible.vue'
+ import Input from '../../../base/inputs/Input.vue'
+ import { injectCreationFlowContext } from '../creation-flow-context'
++import LauncherMark from './LauncherMark.vue'
+ 
+ const ctx = injectCreationFlowContext()
+ const importProvider = injectInstanceImport()
+@@ -122,6 +154,8 @@ const expandedLaunchers = ref(new Set<string>())
+ const expandedBeforeSearch = ref<Set<string> | null>(null)
+ const showAddPath = ref(false)
+ const newLauncherPath = ref('')
++const suggestions = ref<LauncherSuggestion[]>([])
++const scanning = ref<string | null>(null)
+ 
+ const messages = defineMessages({
+ 	launcherInstancesTitle: {
+@@ -160,6 +194,14 @@ const messages = defineMessages({
+ 		id: 'creation-flow.modal.import-instance.notification.no-instances-found.text',
+ 		defaultMessage: 'No importable instances were found at the specified path.',
+ 	},
++	otherLaunchers: {
++		id: 'creation-flow.modal.import-instance.other-launchers',
++		defaultMessage: 'Other launchers',
++	},
++	suggestionNoPath: {
++		id: 'creation-flow.modal.import-instance.other-launchers.no-path',
++		defaultMessage: 'Pick the folder it keeps its instances in',
++	},
+ 	customLauncherName: {
+ 		id: 'creation-flow.modal.import-instance.custom-launcher.name',
+ 		defaultMessage: 'Custom ({pathName})',
+@@ -182,9 +224,65 @@ onMounted(async () => {
+ 	} catch {
+ 		ctx.importLaunchers.value = []
+ 	}
++
++	try {
++		suggestions.value = (await importProvider.getLauncherSuggestions?.()) ?? []
++	} catch {
++		suggestions.value = []
++	}
+ 	loading.value = false
+ })
+ 
++// Whatever is already listed above needs no offer of its own.
++const otherLaunchers = computed(() =>
++	suggestions.value.filter(
++		(suggestion) =>
++			!ctx.importLaunchers.value.some((launcher) => launcher.name === suggestion.name),
++	),
++)
++
++/**
++ * Reads the instances a launcher keeps where it usually does. With none there,
++ * its folder goes into the path field to be corrected by hand.
++ */
++async function useSuggestion(suggestion: LauncherSuggestion) {
++	if (scanning.value) return
++	scanning.value = suggestion.name
++
++	try {
++		const instances = suggestion.path
++			? await importProvider.getImportableInstances(suggestion.launcher, suggestion.path)
++			: []
++		if (instances.length > 0) {
++			addLauncher({
++				name: suggestion.name,
++				launcher: suggestion.launcher,
++				path: suggestion.path,
++				instances,
++			})
++			return
++		}
++	} catch {
++		// Falls through to picking the folder by hand.
++	} finally {
++		scanning.value = null
++	}
++
++	newLauncherPath.value = suggestion.path
++	showAddPath.value = true
++	addNotification({
++		type: 'warning',
++		title: formatMessage(messages.noInstancesFoundTitle),
++		text: formatMessage(messages.noInstancesFoundText),
++	})
++}
++
++function addLauncher(launcher: ImportableLauncher) {
++	ctx.importLaunchers.value = [...ctx.importLaunchers.value, launcher]
++	expandedLaunchers.value.add(launcher.name)
++	expandedLaunchers.value = new Set(expandedLaunchers.value)
++}
++
+ // Filter instances by search query
+ function filteredInstances(launcher: ImportableLauncher): string[] {
+ 	const query = ctx.importSearchQuery.value.toLowerCase().trim()
+@@ -316,16 +414,13 @@ async function addLauncherPath() {
+ 			})
+ 			return
+ 		}
+-		const launcher: ImportableLauncher = {
++		addLauncher({
+ 			name: formatMessage(messages.customLauncherName, {
+ 				pathName: path.split(/[\\/]/).pop() || path,
+ 			}),
+ 			path,
+ 			instances,
+-		}
+-		ctx.importLaunchers.value = [...ctx.importLaunchers.value, launcher]
+-		expandedLaunchers.value.add(launcher.name)
+-		expandedLaunchers.value = new Set(expandedLaunchers.value)
++		})
+ 	} catch {
+ 		addNotification({
+ 			type: 'error',
+diff --git a/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
+new file mode 100644
+index 0000000..ead64f1
+--- /dev/null
++++ b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
+@@ -0,0 +1,47 @@
++<!--
++	A launcher's own logo, or its initials in a badge where the launcher does not
++	let its logo be passed on. See src/assets/launchers/README.md.
++-->
++<template>
++	<CurseForgeIcon v-if="name === 'CurseForge'" class="size-8 shrink-0 text-contrast" />
++	<img v-else-if="logo" :src="logo" :alt="''" class="size-8 shrink-0 rounded-lg" />
++	<span
++		v-else
++		class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-4 text-xs font-extrabold text-contrast"
++		aria-hidden="true"
++	>
++		{{ mark }}
++	</span>
++</template>
++
++<script setup lang="ts">
++import { CurseForgeIcon } from '@modrinth/assets'
++import { computed } from 'vue'
++
++// As URLs, not as components: these are the launchers' own artwork, colours
++// and all, rather than an icon that takes the colour around it.
++import atlauncher from '../../../../assets/launchers/atlauncher.svg?url'
++import gdlauncher from '../../../../assets/launchers/gdlauncher.png'
++import polymc from '../../../../assets/launchers/polymc.svg?url'
++import prismLauncher from '../../../../assets/launchers/prism-launcher.svg?url'
++
++const props = defineProps<{ name: string }>()
++
++const LOGOS: Record<string, string> = {
++	'Prism Launcher': prismLauncher,
++	PolyMC: polymc,
++	ATLauncher: atlauncher,
++	GDLauncher: gdlauncher,
++}
++
++const logo = computed(() => LOGOS[props.name])
++
++// MultiMC gives MM, Custom (foo) gives C.
++const mark = computed(
++	() =>
++		props.name
++			.match(/\p{Lu}/gu)
++			?.slice(0, 2)
++			.join('') ?? props.name.slice(0, 2).toUpperCase(),
++)
++</script>
+diff --git a/packages/ui/src/providers/instance-import.ts b/packages/ui/src/providers/instance-import.ts
+index 13c73a1..e9a9767 100644
+--- a/packages/ui/src/providers/instance-import.ts
++++ b/packages/ui/src/providers/instance-import.ts
+@@ -2,13 +2,27 @@ import { createContext } from '.'
+ 
+ export interface ImportableLauncher {
+ 	name: string
++	/** The importer that reads it, where that is not the name shown. */
++	launcher?: string
+ 	path: string
+ 	instances: string[]
+ }
+ 
++/** A launcher instances can be imported from, installed here or not. */
++export interface LauncherSuggestion {
++	name: string
++	/** The importer that reads it. */
++	launcher: string
++	/** Where it is, or where it would be on this system. */
++	path: string
++	installed: boolean
++}
++
+ export interface InstanceImportProvider {
+ 	/** Returns launchers with instances already populated (one round trip on mount) */
+ 	getDetectedLaunchers: () => Promise<ImportableLauncher[]>
++	/** Every launcher that can be imported from, to offer the ones not found */
++	getLauncherSuggestions?: () => Promise<LauncherSuggestion[]>
+ 	/** Only needed for manually-added launcher paths */
+ 	getImportableInstances: (launcherName: string, path: string) => Promise<string[]>
+ 	/** Perform the actual import */
