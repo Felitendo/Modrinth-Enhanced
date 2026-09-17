@@ -1427,10 +1427,10 @@ index ba6c342..a175675 100644
  pub mod handler;
  pub mod instance;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 4c87e82..904d1d8 100644
+index 1331a24..2514d8e 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -992,12 +992,14 @@ impl Serialize for Credentials {
+@@ -990,12 +990,14 @@ impl Serialize for Credentials {
                  ),
          };
  

@@ -36,7 +36,6 @@ which offered Microsoft and nothing else:
   same choice.
 ---
  Cargo.lock                                    |   1 +
- Cargo.toml                                    |   1 +
  apps/app-frontend/src/App.vue                 |  12 +-
  .../src/components/ui/AccountsCard.vue        |  30 ++++
  .../src/components/ui/OfflineAccountModal.vue | 136 ++++++++++++++++++
@@ -46,34 +45,22 @@ which offered Microsoft and nothing else:
  apps/app/src/api/auth.rs                      |   7 +
  packages/app-lib/Cargo.toml                   |   1 +
  packages/app-lib/src/api/minecraft_auth.rs    |  39 +++++
- packages/app-lib/src/state/minecraft_auth.rs  |  68 +++++++++
- 12 files changed, 331 insertions(+), 8 deletions(-)
+ packages/app-lib/src/state/minecraft_auth.rs  |  66 +++++++++
+ 11 files changed, 328 insertions(+), 8 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index bdc7307..9006b00 100644
+index 28231e3..f94d0fe 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -11534,6 +11534,7 @@ dependencies = [
+@@ -12361,6 +12361,7 @@ dependencies = [
   "indicatif",
   "itertools 0.14.0",
   "json5",
-+ "md-5",
++ "md5",
   "modrinth-content-management",
   "notify",
   "notify-debouncer-mini",
-diff --git a/Cargo.toml b/Cargo.toml
-index b8b227e..8348c8d 100644
---- a/Cargo.toml
-+++ b/Cargo.toml
-@@ -132,6 +132,7 @@ lz4_flex = { version = "0.11.5", default-features = false, features = [
-   "std",
- ] }
- maxminddb = "0.26.0"
-+md-5 = "0.10.6"
- modrinth-content-management = { path = "packages/modrinth-content-management" }
- modrinth-log = { path = "packages/modrinth-log" }
- modrinth-util = { path = "packages/modrinth-util" }
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
 index 447f636..d750a5f 100644
 --- a/apps/app-frontend/src/App.vue
@@ -476,14 +463,14 @@ index 8227d94..f4eded6 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
-index 15a1dc9..4fe7643 100644
+index 9bb14ce..58f85e3 100644
 --- a/packages/app-lib/Cargo.toml
 +++ b/packages/app-lib/Cargo.toml
 @@ -52,6 +52,7 @@ image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
  indicatif = { workspace = true, optional = true }
  itertools = { workspace = true }
  json5 = { workspace = true }
-+md-5 = { workspace = true }
++md5 = { workspace = true }
  modrinth-content-management = { workspace = true }
  notify = { workspace = true }
  notify-debouncer-mini = { workspace = true }
@@ -538,18 +525,10 @@ index e7195c6..a7fac4a 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index b835ad4..d97d233 100644
+index b835ad4..14455ec 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -6,6 +6,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
- use dashmap::DashMap;
- use futures::TryStreamExt;
- use heck::ToTitleCase;
-+use md5::Md5;
- use p256::ecdsa::signature::Signer;
- use p256::ecdsa::{Signature, SigningKey, VerifyingKey};
- use p256::pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding};
-@@ -212,6 +213,34 @@ pub struct Credentials {
+@@ -212,6 +212,33 @@ pub struct Credentials {
      pub active: bool,
  }
  
@@ -574,8 +553,7 @@ index b835ad4..d97d233 100644
 +/// means a world played here keeps the same player data when it is opened from
 +/// somewhere else.
 +pub fn offline_uuid(username: &str) -> Uuid {
-+    let mut bytes: [u8; 16] =
-+        Md5::digest(format!("OfflinePlayer:{username}").as_bytes()).into();
++    let mut bytes = md5::compute(format!("OfflinePlayer:{username}")).0;
 +    bytes[6] = (bytes[6] & 0x0f) | 0x30; // Version 3
 +    bytes[8] = (bytes[8] & 0x3f) | 0x80; // RFC 4122 variant
 +    Uuid::from_bytes(bytes)
@@ -584,7 +562,7 @@ index b835ad4..d97d233 100644
  /// An entry in the player profile cache, keyed by player UUID.
  pub(super) enum ProfileCacheEntry {
      /// A cached profile that is valid, even though it may be stale.
-@@ -265,12 +294,45 @@ impl OnlineProfileCacheIntent {
+@@ -265,12 +292,45 @@ impl OnlineProfileCacheIntent {
  }
  
  impl Credentials {
@@ -630,7 +608,7 @@ index b835ad4..d97d233 100644
          // Use a margin of 5 minutes to give e.g. Minecraft and potentially
          // other operations that depend on a fresh token 5 minutes to complete
          // from now, and deal with some classes of clock skew
-@@ -351,6 +413,12 @@ impl Credentials {
+@@ -351,6 +411,12 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {

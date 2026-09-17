@@ -302,7 +302,7 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index ba08ca7..28d0366 100644
+index b03a35d..2a589bd 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
 @@ -2745,7 +2745,7 @@

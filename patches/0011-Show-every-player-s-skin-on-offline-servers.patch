@@ -2493,10 +2493,10 @@ index a482f66..76bedc7 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index e623cab..e352716 100644
+index 93cfd20..5378b99 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1018,6 +1018,28 @@ pub async fn launch_minecraft(
+@@ -1031,6 +1031,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2525,7 +2525,7 @@ index e623cab..e352716 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1044,6 +1066,7 @@ pub async fn launch_minecraft(
+@@ -1057,6 +1079,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),

@@ -649,7 +649,7 @@ index 833349d..84b9a87 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index e352716..6e7de28 100644
+index 5378b99..658c529 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -825,6 +825,9 @@ pub async fn launch_minecraft(
@@ -704,8 +704,8 @@ index e352716..6e7de28 100644
 +        }
      }
  
-     let natives_dir = state.directories.version_natives_dir(&version_jar);
-@@ -1212,6 +1221,8 @@ pub async fn launch_minecraft(
+     if let Some(path) = download::missing_runtime_file(
+@@ -1225,6 +1234,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,

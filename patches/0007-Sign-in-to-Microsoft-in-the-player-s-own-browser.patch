@@ -586,10 +586,10 @@ index 320112f..ba6c342 100644
      pub use ariadne::users::UserStatus;
      pub use modrinth_content_management::{
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 25c6dfb..4c87e82 100644
+index 4130488..1331a24 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -37,6 +37,7 @@ use uuid::Uuid;
+@@ -36,6 +36,7 @@ use uuid::Uuid;
  pub enum MinecraftAuthStep {
      GetDeviceToken,
      SisuAuthenticate,
@@ -597,7 +597,7 @@ index 25c6dfb..4c87e82 100644
      GetOAuthToken,
      RefreshOAuthToken,
      SisuAuthorize,
-@@ -108,6 +109,16 @@ pub struct MinecraftLoginFlow {
+@@ -107,6 +108,16 @@ pub struct MinecraftLoginFlow {
      pub auth_request_uri: String,
  }
  
@@ -614,7 +614,7 @@ index 25c6dfb..4c87e82 100644
  #[tracing::instrument]
  pub async fn login_begin(
      exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
-@@ -144,13 +155,37 @@ pub async fn login_finish(
+@@ -143,13 +154,37 @@ pub async fn login_finish(
      code: &str,
      flow: MinecraftLoginFlow,
      exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
@@ -654,7 +654,7 @@ index 25c6dfb..4c87e82 100644
          &oauth_token.value.access_token,
          &pair.token.token,
          &pair.key,
-@@ -1273,6 +1308,112 @@ async fn oauth_token(
+@@ -1271,6 +1306,112 @@ async fn oauth_token(
      })
  }
  
