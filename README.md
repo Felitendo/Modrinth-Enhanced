@@ -236,6 +236,9 @@ scripts/check.sh     # assert the patches still do what they claim
 scripts/build.sh     # build installers into build/artifacts
 ```
 
+`FAST=1 scripts/build.sh` builds with thin link-time optimization instead of the full one, which
+roughly halves the Rust build at the cost of a few megabytes. Releases are built without it.
+
 `build/` is scratch space and is never committed.
 
 ## Working on the patches

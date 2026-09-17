@@ -97,6 +97,15 @@ fi
 # v1.2.3-2 from v1.2.3, since the app's own version cannot carry it.
 export MODRINTH_ENHANCED_REVISION="${MODRINTH_ENHANCED_REVISION:-1}"
 
+# A local build to try something out does not need the last few percent of the
+# release profile. Thin LTO across several cores takes well under half the time
+# of the full one, for an installer some megabytes larger.
+if [ -n "${FAST:-}" ]; then
+	export CARGO_PROFILE_RELEASE_LTO=thin
+	export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16
+	warn "FAST is set, so this build is optimized less than a release"
+fi
+
 # Emptied before the build, not after it: a build that fails halfway would
 # otherwise leave the previous run's installers sitting here, where
 # scripts/check.sh would happily pass them off as this build's output.
