@@ -156,6 +156,8 @@ check "the Logs tab shows it" \
 log "Skin browser"
 check "Ely.by's catalogue can be browsed" \
 	contains "$WORKTREE/packages/app-lib/src/api/skin_browser.rs" 'pub async fn ely_catalogue'
+check "LittleSkin's library can be browsed" \
+	contains "$WORKTREE/packages/app-lib/src/api/skin_browser.rs" 'pub async fn littleskin_library'
 check "skin sites open in a window" \
 	contains "$WORKTREE/apps/app/src/api/skin_browser.rs" 'pub async fn skin_browser_open_site'
 check "the skin page has a Browse tab" \

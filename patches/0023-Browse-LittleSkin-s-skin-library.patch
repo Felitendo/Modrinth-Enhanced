@@ -1,0 +1,617 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Thu, 17 Sep 2026 15:52:25 +0200
+Subject: [PATCH] Browse LittleSkin's skin library
+
+LittleSkin is an account server, and also one of the largest skin
+libraries around. The Browse tab gets it next to Ely.by: its own search
+by name, sorting by likes or date and a filter for wide or slim arms,
+with the likes on every tile and more pages as the list is scrolled.
+Picking a skin previews it, and adding it works for any account.
+
+The list is the JSON LittleSkin's library page loads for itself, and its
+robots.txt excludes none of it. Textures come through Rust, as Ely.by's
+do: the site sends no CORS headers.
+---
+ .../src/components/ui/skin/SkinBrowser.vue    | 165 +++++++++++++++---
+ apps/app-frontend/src/helpers/skin-browser.ts |  42 ++++-
+ apps/app/build.rs                             |   2 +
+ apps/app/src/api/skin_browser.rs              |  20 ++-
+ packages/app-lib/src/api/skin_browser.rs      | 118 ++++++++++++-
+ 5 files changed, 318 insertions(+), 29 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
+index 3d92c68..26646a4 100644
+--- a/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
++++ b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
+@@ -1,7 +1,7 @@
+ <!--
+ 	Finding skins elsewhere, next to the account's own.
+ 
+-	Ely.by's catalogue is browsed right here. NameMC, laby.net and crafty.gg are
++	Ely.by's catalogue and LittleSkin's library are browsed right here. NameMC, laby.net and crafty.gg are
+ 	not: their lists are bot-protected or not meant for other programs, so they
+ 	open in a window to browse as usual, and the skin page open there is what
+ 	gets previewed. Picking a skin only previews it; the skin page adds it.
+@@ -10,10 +10,57 @@
+ 	<div class="flex flex-col gap-4">
+ 		<Chips v-model="source" :items="SOURCES" :format-label="sourceLabel" size="small" />
+ 
+-		<template v-if="source === 'ely'">
+-			<Chips v-model="elyMode" :items="ELY_MODES" :format-label="elyModeLabel" size="small" />
++		<template v-if="source === 'ely' || source === 'littleskin'">
++			<div v-if="source === 'littleskin'" class="flex flex-wrap items-center gap-2">
++				<Combobox
++					v-model="littleSkinSort"
++					class="w-max"
++					:options="littleSkinSortOptions"
++					:show-icon-in-selected="false"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<ArrowUpDownIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Combobox
++					v-model="littleSkinFilter"
++					class="w-max"
++					:options="littleSkinFilterOptions"
++					:show-icon-in-selected="false"
++					dropdown-min-width="160px"
++				>
++					<template #prefix>
++						<UserIcon class="size-5 text-primary" />
++					</template>
++					<template #selected="{ label }">
++						<span>{{ label }}</span>
++					</template>
++				</Combobox>
++				<Input
++					v-model="littleSkinKeyword"
++					type="search"
++					:icon="SearchIcon"
++					:placeholder="formatMessage(messages.namePlaceholder)"
++					wrapper-class="w-60"
++				/>
++			</div>
+ 
+-			<div v-if="elyMode === 'catalogue'" class="flex flex-wrap items-center gap-2">
++			<Chips
++				v-if="source === 'ely'"
++				v-model="elyMode"
++				:items="ELY_MODES"
++				:format-label="elyModeLabel"
++				size="small"
++			/>
++
++			<div
++				v-if="source === 'ely' && elyMode === 'catalogue'"
++				class="flex flex-wrap items-center gap-2"
++			>
+ 				<Combobox
+ 					v-model="sort"
+ 					class="w-max"
+@@ -87,7 +134,7 @@
+ 				/>
+ 			</div>
+ 			<Input
+-				v-else
++				v-else-if="source === 'ely'"
+ 				v-model="playerTerm"
+ 				type="search"
+ 				:icon="SearchIcon"
+@@ -117,10 +164,18 @@
+ 							<span v-tooltip="formatMessage(messages.likes)" class="flex items-center gap-1">
+ 								<HeartIcon class="size-4" />{{ compact(tile.stats.likes) }}
+ 							</span>
+-							<span v-tooltip="formatMessage(messages.wearers)" class="flex items-center gap-1">
++							<span
++								v-if="tile.stats.wearers !== undefined"
++								v-tooltip="formatMessage(messages.wearers)"
++								class="flex items-center gap-1"
++							>
+ 								<UsersIcon class="size-4" />{{ compact(tile.stats.wearers) }}
+ 							</span>
+-							<span v-tooltip="formatMessage(messages.views)" class="flex items-center gap-1">
++							<span
++								v-if="tile.stats.views !== undefined"
++								v-tooltip="formatMessage(messages.views)"
++								class="flex items-center gap-1"
++							>
+ 								<EyeIcon class="size-4" />{{ compact(tile.stats.views) }}
+ 							</span>
+ 						</template>
+@@ -131,7 +186,7 @@
+ 			<p v-else-if="!loading" class="m-0 text-secondary">
+ 				{{
+ 					formatMessage(
+-						elyMode === 'players' && playerTerm.trim().length < 3
++						source === 'ely' && elyMode === 'players' && playerTerm.trim().length < 3
+ 							? messages.playerHint
+ 							: messages.nothingFound,
+ 					)
+@@ -140,7 +195,7 @@
+ 
+ 			<div class="flex justify-center">
+ 				<SpinnerIcon v-if="loading" class="size-6 animate-spin" />
+-				<Button v-else-if="elyMode === 'catalogue' && hasMore" @click="loadMore">
++				<Button v-else-if="!showsPlayers && hasMore" @click="loadMore">
+ 					{{ formatMessage(messages.loadMore) }}
+ 				</Button>
+ 			</div>
+@@ -223,7 +278,11 @@ import {
+ 	type ElyModel,
+ 	type ElySort,
+ 	getElyCatalogue,
++	getLittleSkinLibrary,
++	getLittleSkinTexture,
+ 	getSiteSkin,
++	type LittleSkinFilter,
++	type LittleSkinSort,
+ 	onSkinSitePage,
+ 	openSkinSite,
+ 	searchElyPlayers,
+@@ -240,19 +299,20 @@ const emit = defineEmits<{
+ const { formatMessage } = useVIntl()
+ const { handleError } = injectNotificationManager()
+ 
+-type Source = 'ely' | SkinSite
++type Source = 'ely' | 'littleskin' | SkinSite
+ type ElyMode = 'catalogue' | 'players'
+ type Order = 'site' | 'likes' | 'wearers' | 'views'
+ 
+ interface Stats {
+ 	likes: number
+-	wearers: number
+-	views: number
++	wearers?: number
++	views?: number
+ }
+ 
+ interface Entry {
+ 	key: string
+ 	title: string
++	/** Ely.by's texture address, or LittleSkin's texture id. */
+ 	url: string
+ 	variant: SkinModel
+ 	stats?: Stats
+@@ -262,10 +322,11 @@ interface Tile extends Entry {
+ 	skin?: Skin
+ }
+ 
+-const SOURCES: Source[] = ['ely', 'namemc', 'laby', 'crafty']
++const SOURCES: Source[] = ['ely', 'littleskin', 'namemc', 'laby', 'crafty']
+ const ELY_MODES: ElyMode[] = ['catalogue', 'players']
+ const SITE_NAMES: Record<Source, string> = {
+ 	ely: 'Ely.by',
++	littleskin: 'LittleSkin',
+ 	namemc: 'NameMC',
+ 	laby: 'laby.net',
+ 	crafty: 'crafty.gg',
+@@ -284,6 +345,8 @@ const messages = defineMessages({
+ 	modelOld: { id: 'app.skins.browse.model.old', defaultMessage: 'Old format' },
+ 	modelNew: { id: 'app.skins.browse.model.new', defaultMessage: 'New format' },
+ 	modelSlim: { id: 'app.skins.browse.model.slim', defaultMessage: 'Slim' },
++	modelWide: { id: 'app.skins.browse.model.wide', defaultMessage: 'Wide' },
++	namePlaceholder: { id: 'app.skins.browse.name-placeholder', defaultMessage: 'Search by name' },
+ 	allCategories: { id: 'app.skins.browse.kind.all', defaultMessage: 'All categories' },
+ 	tagsPlaceholder: {
+ 		id: 'app.skins.browse.tags-placeholder',
+@@ -341,6 +404,9 @@ const kind = ref('')
+ const tagsText = ref('')
+ const uploader = ref('')
+ const playerTerm = ref('')
++const littleSkinSort = ref<LittleSkinSort>('likes')
++const littleSkinFilter = ref<LittleSkinFilter>('skin')
++const littleSkinKeyword = ref('')
+ 
+ const sortOptions = computed<ComboboxOption<ElySort>[]>(() => [
+ 	{ value: 'best', label: formatMessage(messages.sortBest) },
+@@ -362,6 +428,17 @@ const modelOptions = computed<ComboboxOption<ElyModel>[]>(() => [
+ 	{ value: 'slim', label: formatMessage(messages.modelSlim) },
+ ])
+ 
++const littleSkinSortOptions = computed<ComboboxOption<LittleSkinSort>[]>(() => [
++	{ value: 'likes', label: formatMessage(messages.orderLikes) },
++	{ value: 'time', label: formatMessage(messages.sortNew) },
++])
++
++const littleSkinFilterOptions = computed<ComboboxOption<LittleSkinFilter>[]>(() => [
++	{ value: 'skin', label: formatMessage(messages.modelAny) },
++	{ value: 'steve', label: formatMessage(messages.modelWide) },
++	{ value: 'alex', label: formatMessage(messages.modelSlim) },
++])
++
+ const kindOptions = computed<ComboboxOption<string>[]>(() => [
+ 	{ value: '', label: formatMessage(messages.allCategories) },
+ 	...ELY_KINDS.map((value) => ({ value, label: value })),
+@@ -376,6 +453,7 @@ const pickedKey = ref<string | null>(null)
+ let generation = 0
+ 
+ const hasMore = computed(() => page.value < lastPage.value)
++const showsPlayers = computed(() => source.value === 'ely' && elyMode.value === 'players')
+ 
+ function skinOf(entry: Entry): Skin | undefined {
+ 	const texture = textures.value[entry.key]
+@@ -391,10 +469,12 @@ function skinOf(entry: Entry): Skin | undefined {
+ 
+ const tiles = computed<Tile[]>(() => {
+ 	const ordered =
+-		order.value === 'site' || elyMode.value === 'players'
++		order.value === 'site' || source.value !== 'ely' || showsPlayers.value
+ 			? entries.value
+ 			: [...entries.value].sort(
+-					(a, b) => (b.stats?.[order.value as keyof Stats] ?? 0) - (a.stats?.[order.value as keyof Stats] ?? 0),
++					(a, b) =>
++						(b.stats?.[order.value as keyof Stats] ?? 0) -
++						(a.stats?.[order.value as keyof Stats] ?? 0),
+ 				)
+ 	return ordered.map((entry) => ({ ...entry, skin: skinOf(entry) }))
+ })
+@@ -407,11 +487,14 @@ function tags() {
+ 		.slice(0, 10)
+ }
+ 
+-/** Textures come through Rust: ely.by sends no CORS headers. They land one by one. */
++/** Textures come through Rust: neither site sends CORS headers. They land one by one. */
+ function loadTextures(list: Entry[], forGeneration: number) {
+ 	for (const entry of list) {
+ 		if (textures.value[entry.key]) continue
+-		getElyTexture(entry.url)
++		const request = entry.key.startsWith('browse-littleskin-')
++			? getLittleSkinTexture(Number(entry.url))
++			: getElyTexture(entry.url)
++		request
+ 			.then((texture) => {
+ 				if (forGeneration !== generation) return
+ 				textures.value = { ...textures.value, [entry.key]: texture }
+@@ -455,6 +538,39 @@ async function loadCatalogue(pageNumber: number, forGeneration: number) {
+ 	}
+ }
+ 
++async function loadLittleSkin(pageNumber: number, forGeneration: number) {
++	loading.value = true
++	try {
++		const result = await getLittleSkinLibrary({
++			filter: littleSkinFilter.value,
++			sort: littleSkinSort.value,
++			keyword: littleSkinKeyword.value.trim(),
++			page: pageNumber,
++		})
++		if (forGeneration !== generation) return
++
++		const known = new Set(entries.value.map((entry) => entry.key))
++		const added: Entry[] = result.items
++			.map((skin) => ({
++				key: `browse-littleskin-${skin.id}`,
++				title: skin.uploader ? `${skin.name} · ${skin.uploader}` : skin.name,
++				url: String(skin.id),
++				variant: (skin.is_slim ? 'SLIM' : 'CLASSIC') as SkinModel,
++				stats: { likes: skin.likes },
++			}))
++			.filter((entry) => !known.has(entry.key))
++
++		entries.value = [...entries.value, ...added]
++		page.value = result.current || pageNumber
++		lastPage.value = result.has_more ? page.value + 1 : page.value
++		loadTextures(added, forGeneration)
++	} catch (error) {
++		if (forGeneration === generation) handleError(error as Error)
++	} finally {
++		if (forGeneration === generation) loading.value = false
++	}
++}
++
+ async function loadPlayers(forGeneration: number) {
+ 	loading.value = true
+ 	try {
+@@ -486,6 +602,11 @@ function reload() {
+ 	lastPage.value = 1
+ 	loading.value = false
+ 
++	if (source.value === 'littleskin') {
++		void loadLittleSkin(1, forGeneration)
++		return
++	}
++	if (source.value !== 'ely') return
+ 	if (elyMode.value === 'players') {
+ 		if (playerTerm.value.trim().length >= 3) void loadPlayers(forGeneration)
+ 		return
+@@ -494,13 +615,15 @@ function reload() {
+ }
+ 
+ function loadMore() {
+-	if (!loading.value && hasMore.value) void loadCatalogue(page.value + 1, generation)
++	if (loading.value || !hasMore.value) return
++	if (source.value === 'littleskin') void loadLittleSkin(page.value + 1, generation)
++	else void loadCatalogue(page.value + 1, generation)
+ }
+ 
+-watch([sort, model, kind, elyMode], reload)
++watch([source, sort, model, kind, elyMode, littleSkinSort, littleSkinFilter], reload)
+ 
+ let typingTimeout: ReturnType<typeof setTimeout> | undefined
+-watch([tagsText, uploader, playerTerm], () => {
++watch([tagsText, uploader, playerTerm, littleSkinKeyword], () => {
+ 	clearTimeout(typingTimeout)
+ 	typingTimeout = setTimeout(reload, 500)
+ })
+@@ -538,7 +661,7 @@ let unlistenSite: UnlistenFn | undefined
+ let unmounted = false
+ 
+ function openSite() {
+-	if (source.value === 'ely') return
++	if (source.value === 'ely' || source.value === 'littleskin') return
+ 	openSkinSite(source.value).catch((error) => handleError(error as Error))
+ }
+ 
+diff --git a/apps/app-frontend/src/helpers/skin-browser.ts b/apps/app-frontend/src/helpers/skin-browser.ts
+index ea86e86..e3c4b21 100644
+--- a/apps/app-frontend/src/helpers/skin-browser.ts
++++ b/apps/app-frontend/src/helpers/skin-browser.ts
+@@ -1,9 +1,11 @@
+ /**
+  * Finding skins on other sites, for the skin page.
+  *
+- * Ely.by's catalogue is read directly. NameMC, laby.net and crafty.gg open in a
+- * window the player browses; the launcher only learns which skin page it is on.
++ * Ely.by's catalogue and LittleSkin's library are read directly. NameMC, laby.net
++ * and crafty.gg open in a window the player browses; the launcher only learns
++ * which skin page it is on.
+  */
++import { arrayBufferToBase64 } from '@modrinth/utils'
+ import { invoke } from '@tauri-apps/api/core'
+ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+ 
+@@ -39,6 +41,30 @@ export interface ElyCataloguePage {
+ 	total: number
+ }
+ 
++export type LittleSkinFilter = 'skin' | 'steve' | 'alex'
++export type LittleSkinSort = 'likes' | 'time'
++
++export interface LittleSkinQuery {
++	filter: LittleSkinFilter
++	sort: LittleSkinSort
++	keyword: string
++	page: number
++}
++
++export interface LittleSkinSkin {
++	id: number
++	name: string
++	uploader: string
++	is_slim: boolean
++	likes: number
++}
++
++export interface LittleSkinPage {
++	items: LittleSkinSkin[]
++	current: number
++	has_more: boolean
++}
++
+ export interface ElyPlayer {
+ 	nickname: string
+ 	skin_url: string | null
+@@ -86,6 +112,18 @@ export async function searchElyPlayers(term: string): Promise<ElyPlayer[]> {
+ 	return await invoke('plugin:skin-browser|skin_browser_ely_players', { term })
+ }
+ 
++export async function getLittleSkinLibrary(query: LittleSkinQuery): Promise<LittleSkinPage> {
++	return await invoke('plugin:skin-browser|skin_browser_littleskin_library', { query })
++}
++
++/** A LittleSkin texture as a data URL. It comes through Rust, as Ely.by's do. */
++export async function getLittleSkinTexture(id: number): Promise<string> {
++	const bytes = await invoke<number[]>('plugin:skin-browser|skin_browser_littleskin_texture', {
++		id,
++	})
++	return `data:image/png;base64,${arrayBufferToBase64(new Uint8Array(bytes))}`
++}
++
+ export async function getSiteSkin(site: SkinSite, id: string): Promise<SiteSkin> {
+ 	return await invoke('plugin:skin-browser|skin_browser_site_skin', { site, id })
+ }
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 507ad2f..8cb21f2 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -54,6 +54,8 @@ fn main() {
+                     .commands(&[
+                         "skin_browser_ely_catalogue",
+                         "skin_browser_ely_players",
++                        "skin_browser_littleskin_library",
++                        "skin_browser_littleskin_texture",
+                         "skin_browser_site_skin",
+                         "skin_browser_open_site",
+                     ])
+diff --git a/apps/app/src/api/skin_browser.rs b/apps/app/src/api/skin_browser.rs
+index cfd0d8c..e4451cf 100644
+--- a/apps/app/src/api/skin_browser.rs
++++ b/apps/app/src/api/skin_browser.rs
+@@ -1,6 +1,7 @@
+ //! Browsing skins from the skin page.
+ //!
+-//! Ely.by's catalogue is read directly (see `theseus::skin_browser`). NameMC,
++//! Ely.by's catalogue and LittleSkin's library are read directly (see
++//! `theseus::skin_browser`). NameMC,
+ //! laby.net and crafty.gg open in a window the player browses like any browser;
+ //! the launcher only watches which page that window is on, so that the skin
+ //! page the player has open can be previewed and added.
+@@ -13,7 +14,8 @@ use tauri::{
+     AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder,
+ };
+ use theseus::skin_browser::{
+-    self, ElyCatalogueQuery, ElyCataloguePage, ElyPlayer, SiteSkin, SkinSite,
++    self, ElyCatalogueQuery, ElyCataloguePage, ElyPlayer, LittleSkinPage,
++    LittleSkinQuery, SiteSkin, SkinSite,
+ };
+ 
+ use crate::api::{Result, TheseusSerializableError};
+@@ -23,6 +25,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+         .invoke_handler(tauri::generate_handler![
+             skin_browser_ely_catalogue,
+             skin_browser_ely_players,
++            skin_browser_littleskin_library,
++            skin_browser_littleskin_texture,
+             skin_browser_site_skin,
+             skin_browser_open_site,
+         ])
+@@ -53,6 +57,18 @@ pub async fn skin_browser_ely_players(term: String) -> Result<Vec<ElyPlayer>> {
+     Ok(skin_browser::ely_players(&term).await?)
+ }
+ 
++#[tauri::command]
++pub async fn skin_browser_littleskin_library(
++    query: LittleSkinQuery,
++) -> Result<LittleSkinPage> {
++    Ok(skin_browser::littleskin_library(&query).await?)
++}
++
++#[tauri::command]
++pub async fn skin_browser_littleskin_texture(id: u64) -> Result<Vec<u8>> {
++    Ok(skin_browser::littleskin_texture(id).await?)
++}
++
+ #[tauri::command]
+ pub async fn skin_browser_site_skin(
+     site: SkinSite,
+diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
+index fba085b..9038989 100644
+--- a/packages/app-lib/src/api/skin_browser.rs
++++ b/packages/app-lib/src/api/skin_browser.rs
+@@ -1,9 +1,10 @@
+ //! Browsing skins from other sites.
+ //!
+-//! Only Ely.by's catalogue is read from here: its robots.txt invites it. NameMC,
+-//! laby.net and crafty.gg are not - their lists are bot-protected or not meant
+-//! for other programs - so the player browses them in a window of the desktop
+-//! shell, and all that is read from them is the one skin whose page is open.
++//! Ely.by's catalogue and LittleSkin's skin library are read from here: Ely.by's
++//! robots.txt invites it, and LittleSkin's excludes nothing. NameMC, laby.net and
++//! crafty.gg are not - their lists are bot-protected or not meant for other
++//! programs - so the player browses them in a window of the desktop shell, and
++//! all that is read from them is the one skin whose page is open.
+ 
+ use base64::Engine;
+ use serde::{Deserialize, Serialize};
+@@ -194,6 +195,115 @@ pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
+         .map_err(|error| failed("read the Ely.by search", error))
+ }
+ 
++/// A search of LittleSkin's skin library, as the library page sends it.
++#[derive(Deserialize, Debug)]
++pub struct LittleSkinQuery {
++    /// `skin` for either model, `steve` or `alex`.
++    pub filter: String,
++    /// `likes` or `time`.
++    pub sort: String,
++    pub keyword: String,
++    pub page: u32,
++}
++
++#[derive(Serialize, Debug)]
++pub struct LittleSkinSkin {
++    pub id: u64,
++    pub name: String,
++    pub uploader: String,
++    pub is_slim: bool,
++    pub likes: u64,
++}
++
++#[derive(Serialize, Debug)]
++pub struct LittleSkinPage {
++    pub items: Vec<LittleSkinSkin>,
++    pub current: u32,
++    pub has_more: bool,
++}
++
++/// One page of LittleSkin's skin library, a Blessing Skin one.
++pub async fn littleskin_library(
++    query: &LittleSkinQuery,
++) -> crate::Result<LittleSkinPage> {
++    #[derive(Deserialize)]
++    struct RawPage {
++        #[serde(default)]
++        current_page: u32,
++        next_page_url: Option<String>,
++        data: Vec<RawTexture>,
++    }
++
++    #[derive(Deserialize)]
++    struct RawTexture {
++        tid: u64,
++        #[serde(default)]
++        name: String,
++        #[serde(rename = "type")]
++        kind: String,
++        #[serde(default)]
++        likes: u64,
++        #[serde(default)]
++        nickname: String,
++    }
++
++    if !matches!(query.filter.as_str(), "skin" | "steve" | "alex") {
++        return Err(invalid("skin model"));
++    }
++    if !matches!(query.sort.as_str(), "likes" | "time") {
++        return Err(invalid("sort"));
++    }
++    if !plain(&query.keyword, 64) {
++        return Err(invalid("search"));
++    }
++
++    let page = query.page.max(1).to_string();
++    let url = url::Url::parse_with_params(
++        "https://littleskin.cn/skinlib/list",
++        &[
++            ("filter", query.filter.as_str()),
++            ("sort", query.sort.as_str()),
++            ("keyword", query.keyword.trim()),
++            ("page", page.as_str()),
++        ],
++    )
++    .map_err(|error| failed("build the library address", error))?;
++
++    let page: RawPage = REQWEST_CLIENT
++        .get(url)
++        .header("Accept", "application/json")
++        .send()
++        .await
++        .and_then(|response| response.error_for_status())
++        .map_err(|error| failed("load the LittleSkin library", error))?
++        .json()
++        .await
++        .map_err(|error| failed("read the LittleSkin library", error))?;
++
++    Ok(LittleSkinPage {
++        items: page
++            .data
++            .into_iter()
++            // Capes share the library with skins.
++            .filter(|texture| matches!(texture.kind.as_str(), "steve" | "alex"))
++            .map(|texture| LittleSkinSkin {
++                id: texture.tid,
++                name: texture.name,
++                uploader: texture.nickname,
++                is_slim: texture.kind == "alex",
++                likes: texture.likes,
++            })
++            .collect(),
++        current: page.current_page,
++        has_more: page.next_page_url.is_some(),
++    })
++}
++
++/// A skin from LittleSkin's library.
++pub async fn littleskin_texture(id: u64) -> crate::Result<Vec<u8>> {
++    png(&format!("https://littleskin.cn/raw/{id}"), "LittleSkin").await
++}
++
+ /// A site that is browsed in the launcher's window.
+ #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+ #[serde(rename_all = "lowercase")]

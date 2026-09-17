@@ -35,6 +35,7 @@ works.
 | `0020-Keep-the-settings-tabs-clear-of-...` | The settings tab list scrolls instead of running over the app version on Linux.                                                             |
 | `0021-Show-and-change-skins-of-custom-...` | A custom server account's skin is shown and changed on the skin page, and its head in the account list.                                     |
 | `0022-Sign-in-to-custom-servers-in-...`    | Servers with Yggdrasil Connect, such as LittleSkin, sign in on their own page, with two-factor authentication.                              |
+| `0023-Browse-LittleSkin-s-skin-library`    | LittleSkin's skin library in the Browse tab, with search, sorting and likes.                                                                |
 
 ### Offline accounts
 
@@ -149,7 +150,8 @@ name: first in the `player_skins` folder in the launcher directory (`<name>.png`
 has the switch and a button that opens the folder.
 
 The Browse tab finds skins elsewhere. Ely.by's catalogue is browsed in the app, with its sorting,
-filters and like, wearer and view counts. NameMC, laby.net and crafty.gg open in a window of the app
+filters and like, wearer and view counts, and so is LittleSkin's library, with its search by name,
+sorting and likes. NameMC, laby.net and crafty.gg open in a window of the app
 instead, because their skin lists are bot-protected or not meant for other programs; the skin page
 you open there is previewed and can be added.
 
