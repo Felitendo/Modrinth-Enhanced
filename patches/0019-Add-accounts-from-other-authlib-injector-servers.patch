@@ -25,7 +25,7 @@ sits in the refresh token column in front of the client token, and the
 account list shows which server an account is on.
 ---
  .../src/components/ui/AccountsCard.vue        | 112 +++--
- .../src/components/ui/AuthlibAccountModal.vue | 307 +++++++++++++
+ .../src/components/ui/AuthlibAccountModal.vue | 334 ++++++++++++++
  .../src/components/ui/MicrosoftLogo.vue       |   8 +
  .../components/ui/TitleBarAccountSwitcher.vue |  63 ++-
  .../MinecraftRequiredModal.vue                |  23 +-
@@ -35,8 +35,8 @@ account list shows which server an account is on.
  packages/app-lib/src/api/minecraft_auth.rs    |  77 +++-
  packages/app-lib/src/launcher/mod.rs          |  11 +-
  packages/app-lib/src/state/minecraft_auth.rs  | 422 ++++++++++++------
- packages/app-lib/src/util/authlib_injector.rs | 134 +++++-
- 12 files changed, 1001 insertions(+), 211 deletions(-)
+ packages/app-lib/src/util/authlib_injector.rs | 138 +++++-
+ 12 files changed, 1032 insertions(+), 211 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 
@@ -260,10 +260,10 @@ index 632483e..03a61f2 100644
  		id: 'minecraft-account.remove-account',
 diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 new file mode 100644
-index 0000000..4aab3f9
+index 0000000..a2873fe
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,334 @@
 +<template>
 +	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
 +		<div class="flex flex-col gap-4">
@@ -300,6 +300,13 @@ index 0000000..4aab3f9
 +						<a v-if="server.register" :href="server.register" class="text-link">
 +							{{ formatMessage(messages.register) }}
 +						</a>
++					</p>
++					<p
++						v-else-if="lookingUp"
++						class="m-0 flex items-center gap-2 text-sm leading-tight text-secondary"
++					>
++						<SpinnerIcon aria-hidden="true" class="animate-spin" />
++						{{ formatMessage(messages.lookingUp) }}
 +					</p>
 +					<p v-else class="m-0 text-sm leading-tight text-secondary">
 +						{{ formatMessage(messages.serverHint) }}
@@ -437,10 +444,14 @@ index 0000000..4aab3f9
 +const profile = ref<Profile | null>(null)
 +const error = ref('')
 +const submitting = ref(false)
++const lookingUp = ref(false)
 +let lookup = 0
 +
 +function message(e: unknown) {
-+	return typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++	const text =
++		typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++	// The launcher's own label for the kind of error says nothing here.
++	return text.replace(/^(Error|Invalid input): /, '')
 +}
 +
 +// The players belong to the account they were listed for.
@@ -451,6 +462,7 @@ index 0000000..4aab3f9
 +
 +watch(address, () => {
 +	lookup++
++	lookingUp.value = false
 +	server.value = null
 +	serverError.value = ''
 +})
@@ -477,11 +489,15 @@ index 0000000..4aab3f9
 +	if (!value || server.value) return
 +
 +	const request = ++lookup
++	lookingUp.value = true
++	serverError.value = ''
 +	try {
 +		const found = await authlib_server(value)
 +		if (request === lookup) server.value = found
 +	} catch (e) {
 +		if (request === lookup) serverError.value = message(e)
++	} finally {
++		if (request === lookup) lookingUp.value = false
 +	}
 +}
 +
@@ -494,6 +510,13 @@ index 0000000..4aab3f9
 +
 +	submitting.value = true
 +	error.value = ''
++
++	// A server that cannot be found is the address's fault, not the password's.
++	await lookUpServer()
++	if (!server.value) {
++		submitting.value = false
++		return
++	}
 +
 +	try {
 +		const result = await login_authlib(
@@ -535,6 +558,10 @@ index 0000000..4aab3f9
 +	serverHint: {
 +		id: 'app.authlib-account.server-hint',
 +		defaultMessage: "The address of the server's website.",
++	},
++	lookingUp: {
++		id: 'app.authlib-account.looking-up',
++		defaultMessage: 'Looking for the server…',
 +	},
 +	register: {
 +		id: 'app.authlib-account.register',
@@ -1540,10 +1567,10 @@ index 2514d8e..0245152 100644
      }
  }
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
-index dc099f9..709e6d0 100644
+index dc099f9..13591ef 100644
 --- a/packages/app-lib/src/util/authlib_injector.rs
 +++ b/packages/app-lib/src/util/authlib_injector.rs
-@@ -1,16 +1,133 @@
+@@ -1,16 +1,137 @@
 -//! Downloads and caches the authlib-injector Java agent.
 +//! The authlib-injector Java agent, and the servers it works with.
  //!
@@ -1630,16 +1657,20 @@ index dc099f9..709e6d0 100644
 +            ))
 +        })?;
 +
++    // What went wrong in detail is for the log: to the player, a mistyped
++    // address and a server that is down look the same.
 +    async fn get(url: &Url) -> crate::Result<Response> {
++        let host = url.host_str().unwrap_or_default();
 +        INSECURE_REQWEST_CLIENT
 +            .get(url.clone())
 +            .header(ACCEPT, "application/json")
++            .timeout(std::time::Duration::from_secs(10))
 +            .send()
 +            .await
 +            .map_err(|error| {
++                tracing::warn!("Could not reach {host}: {error:?}");
 +                crate::ErrorKind::OtherError(format!(
-+                    "Could not reach {}: {error}",
-+                    url.host_str().unwrap_or_default()
++                    "Could not reach {host}. Check the address and your connection."
 +                ))
 +                .as_error()
 +            })
@@ -1683,7 +1714,7 @@ index dc099f9..709e6d0 100644
  /// The agent's own distribution metadata.
  const LATEST_URL: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";
  
-@@ -22,8 +139,7 @@ struct LatestArtifact {
+@@ -22,8 +143,7 @@ struct LatestArtifact {
  /// Returns the path to the agent jar, downloading it once if it is not cached.
  ///
  /// The cached copy is reused as it is. The agent is not tied to a game or
@@ -1693,7 +1724,7 @@ index dc099f9..709e6d0 100644
  pub async fn get_authlib_injector(
      directories: &DirectoryInfo,
  ) -> crate::Result<PathBuf> {
-@@ -35,7 +151,7 @@ pub async fn get_authlib_injector(
+@@ -35,7 +155,7 @@ pub async fn get_authlib_injector(
          return Ok(jar);
      }
  
