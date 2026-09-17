@@ -9,6 +9,30 @@ Modrinth ships a new version, the patches are reapplied on top of it, the result
 checked on Linux, Windows and macOS, and a release is published automatically if it all still
 works.
 
+## Installation
+
+Installers are on the [latest release](https://github.com/Felitendo/Modrinth-Enhanced/releases/latest):
+the `-setup.exe` for Windows, the `.dmg` for macOS and the `.AppImage` for Linux. All of them support auto-updates.
+
+Arch Linux:
+
+```bash
+yay -S modrinth-enhanced-bin
+```
+
+Debian and Ubuntu:
+
+```bash
+curl -fLo /tmp/modrinth-enhanced.deb "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-Enhanced/releases/latest | grep -o 'https://[^"]*_amd64\.deb"' | tr -d '"')"
+sudo apt install /tmp/modrinth-enhanced.deb
+```
+
+Fedora:
+
+```bash
+sudo dnf install "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-Enhanced/releases/latest | grep -o 'https://[^"]*\.x86_64\.rpm"' | tr -d '"')"
+```
+
 ## What changes
 
 | Patch                                     | What it does                                                                                                                                    |
