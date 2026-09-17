@@ -189,6 +189,8 @@ check "the middle button autoscrolls" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'installAutoscroll()'
 check "file pickers use the desktop portal on Linux" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("GTK_USE_PORTAL", "1")'
+check "the settings tabs scroll instead of covering the version" \
+	contains "$WORKTREE/packages/ui/src/components/modal/TabbedModal.vue" 'class="absolute inset-0 flex flex-col gap-1 overflow-y-auto"'
 check "NVIDIA under Wayland does not crash the webview" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")'
 

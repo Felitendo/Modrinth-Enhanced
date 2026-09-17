@@ -32,6 +32,7 @@ works.
 | `0017-Start-on-Wayland-with-an-NVIDIA-GPU` | The app no longer crashes at start under Wayland with the NVIDIA driver.                                                                    |
 | `0018-Update-from-Modrinth-Enhanced-s-...` | Updates come from this project's own signed releases rather than Modrinth's.                                                                |
 | `0019-Add-accounts-from-other-...`         | Sign in to Drasl, Blessing Skin and other account servers, as with Ely.by.                                                                  |
+| `0020-Keep-the-settings-tabs-clear-of-...` | The settings tab list scrolls instead of running over the app version on Linux.                                                             |
 
 ### Offline accounts
 

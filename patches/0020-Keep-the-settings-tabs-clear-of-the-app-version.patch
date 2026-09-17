@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Thu, 17 Sep 2026 14:23:15 +0200
+Subject: [PATCH] Keep the settings tabs clear of the app version
+
+The settings tab list is sized to its column with a percentage height,
+which WebKitGTK leaves unresolved inside a flex item without a set
+height. The list then ran on over the app version at the bottom of the
+column instead of scrolling. It fills its column absolutely now, the way
+the content beside it already does.
+---
+ packages/ui/src/components/modal/TabbedModal.vue | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/packages/ui/src/components/modal/TabbedModal.vue b/packages/ui/src/components/modal/TabbedModal.vue
+index 4715916..1b1d69a 100644
+--- a/packages/ui/src/components/modal/TabbedModal.vue
++++ b/packages/ui/src/components/modal/TabbedModal.vue
+@@ -158,7 +158,7 @@ defineExpose({ show, hide, selectedTab, setTab })
+ 
+ 					<div
+ 						ref="sidebarScrollContainer"
+-						class="flex h-full flex-col gap-1 overflow-y-auto"
++						class="absolute inset-0 flex flex-col gap-1 overflow-y-auto"
+ 						@scroll="checkSidebarScrollState"
+ 					>
+ 						<template v-for="(tab, index) in visibleTabs" :key="index">
