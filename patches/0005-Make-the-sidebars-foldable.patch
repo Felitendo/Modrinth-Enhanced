@@ -30,14 +30,15 @@ page headed "Sync features across devices" and would otherwise look like
 it syncs. The other two are not settings entries - a heading and a title
 bar button - so nothing there promises anything.
 ---
- apps/app-frontend/src/App.vue                 | 184 ++++++++++++++++--
+ apps/app-frontend/src/App.vue                 | 180 ++++++++++++++++--
+ .../ui/settings/display/BehaviorSettings.vue  |  18 --
  .../ui/settings/display/FeaturesSettings.vue  |  28 +++
  .../src/composables/use-app-settings.ts       |   4 +
  packages/app-lib/src/state/settings.rs        |   4 +
- 4 files changed, 205 insertions(+), 15 deletions(-)
+ 5 files changed, 201 insertions(+), 33 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index d750a5f..c47484d 100644
+index d750a5f..76da736 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -10,6 +10,8 @@ import {
@@ -65,14 +66,14 @@ index d750a5f..c47484d 100644
  	NewsArticleCard,
  	NotificationPanel,
  	PopupNotificationPanel,
-@@ -254,12 +258,46 @@ const credentials = ref()
+@@ -254,12 +258,42 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
 +// Whether the right sidebar is folded away, remembered across restarts in the
-+// feature flags. The title bar button below is what normally sets it; the
-+// "Hide right sidebar" setting still seeds it, so turning that on folds the
-+// sidebar away as it always did.
++// feature flags. The title bar button below is the only thing that sets it:
++// upstream's "Hide right sidebar" setting, which used to be what showed that
++// button, is gone.
  watch(
 -	() => appSettings.toggleSidebar,
 -	(toggleSidebar) => {
@@ -82,10 +83,6 @@ index d750a5f..c47484d 100644
 +		sidebarToggled.value = !collapsed
  	},
 +	{ immediate: true },
-+)
-+watch(
-+	() => appSettings.toggleSidebar,
-+	(hide) => setSidebarCollapsed(hide),
  )
 +
 +// Briefly shows a check on the fold button once the state is saved, and the
@@ -115,7 +112,7 @@ index d750a5f..c47484d 100644
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -358,6 +396,21 @@ useQuery({
+@@ -358,6 +392,21 @@ useQuery({
  // ad and the gradient being drawn above it.
  const showAd = computed(() => false)
  const adConsentAvailable = computed(() => false)
@@ -137,7 +134,7 @@ index d750a5f..c47484d 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -588,6 +641,25 @@ const messages = defineMessages({
+@@ -588,6 +637,25 @@ const messages = defineMessages({
  	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
  	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
  	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
@@ -163,7 +160,7 @@ index d750a5f..c47484d 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2252,6 +2324,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2252,6 +2320,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -171,7 +168,7 @@ index d750a5f..c47484d 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2377,16 +2450,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2377,16 +2446,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<Breadcrumbs />
  			</div>
  			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
@@ -223,7 +220,7 @@ index d750a5f..c47484d 100644
  				<div class="flex mr-3">
  					<Suspense>
  						<AppActionBar />
-@@ -2502,10 +2601,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2502,10 +2597,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
@@ -245,7 +242,7 @@ index d750a5f..c47484d 100644
  							<NewsArticleCard
  								v-for="(item, index) in news"
  								:key="`news-${index}`"
-@@ -2531,6 +2638,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2531,6 +2634,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
@@ -267,7 +264,7 @@ index d750a5f..c47484d 100644
  	<ErrorModal ref="errorModal" />
  	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
  	<MinecraftRequiredModal ref="minecraftRequiredModal" />
-@@ -2743,6 +2865,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2743,6 +2861,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	display: contents;
  }
  
@@ -306,6 +303,42 @@ index d750a5f..c47484d 100644
  @media (prefers-reduced-motion: no-preference) {
  	.nav-button-animated-enter-active {
  		transition: all 0.5s cubic-bezier(0.15, 1.4, 0.64, 0.96);
+diff --git a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
+index 55622d7..6c6ba20 100644
+--- a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
++++ b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
+@@ -80,14 +80,6 @@ const messages = defineMessages({
+ 		id: 'app.appearance-settings.default-landing-page.library',
+ 		defaultMessage: 'Library',
+ 	},
+-	toggleSidebarTitle: {
+-		id: 'app.appearance-settings.toggle-sidebar.title',
+-		defaultMessage: 'Hide right sidebar',
+-	},
+-	toggleSidebarDescription: {
+-		id: 'app.appearance-settings.toggle-sidebar.description',
+-		defaultMessage: 'Hide the right sidebar by default and add a button to show or hide it.',
+-	},
+ 	compactModeTitle: {
+ 		id: 'app.appearance-settings.compact-mode.title',
+ 		defaultMessage: 'Compact mode',
+@@ -288,16 +280,6 @@ onBeforeUnmount(() => {
+ 				</div>
+ 				<Toggle id="minimize-launcher" v-model="current.minimizeApp" />
+ 			</div>
+-
+-			<div class="flex items-center justify-between gap-4">
+-				<div>
+-					<h3 class="m-0 text-lg font-semibold text-contrast">
+-						{{ formatMessage(messages.toggleSidebarTitle) }}
+-					</h3>
+-					<p class="m-0 mt-1">{{ formatMessage(messages.toggleSidebarDescription) }}</p>
+-				</div>
+-				<Toggle id="toggle-sidebar" v-model="current.hideRightSidebar" />
+-			</div>
+ 		</div>
+ 	</section>
+ 
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 index 1d3e379..ae88550 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue

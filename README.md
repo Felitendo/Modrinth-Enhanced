@@ -131,8 +131,8 @@ The Modrinth Servers button in the left sidebar can be switched off under
 Settings > Features > Sidebar.
 
 The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
-folds away with the arrow button in the title bar, which upstream only shows once "Hide right
-sidebar" is turned on in settings. Both remember what they were set to across restarts, and the
+folds away with the arrow button in the title bar. Upstream shows that button only once "Hide right
+sidebar" is turned on in settings; here it is always there and that setting is gone. Both remember what they were set to across restarts, and the
 title bar button briefly shows a check once its state is saved; the first time, a short note
 explains this. On pages that need the sidebar, such as the mod browser, the button stays in place,
 greyed out. While the sidebar is folded away, the

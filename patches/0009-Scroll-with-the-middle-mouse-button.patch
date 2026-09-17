@@ -11,7 +11,7 @@ Subject: [PATCH] Scroll with the middle mouse button
  create mode 100644 apps/app-frontend/src/helpers/autoscroll.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 556ef25..0ffddff 100644
+index dcae1f1..e18904b 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -126,6 +126,7 @@ import {
@@ -22,7 +22,7 @@ index 556ef25..0ffddff 100644
  import { get_user, get_user_many, get_version } from '@/helpers/cache.js'
  import { gameSettingsQueryOptions } from '@/helpers/game-options'
  import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
-@@ -607,11 +608,18 @@ onMounted(async () => {
+@@ -603,11 +604,18 @@ onMounted(async () => {
  	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
  	document.querySelector('body').addEventListener('contextmenu', handleContextMenu)
  	document.addEventListener('fullscreenchange', handleFullscreenChange)

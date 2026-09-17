@@ -22,7 +22,7 @@ menu closing.
  create mode 100644 apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 0ffddff..5cbe7d8 100644
+index e18904b..4d95408 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -79,6 +79,7 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from
@@ -33,7 +33,7 @@ index 0ffddff..5cbe7d8 100644
  import AppActionBar from '@/components/ui/AppActionBar.vue'
  import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
  import ErrorModal from '@/components/ui/ErrorModal.vue'
-@@ -2509,6 +2510,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2505,6 +2506,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						<AppActionBar />
  					</Suspense>
  				</div>
