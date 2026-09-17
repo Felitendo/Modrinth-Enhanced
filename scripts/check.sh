@@ -101,6 +101,18 @@ check "the Tauri command is registered" \
 check "authlib-injector is added at launch" \
 	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'authlib_injector'
 
+log "Custom server accounts"
+check "app-lib can sign in to other servers" \
+	contains "$WORKTREE/packages/app-lib/src/api/minecraft_auth.rs" 'pub async fn login_authlib'
+check "the Tauri command is registered" \
+	contains "$WORKTREE/apps/app/src/api/auth.rs" 'login_authlib,'
+check "the server is found from its website" \
+	contains "$WORKTREE/packages/app-lib/src/util/authlib_injector.rs" 'x-authlib-injector-api-location'
+check "the game is pointed at the account's server" \
+	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'server.api_root()'
+check "the account card offers it" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'authlibAccountModal?.show'
+
 log "Ely.by skins"
 check "the frontend can tell an Ely.by account" \
 	contains "$WORKTREE/packages/app-lib/src/state/minecraft_auth.rs" 'serialize_field("ely"'

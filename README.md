@@ -1,7 +1,7 @@
 # Modrinth Enhanced
 
 The [Modrinth App](https://github.com/modrinth/code), without advertising, without telemetry, and
-with offline and Ely.by accounts, a skins browser and tons of fixes for Linux.
+with offline, Ely.by and custom server accounts, a skins browser and tons of fixes for Linux.
 
 Everything else is deliberately left alone. This repository holds no forked source code — only a
 series of patches that are applied to an upstream release tag, built, and published. Whenever
@@ -31,20 +31,21 @@ works.
 | `0016-Show-the-account-in-the-title-bar-...` | With the right sidebar folded away, the Minecraft account is shown in the title bar and managed from there.                         |
 | `0017-Start-on-Wayland-with-an-NVIDIA-GPU` | The app no longer crashes at start under Wayland with the NVIDIA driver.                                                                    |
 | `0018-Update-from-Modrinth-Enhanced-s-...` | Updates come from this project's own signed releases rather than Modrinth's.                                                                |
+| `0019-Add-accounts-from-other-...`         | Sign in to Drasl, Blessing Skin and other account servers, as with Ely.by.                                                                  |
 
 ### Offline accounts
 
-"Add offline account" sits next to "Sign in to Minecraft" in the account card. It asks for a
-username and nothing else.
+"Offline" under "Add account" in the account card asks for a username and nothing else.
 
 The player UUID is derived exactly the way Minecraft itself derives it — an MD5 name UUID over
 `OfflinePlayer:<name>` — so worlds keep the same player data when they are opened from another
 launcher. Offline accounts can play singleplayer and join servers running in offline mode. Servers
 in online mode reject them, as they do in every other launcher.
 
-Both sit next to "Sign in to Microsoft" everywhere an account can be added: the account card, the
-modal you get when pressing Play with no account, and "Sign in to Minecraft" in the getting started
-checklist. Upstream offered Microsoft and nothing else at all three.
+Offline, Ely.by and custom server accounts sit next to Microsoft everywhere an account can be
+added: the account card, the title bar menu, the modal you get when pressing Play with no account,
+and "Sign in to Minecraft" in the getting started checklist. Upstream offered Microsoft and nothing
+else.
 
 ### Microsoft sign-in
 
@@ -60,8 +61,7 @@ launcher is still one click away in the dialog, for when the browser does not wo
 
 ### Ely.by accounts
 
-"Add Ely.by account" sits in the same account card. It asks for an Ely.by account name or email and
-a password. With two-factor authentication on, append the current code to the password after a
+"Ely.by" asks for an Ely.by account name or email and a password. With two-factor authentication on, append the current code to the password after a
 colon, which is Ely.by's own convention.
 
 At launch the game is pointed at Ely.by with
@@ -74,6 +74,19 @@ read of the account list.
 
 Signing in on Ely.by's own page instead of in this form would be better, and needs an OAuth
 application registered with Ely.by — one has not been registered for Modrinth Enhanced.
+
+### Custom server accounts
+
+"Custom server" does the same for any other server authlib-injector works with, such as
+[Drasl](https://github.com/unmojang/drasl), Blessing Skin or LittleSkin. It asks for the server as
+well: its website is enough, since the server names its API in the `X-Authlib-Injector-API-Location`
+header. The dialog then shows the server's name and a link to sign up there. An account with several
+players asks which one to play as.
+
+On Drasl, a player who signed up through another service uses the Minecraft token from their
+account page as the password; the dialog says so.
+
+The account list shows which server an account is on.
 
 ### Sidebar and news
 

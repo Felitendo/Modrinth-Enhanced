@@ -1,0 +1,1704 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Thu, 17 Sep 2026 12:07:13 +0200
+Subject: [PATCH] Add accounts from other authlib-injector servers
+
+Ely.by is not the only account server Minecraft can be pointed at.
+Drasl, Blessing Skin, LittleSkin and others speak the same Yggdrasil
+protocol, and players often sign in to one run by a friend or a server
+owner. A custom server sits next to the Ely.by option and asks for the
+server as well.
+
+With a fourth way in, the account card and the title bar menu list them
+under "Add account" by name alone: "Add custom server account" ran out
+of the menu.
+
+The server is usually given as its website, which names its API in the
+X-Authlib-Injector-API-Location header, the same way authlib-injector
+finds it. Its metadata is read once the address is typed in, to show the
+server's name and where to sign up. An account with several players signs
+in as the one picked in the dialog.
+
+The Ely.by sign-in, renewal and launch code now serves any such server.
+An account is still a row in `minecraft_users`: the server's API root
+sits in the refresh token column in front of the client token, and the
+account list shows which server an account is on.
+---
+ .../src/components/ui/AccountsCard.vue        | 112 +++--
+ .../src/components/ui/AuthlibAccountModal.vue | 307 +++++++++++++
+ .../src/components/ui/MicrosoftLogo.vue       |   8 +
+ .../components/ui/TitleBarAccountSwitcher.vue |  63 ++-
+ .../MinecraftRequiredModal.vue                |  23 +-
+ apps/app-frontend/src/helpers/auth.js         |  26 ++
+ apps/app/build.rs                             |   2 +
+ apps/app/src/api/auth.rs                      |  27 ++
+ packages/app-lib/src/api/minecraft_auth.rs    |  77 +++-
+ packages/app-lib/src/launcher/mod.rs          |  11 +-
+ packages/app-lib/src/state/minecraft_auth.rs  | 422 ++++++++++++------
+ packages/app-lib/src/util/authlib_injector.rs | 134 +++++-
+ 12 files changed, 1001 insertions(+), 211 deletions(-)
+ create mode 100644 apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
+ create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLogo.vue
+
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index 632483e..03a61f2 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -9,14 +9,23 @@
+ 			<SpinnerIcon v-else class="animate-spin" />
+ 			{{ formatMessage(messages.signInToMinecraft) }}
+ 		</Button>
+-		<Button @click="elyAccountModal?.show($event)">
+-			<KeyIcon />
+-			{{ formatMessage(messages.addElyAccount) }}
+-		</Button>
+-		<Button @click="offlineAccountModal?.show($event)">
+-			<UserIcon />
+-			{{ formatMessage(messages.addOfflineAccount) }}
+-		</Button>
++		<div class="flex flex-col gap-2">
++			<span class="text-xs font-semibold text-secondary">
++				{{ formatMessage(messages.otherAccounts) }}
++			</span>
++			<Button @click="elyAccountModal?.show($event)">
++				<KeyIcon />
++				{{ formatMessage(messages.ely) }}
++			</Button>
++			<Button @click="authlibAccountModal?.show($event)">
++				<GlobeIcon />
++				{{ formatMessage(messages.customServer) }}
++			</Button>
++			<Button @click="offlineAccountModal?.show($event)">
++				<UserIcon />
++				{{ formatMessage(messages.offline) }}
++			</Button>
++		</div>
+ 	</div>
+ 	<Accordion
+ 		v-else
+@@ -55,16 +64,21 @@
+ 						/>
+ 						<RadioButtonIcon v-else class="w-5 h-5 text-secondary shrink-0" />
+ 						<Avatar :src="getAccountAvatarUrl(account)" size="24px" />
+-						<p
+-							class="m-0 truncate min-w-0"
+-							:class="
+-								selectedAccount && selectedAccount.profile.id === account.profile.id
+-									? 'text-contrast font-semibold'
+-									: 'text-primary'
+-							"
+-						>
+-							{{ account.profile.name }}
+-						</p>
++						<div class="flex flex-col items-start min-w-0">
++							<p
++								class="m-0 truncate max-w-full"
++								:class="
++									selectedAccount && selectedAccount.profile.id === account.profile.id
++										? 'text-contrast font-semibold'
++										: 'text-primary'
++								"
++							>
++								{{ account.profile.name }}
++							</p>
++							<span v-if="account.auth_server" class="truncate max-w-full text-secondary text-xs">
++								{{ account.auth_server }}
++							</span>
++						</div>
+ 					</button>
+ 					<IconButton
+ 						v-tooltip="formatMessage(messages.removeAccount)"
+@@ -79,28 +93,37 @@
+ 				</div>
+ 			</template>
+ 			<div class="flex flex-col gap-2 px-2 pt-2">
++				<span class="px-1 text-xs font-semibold text-secondary">
++					{{ formatMessage(messages.addAccount) }}
++				</span>
+ 				<Button
+-					v-if="accounts.length > 0"
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					:disabled="loginDisabled"
+ 					@click="login()"
+ 				>
+-					<PlusIcon />
+-					{{ formatMessage(messages.addAccount) }}
++					<MicrosoftLogo />
++					{{ formatMessage(messages.microsoft) }}
+ 				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="elyAccountModal?.show($event)"
+ 				>
+ 					<KeyIcon />
+-					{{ formatMessage(messages.addElyAccount) }}
++					{{ formatMessage(messages.ely) }}
++				</Button>
++				<Button
++					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
++					@click="authlibAccountModal?.show($event)"
++				>
++					<GlobeIcon />
++					{{ formatMessage(messages.customServer) }}
+ 				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="offlineAccountModal?.show($event)"
+ 				>
+ 					<UserIcon />
+-					{{ formatMessage(messages.addOfflineAccount) }}
++					{{ formatMessage(messages.offline) }}
+ 				</Button>
+ 			</div>
+ 		</div>
+@@ -108,13 +131,14 @@
+ 	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
+ 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
+ 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
++	<AuthlibAccountModal ref="authlibAccountModal" @created="accountAdded" />
+ </template>
+ 
+ <script setup lang="ts">
+ import {
++	GlobeIcon,
+ 	KeyIcon,
+ 	LogInIcon,
+-	PlusIcon,
+ 	RadioButtonCheckedIcon,
+ 	RadioButtonIcon,
+ 	SpinnerIcon,
+@@ -133,8 +157,10 @@ import {
+ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
++import AuthlibAccountModal from '@/components/ui/AuthlibAccountModal.vue'
+ import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
+ import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
++import MicrosoftLogo from '@/components/ui/MicrosoftLogo.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { trackEvent } from '@/helpers/analytics'
+@@ -160,11 +186,14 @@ type MinecraftCredential = {
+ 		id: string
+ 		name: string
+ 	}
++	/** The Yggdrasil server a non-Microsoft account is on, such as Ely.by. */
++	auth_server?: string | null
+ }
+ 
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
++const authlibAccountModal = ref<InstanceType<typeof AuthlibAccountModal>>()
+ const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+@@ -226,6 +255,10 @@ function showElyAccountModal(event?: MouseEvent) {
+ 	elyAccountModal.value?.show(event)
+ }
+ 
++function showAuthlibAccountModal(event?: MouseEvent) {
++	authlibAccountModal.value?.show(event)
++}
++
+ const selectedAccount = computed(() =>
+ 	accounts.value.find((account) => account.profile.id === defaultUser.value),
+ )
+@@ -248,6 +281,7 @@ defineExpose({
+ 	refreshValues,
+ 	showOfflineAccountModal,
+ 	showElyAccountModal,
++	showAuthlibAccountModal,
+ 	setEquippedSkin,
+ 	setLoginDisabled,
+ 	login,
+@@ -289,7 +323,7 @@ function login(event?: MouseEvent) {
+ }
+ 
+ async function accountAdded() {
+-	// Both sign-in paths already mark the new account as the active one.
++	// Every sign-in path already marks the new account as the active one.
+ 	await refreshValues()
+ 	emit('change')
+ }
+@@ -317,16 +351,28 @@ const messages = defineMessages({
+ 		defaultMessage: 'Not signed in',
+ 	},
+ 	addAccount: {
+-		id: 'minecraft-account.add-microsoft-account',
+-		defaultMessage: 'Add Microsoft account',
++		id: 'minecraft-account.add-account',
++		defaultMessage: 'Add account',
++	},
++	otherAccounts: {
++		id: 'minecraft-account.other-accounts',
++		defaultMessage: 'Other accounts',
++	},
++	microsoft: {
++		id: 'minecraft-account.kind.microsoft',
++		defaultMessage: 'Microsoft',
++	},
++	ely: {
++		id: 'minecraft-account.kind.ely',
++		defaultMessage: 'Ely.by',
+ 	},
+-	addOfflineAccount: {
+-		id: 'minecraft-account.add-offline-account',
+-		defaultMessage: 'Add offline account',
++	customServer: {
++		id: 'minecraft-account.kind.custom-server',
++		defaultMessage: 'Custom server',
+ 	},
+-	addElyAccount: {
+-		id: 'minecraft-account.add-ely-account',
+-		defaultMessage: 'Add Ely.by account',
++	offline: {
++		id: 'minecraft-account.kind.offline',
++		defaultMessage: 'Offline',
+ 	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
+new file mode 100644
+index 0000000..4aab3f9
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
+@@ -0,0 +1,307 @@
++<template>
++	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
++		<div class="flex flex-col gap-4">
++			<p class="m-0 leading-tight text-secondary">
++				{{ formatMessage(messages.description) }}
++			</p>
++
++			<form class="flex flex-col gap-3" @submit.prevent="submit">
++				<div class="flex flex-col gap-2">
++					<label class="font-semibold text-contrast" for="authlib-account-server">
++						{{ formatMessage(messages.serverLabel) }}
++					</label>
++					<Input
++						id="authlib-account-server"
++						v-model="address"
++						:icon="GlobeIcon"
++						placeholder="drasl.example.com"
++						:error="!!serverError"
++						autocapitalize="none"
++						autocorrect="off"
++						:spellcheck="false"
++						class="w-full"
++						@blur="lookUpServer"
++					/>
++					<p v-if="serverError" class="m-0 text-sm leading-tight text-red">{{ serverError }}</p>
++					<p
++						v-else-if="server"
++						class="m-0 flex flex-wrap items-center gap-x-2 text-sm leading-tight text-secondary"
++					>
++						<span class="flex items-center gap-1 font-semibold text-contrast">
++							<CheckIcon class="size-4 text-brand" aria-hidden="true" />
++							{{ server.name }}
++						</span>
++						<a v-if="server.register" :href="server.register" class="text-link">
++							{{ formatMessage(messages.register) }}
++						</a>
++					</p>
++					<p v-else class="m-0 text-sm leading-tight text-secondary">
++						{{ formatMessage(messages.serverHint) }}
++					</p>
++				</div>
++
++				<div class="flex flex-col gap-2">
++					<label class="font-semibold text-contrast" for="authlib-account-username">
++						{{ formatMessage(messages.usernameLabel) }}
++					</label>
++					<Input
++						id="authlib-account-username"
++						v-model="username"
++						:icon="UserIcon"
++						:error="!!error"
++						autocapitalize="none"
++						autocorrect="off"
++						:spellcheck="false"
++						class="w-full"
++					/>
++				</div>
++
++				<div class="flex flex-col gap-2">
++					<label class="font-semibold text-contrast" for="authlib-account-password">
++						{{ formatMessage(messages.passwordLabel) }}
++					</label>
++					<Input
++						id="authlib-account-password"
++						v-model="password"
++						type="password"
++						:icon="KeyIcon"
++						:error="!!error"
++						class="w-full"
++					/>
++					<p
++						v-if="server?.implementation === 'Drasl'"
++						class="m-0 text-sm leading-tight text-secondary"
++					>
++						{{ formatMessage(messages.draslTokenHint) }}
++					</p>
++				</div>
++
++				<div v-if="profiles.length" class="flex flex-col gap-2">
++					<span class="font-semibold text-contrast">
++						{{ formatMessage(messages.profileLabel) }}
++					</span>
++					<p class="m-0 text-sm leading-tight text-secondary">
++						{{ formatMessage(messages.profileHint) }}
++					</p>
++					<Chips
++						v-model="profile"
++						:items="profiles"
++						:format-label="(item: Profile) => item.name"
++						:capitalize="false"
++					/>
++				</div>
++
++				<p v-if="error" class="m-0 text-sm leading-tight text-red">{{ error }}</p>
++			</form>
++		</div>
++
++		<template #actions>
++			<div class="flex justify-end gap-2">
++				<Button native-type="button" @click="modal?.hide()">
++					<XIcon aria-hidden="true" />
++					{{ formatMessage(commonMessages.cancelButton) }}
++				</Button>
++				<Button
++					type="colored"
++					color="brand"
++					native-type="button"
++					:disabled="
++						submitting ||
++						!address.trim() ||
++						!username.trim() ||
++						!password ||
++						(profiles.length > 0 && !profile)
++					"
++					@click="submit"
++				>
++					<SpinnerIcon v-if="submitting" aria-hidden="true" class="animate-spin" />
++					<LogInIcon v-else aria-hidden="true" />
++					{{ formatMessage(messages.signInButton) }}
++				</Button>
++			</div>
++		</template>
++	</NewModal>
++</template>
++
++<script setup lang="ts">
++import {
++	CheckIcon,
++	GlobeIcon,
++	KeyIcon,
++	LogInIcon,
++	SpinnerIcon,
++	UserIcon,
++	XIcon,
++} from '@modrinth/assets'
++import {
++	Button,
++	Chips,
++	commonMessages,
++	defineMessages,
++	Input,
++	NewModal,
++	useVIntl,
++} from '@modrinth/ui'
++import { nextTick, ref, watch } from 'vue'
++
++import { authlib_server, login_authlib } from '@/helpers/auth'
++
++type Server = {
++	api_root: string
++	name: string
++	implementation?: string
++	homepage?: string
++	register?: string
++}
++type Profile = { id: string; name: string }
++
++const { formatMessage } = useVIntl()
++
++const emit = defineEmits<{
++	created: [account: unknown]
++}>()
++
++const modal = ref<InstanceType<typeof NewModal>>()
++const address = ref('')
++const username = ref('')
++const password = ref('')
++const server = ref<Server | null>(null)
++const serverError = ref('')
++const profiles = ref<Profile[]>([])
++const profile = ref<Profile | null>(null)
++const error = ref('')
++const submitting = ref(false)
++let lookup = 0
++
++function message(e: unknown) {
++	return typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++}
++
++// The players belong to the account they were listed for.
++watch([address, username], () => {
++	profiles.value = []
++	profile.value = null
++})
++
++watch(address, () => {
++	lookup++
++	server.value = null
++	serverError.value = ''
++})
++
++function show(event?: MouseEvent) {
++	address.value = ''
++	username.value = ''
++	password.value = ''
++	server.value = null
++	serverError.value = ''
++	profiles.value = []
++	profile.value = null
++	error.value = ''
++	submitting.value = false
++	modal.value?.show(event)
++	void nextTick(() => {
++		document.getElementById('authlib-account-server')?.focus()
++	})
++}
++
++/** Shows which server the address leads to, and where to sign up there. */
++async function lookUpServer() {
++	const value = address.value.trim()
++	if (!value || server.value) return
++
++	const request = ++lookup
++	try {
++		const found = await authlib_server(value)
++		if (request === lookup) server.value = found
++	} catch (e) {
++		if (request === lookup) serverError.value = message(e)
++	}
++}
++
++async function submit() {
++	if (submitting.value) return
++
++	const name = username.value.trim()
++	if (!address.value.trim() || !name || !password.value) return
++	if (profiles.value.length && !profile.value) return
++
++	submitting.value = true
++	error.value = ''
++
++	try {
++		const result = await login_authlib(
++			address.value.trim(),
++			name,
++			password.value,
++			profile.value?.id ?? null,
++		)
++		if (result.status === 'choose_profile') {
++			profiles.value = result.profiles
++			profile.value = null
++			return
++		}
++		password.value = ''
++		modal.value?.hide()
++		emit('created', result.credentials)
++	} catch (e) {
++		error.value = message(e)
++	} finally {
++		submitting.value = false
++	}
++}
++
++defineExpose({ show })
++
++const messages = defineMessages({
++	header: {
++		id: 'app.authlib-account.header',
++		defaultMessage: 'Sign in to a custom server',
++	},
++	description: {
++		id: 'app.authlib-account.description',
++		defaultMessage: 'For account servers such as Drasl, Blessing Skin or LittleSkin.',
++	},
++	serverLabel: {
++		id: 'app.authlib-account.server-label',
++		defaultMessage: 'Server',
++	},
++	serverHint: {
++		id: 'app.authlib-account.server-hint',
++		defaultMessage: "The address of the server's website.",
++	},
++	register: {
++		id: 'app.authlib-account.register',
++		defaultMessage: 'Create an account',
++	},
++	usernameLabel: {
++		id: 'app.authlib-account.username-label',
++		defaultMessage: 'Username or email',
++	},
++	passwordLabel: {
++		id: 'app.authlib-account.password-label',
++		defaultMessage: 'Password',
++	},
++	draslTokenHint: {
++		id: 'app.authlib-account.drasl-token-hint',
++		defaultMessage:
++			'Signed in to Drasl through another service? Use the Minecraft token from your account page there as the password.',
++	},
++	profileLabel: {
++		id: 'app.authlib-account.profile-label',
++		defaultMessage: 'Player',
++	},
++	profileHint: {
++		id: 'app.authlib-account.profile-hint',
++		defaultMessage: 'This account has several players. Pick the one to play as.',
++	},
++	signInButton: {
++		id: 'app.authlib-account.sign-in-button',
++		defaultMessage: 'Sign in',
++	},
++	genericError: {
++		id: 'app.authlib-account.generic-error',
++		defaultMessage: 'Could not sign in.',
++	},
++})
++</script>
+diff --git a/apps/app-frontend/src/components/ui/MicrosoftLogo.vue b/apps/app-frontend/src/components/ui/MicrosoftLogo.vue
+new file mode 100644
+index 0000000..6d1fd75
+--- /dev/null
++++ b/apps/app-frontend/src/components/ui/MicrosoftLogo.vue
+@@ -0,0 +1,8 @@
++<template>
++	<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
++		<rect width="9.25" height="9.25" />
++		<rect x="10.75" width="9.25" height="9.25" />
++		<rect y="10.75" width="9.25" height="9.25" />
++		<rect x="10.75" y="10.75" width="9.25" height="9.25" />
++	</svg>
++</template>
+diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+index 70ab9e9..b21fae7 100644
+--- a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
++++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+@@ -22,7 +22,7 @@
+ 			<DropdownIcon class="size-4 text-secondary" />
+ 		</template>
+ 		<template #panel="{ close }">
+-			<div class="flex w-64 flex-col gap-1 p-2">
++			<div class="flex w-56 flex-col gap-1 p-2">
+ 				<div
+ 					v-for="account in card.accounts"
+ 					:key="account.profile.id"
+@@ -35,11 +35,16 @@
+ 						<RadioButtonCheckedIcon v-if="isSelected(account)" class="size-5 shrink-0 text-brand" />
+ 						<RadioButtonIcon v-else class="size-5 shrink-0 text-secondary" />
+ 						<Avatar :src="card.getAccountAvatarUrl(account)" size="24px" />
+-						<span
+-							class="min-w-0 truncate"
+-							:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
+-						>
+-							{{ account.profile.name }}
++						<span class="flex min-w-0 flex-col">
++							<span
++								class="truncate"
++								:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
++							>
++								{{ account.profile.name }}
++							</span>
++							<span v-if="account.auth_server" class="truncate text-xs text-secondary">
++								{{ account.auth_server }}
++							</span>
+ 						</span>
+ 					</button>
+ 					<!-- The menu stays open, so what is left is on show. -->
+@@ -55,14 +60,17 @@
+ 					</IconButton>
+ 				</div>
+ 				<div v-if="card.accounts.length" class="my-1 h-px bg-surface-5" />
++				<span class="px-2 pb-0.5 pt-1 text-xs font-semibold text-secondary">
++					{{ formatMessage(messages.addAccount) }}
++				</span>
+ 				<Button
+ 					type="quiet"
+ 					class="!justify-start"
+ 					:disabled="card.loginDisabled"
+ 					@click="(event: MouseEvent) => add(close, () => card?.login(event))"
+ 				>
+-					<PlusIcon />
+-					{{ formatMessage(messages.addAccount) }}
++					<MicrosoftLogo />
++					{{ formatMessage(messages.microsoft) }}
+ 				</Button>
+ 				<Button
+ 					type="quiet"
+@@ -70,7 +78,15 @@
+ 					@click="(event: MouseEvent) => add(close, () => card?.showElyAccountModal(event))"
+ 				>
+ 					<KeyIcon />
+-					{{ formatMessage(messages.addElyAccount) }}
++					{{ formatMessage(messages.ely) }}
++				</Button>
++				<Button
++					type="quiet"
++					class="!justify-start"
++					@click="(event: MouseEvent) => add(close, () => card?.showAuthlibAccountModal(event))"
++				>
++					<GlobeIcon />
++					{{ formatMessage(messages.customServer) }}
+ 				</Button>
+ 				<Button
+ 					type="quiet"
+@@ -78,7 +94,7 @@
+ 					@click="(event: MouseEvent) => add(close, () => card?.showOfflineAccountModal(event))"
+ 				>
+ 					<UserIcon />
+-					{{ formatMessage(messages.addOfflineAccount) }}
++					{{ formatMessage(messages.offline) }}
+ 				</Button>
+ 			</div>
+ 		</template>
+@@ -88,8 +104,8 @@
+ <script setup lang="ts">
+ import {
+ 	DropdownIcon,
++	GlobeIcon,
+ 	KeyIcon,
+-	PlusIcon,
+ 	RadioButtonCheckedIcon,
+ 	RadioButtonIcon,
+ 	TrashIcon,
+@@ -106,6 +122,7 @@ import {
+ import type { PropType } from 'vue'
+ 
+ import type AccountsCard from '@/components/ui/AccountsCard.vue'
++import MicrosoftLogo from '@/components/ui/MicrosoftLogo.vue'
+ 
+ type Card = InstanceType<typeof AccountsCard>
+ type Account = Card['accounts'][number]
+@@ -129,16 +146,24 @@ const messages = defineMessages({
+ 		defaultMessage: 'Select account',
+ 	},
+ 	addAccount: {
+-		id: 'minecraft-account.add-microsoft-account',
+-		defaultMessage: 'Add Microsoft account',
++		id: 'minecraft-account.add-account',
++		defaultMessage: 'Add account',
++	},
++	microsoft: {
++		id: 'minecraft-account.kind.microsoft',
++		defaultMessage: 'Microsoft',
++	},
++	ely: {
++		id: 'minecraft-account.kind.ely',
++		defaultMessage: 'Ely.by',
+ 	},
+-	addElyAccount: {
+-		id: 'minecraft-account.add-ely-account',
+-		defaultMessage: 'Add Ely.by account',
++	customServer: {
++		id: 'minecraft-account.kind.custom-server',
++		defaultMessage: 'Custom server',
+ 	},
+-	addOfflineAccount: {
+-		id: 'minecraft-account.add-offline-account',
+-		defaultMessage: 'Add offline account',
++	offline: {
++		id: 'minecraft-account.kind.offline',
++		defaultMessage: 'Offline',
+ 	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+index 341ccdc..99695db 100644
+--- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
++++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+@@ -45,11 +45,15 @@
+ 				<p class="m-0 text-sm leading-tight text-secondary">
+ 					{{ formatMessage(messages.offlineHint) }}
+ 				</p>
+-				<div class="grid grid-cols-2 gap-2">
++				<div class="grid grid-cols-3 gap-2">
+ 					<Button @click="addElyAccount">
+ 						<KeyIcon />
+ 						{{ formatMessage(messages.addElyAccount) }}
+ 					</Button>
++					<Button @click="addAuthlibAccount">
++						<GlobeIcon />
++						{{ formatMessage(messages.addAuthlibAccount) }}
++					</Button>
+ 					<Button @click="addOfflineAccount">
+ 						<UserIcon />
+ 						{{ formatMessage(messages.addOfflineAccount) }}
+@@ -71,7 +75,7 @@
+ </template>
+ 
+ <script setup lang="ts">
+-import { KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
++import { GlobeIcon, KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
+ import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
+ import { inject, type Ref, ref } from 'vue'
+ 
+@@ -114,15 +118,19 @@ const messages = defineMessages({
+ 	offlineHint: {
+ 		id: 'minecraft-required.offline-hint',
+ 		defaultMessage:
+-			'Or sign in with Ely.by, or play singleplayer and offline-mode servers without an account of any kind.',
++			'Or sign in with Ely.by or a custom server, or play singleplayer and offline-mode servers without an account of any kind.',
+ 	},
+ 	addElyAccount: {
+ 		id: 'minecraft-required.add-ely-account',
+-		defaultMessage: 'Ely.by account',
++		defaultMessage: 'Ely.by',
++	},
++	addAuthlibAccount: {
++		id: 'minecraft-required.add-custom-server-account',
++		defaultMessage: 'Custom server',
+ 	},
+ 	addOfflineAccount: {
+ 		id: 'minecraft-required.add-offline-account',
+-		defaultMessage: 'Offline account',
++		defaultMessage: 'Offline',
+ 	},
+ })
+ 
+@@ -147,6 +155,11 @@ function addElyAccount(event: MouseEvent) {
+ 	accountsCard.value?.showElyAccountModal(event)
+ }
+ 
++function addAuthlibAccount(event: MouseEvent) {
++	modal.value?.hide()
++	accountsCard.value?.showAuthlibAccountModal(event)
++}
++
+ defineExpose({
+ 	show,
+ })
+diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
+index 9b2408e..f4d24a1 100644
+--- a/apps/app-frontend/src/helpers/auth.js
++++ b/apps/app-frontend/src/helpers/auth.js
+@@ -84,6 +84,32 @@ export async function login_ely(username, password) {
+ 	return await invoke('plugin:auth|login_ely', { username, password })
+ }
+ 
++/**
++ * Looks up an authlib-injector server, such as Drasl or Blessing Skin, by the
++ * address of its website or API.
++ *
++ * @param {string} address
++ * @returns {Promise<{api_root: string, name: string, implementation?: string, homepage?: string, register?: string}>}
++ */
++export async function authlib_server(address) {
++	return await invoke('plugin:auth|authlib_server', { address })
++}
++
++/**
++ * Signs in to an authlib-injector server and makes that account the active one.
++ *
++ * An account with several players resolves to `{ status: 'choose_profile', profiles }`
++ * until `profile` names one of them, and then to `{ status: 'signed_in', credentials }`.
++ *
++ * @param {string} server Address of the server's website or API
++ * @param {string} username
++ * @param {string} password
++ * @param {string | null} profile Id of the player to sign in as
++ */
++export async function login_authlib(server, username, password, profile) {
++	return await invoke('plugin:auth|login_authlib', { server, username, password, profile })
++}
++
+ /**
+  * Retrieves the default user
+  * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index f01ba91..94f7a8e 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -18,6 +18,8 @@ fn main() {
+                         "login_device_poll",
+                         "login_offline",
+                         "login_ely",
++                        "authlib_server",
++                        "login_authlib",
+                         "remove_user",
+                         "get_default_user",
+                         "set_default_user",
+diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
+index eab604d..c856d40 100644
+--- a/apps/app/src/api/auth.rs
++++ b/apps/app/src/api/auth.rs
+@@ -14,6 +14,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+             login_device_poll,
+             login_offline,
+             login_ely,
++            authlib_server,
++            login_authlib,
+             remove_user,
+             get_default_user,
+             set_default_user,
+@@ -167,6 +169,31 @@ pub async fn login_ely(
+     Ok(minecraft_auth::login_ely(&username, &password).await?)
+ }
+ 
++/// Looks up an authlib-injector server by its website or API address.
++#[tauri::command]
++pub async fn authlib_server(
++    address: String,
++) -> Result<minecraft_auth::AuthlibServer> {
++    Ok(minecraft_auth::authlib_server(&address).await?)
++}
++
++/// Signs in to an authlib-injector server and makes that account active.
++#[tauri::command]
++pub async fn login_authlib(
++    server: String,
++    username: String,
++    password: String,
++    profile: Option<String>,
++) -> Result<minecraft_auth::YggdrasilSignIn> {
++    Ok(minecraft_auth::login_authlib(
++        &server,
++        &username,
++        &password,
++        profile.as_deref(),
++    )
++    .await?)
++}
++
+ #[tauri::command]
+ pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
+     Ok(minecraft_auth::remove_user(user).await?)
+diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
+index fba473f..fe95027 100644
+--- a/packages/app-lib/src/api/minecraft_auth.rs
++++ b/packages/app-lib/src/api/minecraft_auth.rs
+@@ -3,9 +3,13 @@
+ use reqwest::StatusCode;
+ 
+ use crate::State;
+-use crate::state::{Credentials, MinecraftLoginFlow};
++use crate::state::{AuthServer, Credentials, MinecraftLoginFlow};
++use crate::util::authlib_injector;
+ use crate::util::fetch::INSECURE_REQWEST_CLIENT;
+ 
++pub use crate::state::{YggdrasilProfile, YggdrasilSignIn};
++pub use crate::util::authlib_injector::AuthlibServer;
++
+ #[tracing::instrument]
+ pub async fn check_reachable() -> crate::Result<()> {
+     let resp = INSECURE_REQWEST_CLIENT
+@@ -126,28 +130,79 @@ pub async fn login_ely(
+     username: &str,
+     password: &str,
+ ) -> crate::Result<Credentials> {
++    match sign_in(AuthServer::Ely, username, password, None).await? {
++        YggdrasilSignIn::SignedIn { credentials } => Ok(credentials),
++        // An Ely.by account is a single player.
++        YggdrasilSignIn::ChooseProfile { .. } => {
++            Err(crate::ErrorKind::OtherError(
++                "Ely.by did not say which player to sign in as".to_string(),
++            )
++            .into())
++        }
++    }
++}
++
++/// Looks up an authlib-injector server by its website or API address.
++#[tracing::instrument]
++pub async fn authlib_server(address: &str) -> crate::Result<AuthlibServer> {
++    authlib_injector::resolve_server(address).await
++}
++
++/// Signs in to an authlib-injector server, such as Drasl or Blessing Skin, and
++/// makes the account the active one.
++///
++/// An account with several players signs in only once `profile` names one of
++/// them; until then the players are returned to choose from.
++#[tracing::instrument(skip(password))]
++pub async fn login_authlib(
++    server: &str,
++    username: &str,
++    password: &str,
++    profile: Option<&str>,
++) -> crate::Result<YggdrasilSignIn> {
++    let server = authlib_injector::resolve_server(server).await?;
++    sign_in(
++        AuthServer::Authlib(server.api_root),
++        username,
++        password,
++        profile,
++    )
++    .await
++}
++
++async fn sign_in(
++    server: AuthServer,
++    username: &str,
++    password: &str,
++    profile: Option<&str>,
++) -> crate::Result<YggdrasilSignIn> {
+     let username = username.trim();
+ 
+     if username.is_empty() || password.is_empty() {
+         return Err(crate::ErrorKind::InputError(
+-            "An Ely.by account name and password are both required".to_string(),
++            "An account name and password are both required".to_string(),
+         )
+         .into());
+     }
+ 
+     let state = State::get().await?;
+-    let credentials = Credentials::ely(username, password).await?;
+-    credentials.upsert(&state.pool).await?;
++    let result =
++        Credentials::yggdrasil_sign_in(server, username, password, profile)
++            .await?;
+ 
+-    if let Err(error) =
+-        crate::onboarding_checklist::mark_logged_into_minecraft().await
+-    {
+-        tracing::warn!(
+-            "Failed to mark Minecraft login in onboarding checklist: {error}"
+-        );
++    if let YggdrasilSignIn::SignedIn { credentials } = &result {
++        credentials.upsert(&state.pool).await?;
++
++        if let Err(error) =
++            crate::onboarding_checklist::mark_logged_into_minecraft().await
++        {
++            tracing::warn!(
++                "Failed to mark Minecraft login in onboarding checklist: {error}"
++            );
++        }
+     }
+ 
+-    Ok(credentials)
++    Ok(result)
+ }
+ 
+ #[tracing::instrument]
+diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
+index 4199bff..7b648b7 100644
+--- a/packages/app-lib/src/launcher/mod.rs
++++ b/packages/app-lib/src/launcher/mod.rs
+@@ -1104,10 +1104,11 @@ pub async fn launch_minecraft(
+         command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
+     }
+ 
+-    // Minecraft asks Mojang who the player is, and an Ely.by account is not a
+-    // Mojang account. authlib-injector is a Java agent that points those calls
+-    // at Ely.by instead, and without it such an account cannot start the game.
+-    if credentials.is_ely() {
++    // Minecraft asks Mojang who the player is, and an account on Ely.by or
++    // another Yggdrasil server is not a Mojang account. authlib-injector is a
++    // Java agent that points those calls at the account's server instead, and
++    // without it such an account cannot start the game.
++    if let Some(server) = credentials.auth_server() {
+         let injector = crate::util::authlib_injector::get_authlib_injector(
+             &state.directories,
+         )
+@@ -1116,7 +1117,7 @@ pub async fn launch_minecraft(
+         command.arg(format!(
+             "-javaagent:{}={}",
+             injector.to_string_lossy(),
+-            crate::state::ELY_API_ROOT
++            server.api_root()
+         ));
+     }
+ 
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index 2514d8e..0245152 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -276,63 +276,145 @@ pub fn offline_uuid(username: &str) -> Uuid {
+ 
+ /// Marker stored in front of an Ely.by account's client token.
+ ///
+-/// Ely.by's Yggdrasil flow hands back an access token and a client token, and
++/// A Yggdrasil server hands back an access token and a client token, and
+ /// renewing the pair needs both. The client token therefore goes in the refresh
+-/// token column behind this marker, which both identifies the account as an
+-/// Ely.by one and keeps it out of a table of its own.
++/// token column behind a marker, which both identifies the kind of account and
++/// keeps it out of a table of its own.
+ const ELY_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:ely:";
+ 
+-/// Ely.by's Yggdrasil server, which answers the same shapes Mojang's used to.
+-const ELY_AUTHSERVER: &str = "https://authserver.ely.by";
++/// Marker stored in front of an account on another authlib-injector server,
++/// followed by the server's API root, a space and the client token. A URL never
++/// holds a bare space, so the two always split apart again.
++const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
++
++/// Ely.by's Yggdrasil endpoints.
++const ELY_AUTHSERVER: &str = "https://authserver.ely.by/auth";
++
++/// An account server that speaks Yggdrasil, the protocol Mojang's own used to,
++/// and that authlib-injector can point the game at.
++#[derive(Debug, Clone)]
++pub enum AuthServer {
++    Ely,
++    /// Any other authlib-injector server, such as Drasl or Blessing Skin, by
++    /// its API root.
++    Authlib(String),
++}
+ 
+-/// What authlib-injector is handed so the game asks Ely.by rather than Mojang.
+-///
+-/// The agent resolves the short form to Ely.by's actual API root itself.
+-pub const ELY_API_ROOT: &str = "ely.by";
++impl AuthServer {
++    /// What authlib-injector is handed so the game asks this server rather
++    /// than Mojang. The agent resolves `ely.by` to Ely.by's API root itself.
++    pub fn api_root(&self) -> &str {
++        match self {
++            Self::Ely => "ely.by",
++            Self::Authlib(root) => root,
++        }
++    }
++
++    /// How the server is called in messages.
++    pub fn name(&self) -> String {
++        match self {
++            Self::Ely => "Ely.by".to_owned(),
++            Self::Authlib(root) => Url::parse(root)
++                .ok()
++                .and_then(|url| url.host_str().map(str::to_owned))
++                .unwrap_or_else(|| root.clone()),
++        }
++    }
++
++    async fn post(
++        &self,
++        endpoint: &str,
++        body: serde_json::Value,
++    ) -> reqwest::Result<Response> {
++        let url = match self {
++            Self::Ely => format!("{ELY_AUTHSERVER}/{endpoint}"),
++            Self::Authlib(root) => format!("{root}/authserver/{endpoint}"),
++        };
++
++        INSECURE_REQWEST_CLIENT.post(url).json(&body).send().await
++    }
++
++    fn refresh_token(&self, client_token: &str) -> String {
++        match self {
++            Self::Ely => format!("{ELY_REFRESH_TOKEN_PREFIX}{client_token}"),
++            Self::Authlib(root) => {
++                format!("{AUTHLIB_REFRESH_TOKEN_PREFIX}{root} {client_token}")
++            }
++        }
++    }
++
++    /// Reads the error message out of a refusal, falling back to the status.
++    async fn error(&self, response: Response) -> crate::Error {
++        #[derive(Deserialize)]
++        struct YggdrasilError {
++            #[serde(rename = "errorMessage")]
++            error_message: Option<String>,
++        }
++
++        let status = response.status();
++        let message = response
++            .json::<YggdrasilError>()
++            .await
++            .ok()
++            .and_then(|error| error.error_message)
++            .unwrap_or_else(|| {
++                format!("{} refused the request ({status})", self.name())
++            });
++
++        crate::ErrorKind::OtherError(message).as_error()
++    }
++
++    /// Yggdrasil UUIDs usually come without dashes.
++    fn profile(
++        &self,
++        profile: YggdrasilProfile,
++    ) -> crate::Result<MinecraftProfile> {
++        let id = Uuid::parse_str(&profile.id).map_err(|_| {
++            crate::ErrorKind::OtherError(format!(
++                "{} returned a player id that could not be read: {}",
++                self.name(),
++                profile.id
++            ))
++        })?;
++
++        Ok(MinecraftProfile {
++            id,
++            name: profile.name,
++            ..MinecraftProfile::default()
++        })
++    }
++}
+ 
+ #[derive(Deserialize)]
+-struct ElyAuthResponse {
++struct YggdrasilAuthResponse {
+     #[serde(rename = "accessToken")]
+     access_token: String,
+     #[serde(rename = "clientToken")]
+     client_token: String,
+     #[serde(rename = "selectedProfile")]
+-    selected_profile: ElyProfile,
++    selected_profile: Option<YggdrasilProfile>,
++    #[serde(rename = "availableProfiles", default)]
++    available_profiles: Vec<YggdrasilProfile>,
+ }
+ 
+-#[derive(Deserialize)]
+-struct ElyProfile {
+-    id: String,
+-    name: String,
+-}
+-
+-/// Reads the error message out of an Ely.by refusal, falling back to the status.
+-async fn ely_error(response: Response) -> crate::Error {
+-    #[derive(Deserialize)]
+-    struct ElyError {
+-        #[serde(rename = "errorMessage")]
+-        error_message: Option<String>,
+-    }
+-
+-    let status = response.status();
+-    let message = response
+-        .json::<ElyError>()
+-        .await
+-        .ok()
+-        .and_then(|error| error.error_message)
+-        .unwrap_or_else(|| format!("Ely.by refused the request ({status})"));
+-
+-    crate::ErrorKind::OtherError(message).as_error()
++/// A player on a Yggdrasil server. One account there can have several.
++#[derive(Serialize, Deserialize, Debug, Clone)]
++pub struct YggdrasilProfile {
++    pub id: String,
++    pub name: String,
+ }
+ 
+-/// Ely.by's Yggdrasil UUIDs come without dashes.
+-fn parse_ely_uuid(id: &str) -> crate::Result<Uuid> {
+-    Uuid::parse_str(id).map_err(|_| {
+-        crate::ErrorKind::OtherError(format!(
+-            "Ely.by returned a player id that could not be read: {id}"
+-        ))
+-        .as_error()
+-    })
++/// What signing in to a Yggdrasil server came to.
++#[derive(Serialize, Debug)]
++#[serde(tag = "status", rename_all = "snake_case")]
++pub enum YggdrasilSignIn {
++    SignedIn {
++        credentials: Credentials,
++    },
++    /// The account has several players and none was picked.
++    ChooseProfile {
++        profiles: Vec<YggdrasilProfile>,
++    },
+ }
+ 
+ /// An entry in the player profile cache, keyed by player UUID.
+@@ -420,90 +502,169 @@ impl Credentials {
+         self.refresh_token.starts_with(ELY_REFRESH_TOKEN_PREFIX)
+     }
+ 
+-    /// The client token Ely.by issued with the access token, if this is an
+-    /// Ely.by account.
+-    fn ely_client_token(&self) -> Option<&str> {
+-        self.refresh_token.strip_prefix(ELY_REFRESH_TOKEN_PREFIX)
++    /// The Yggdrasil server this account is on, unless it is a Microsoft or
++    /// offline account.
++    pub fn auth_server(&self) -> Option<AuthServer> {
++        self.yggdrasil().map(|(server, _)| server)
+     }
+ 
+-    /// Signs in to Ely.by with an account name or email and a password.
++    /// The account's server and the client token it issued.
++    fn yggdrasil(&self) -> Option<(AuthServer, String)> {
++        if let Some(client_token) =
++            self.refresh_token.strip_prefix(ELY_REFRESH_TOKEN_PREFIX)
++        {
++            return Some((AuthServer::Ely, client_token.to_owned()));
++        }
++
++        let (root, client_token) = self
++            .refresh_token
++            .strip_prefix(AUTHLIB_REFRESH_TOKEN_PREFIX)?
++            .split_once(' ')?;
++
++        Some((
++            AuthServer::Authlib(root.to_owned()),
++            client_token.to_owned(),
++        ))
++    }
++
++    /// Signs in to a Yggdrasil server with an account name or email and a
++    /// password, as the player with the id `profile` if the account has
++    /// several.
+     ///
+     /// Ely.by accounts with two-factor authentication expect the current code
+     /// appended to the password with a colon, which is Ely.by's own convention
+     /// and is passed straight through.
+-    pub async fn ely(username: &str, password: &str) -> crate::Result<Self> {
+-        let client_token = Uuid::new_v4().to_string();
++    pub async fn yggdrasil_sign_in(
++        server: AuthServer,
++        username: &str,
++        password: &str,
++        profile: Option<&str>,
++    ) -> crate::Result<YggdrasilSignIn> {
++        let unreachable = |error: reqwest::Error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not reach {}: {error}",
++                server.name()
++            ))
++        };
+ 
+-        let response = INSECURE_REQWEST_CLIENT
+-            .post(format!("{ELY_AUTHSERVER}/auth/authenticate"))
+-            .json(&json!({
+-                "username": username,
+-                "password": password,
+-                "clientToken": client_token,
+-                "requestUser": false,
+-                "agent": { "name": "Minecraft", "version": 1 },
+-            }))
+-            .send()
++        let response = server
++            .post(
++                "authenticate",
++                json!({
++                    "username": username,
++                    "password": password,
++                    "clientToken": Uuid::new_v4().to_string(),
++                    "requestUser": false,
++                    "agent": { "name": "Minecraft", "version": 1 },
++                }),
++            )
+             .await
+-            .map_err(|error| {
+-                crate::ErrorKind::OtherError(format!(
+-                    "Could not reach Ely.by: {error}"
+-                ))
+-            })?;
++            .map_err(unreachable)?;
+ 
+         if !response.status().is_success() {
+-            return Err(ely_error(response).await);
++            return Err(server.error(response).await);
+         }
+ 
+-        let auth = response.json::<ElyAuthResponse>().await?;
++        let mut auth = response.json::<YggdrasilAuthResponse>().await?;
++
++        // An account with several players signs in as none of them, and the
++        // token is bound to one by renewing it with that player.
++        let player = match auth.selected_profile.take() {
++            Some(player) => player,
++            None => {
++                let players = std::mem::take(&mut auth.available_profiles);
++                let player = match profile {
++                    _ if players.is_empty() => {
++                        return Err(crate::ErrorKind::OtherError(format!(
++                            "This account has no player on {} yet. Create one there first.",
++                            server.name()
++                        ))
++                        .into());
++                    }
++                    Some(id) => {
++                        players.into_iter().find(|player| player.id == id)
++                    }
++                    None if players.len() == 1 => players.into_iter().next(),
++                    None => {
++                        return Ok(YggdrasilSignIn::ChooseProfile {
++                            profiles: players,
++                        });
++                    }
++                }
++                .ok_or_else(|| {
++                    crate::ErrorKind::OtherError(
++                        "That player is not on this account.".to_owned(),
++                    )
++                })?;
++
++                let response = server
++                    .post(
++                        "refresh",
++                        json!({
++                            "accessToken": auth.access_token,
++                            "clientToken": auth.client_token,
++                            "requestUser": false,
++                            "selectedProfile": &player,
++                        }),
++                    )
++                    .await
++                    .map_err(unreachable)?;
++
++                if !response.status().is_success() {
++                    return Err(server.error(response).await);
++                }
+ 
+-        Ok(Self {
+-            offline_profile: MinecraftProfile {
+-                id: parse_ely_uuid(&auth.selected_profile.id)?,
+-                name: auth.selected_profile.name,
+-                ..MinecraftProfile::default()
++                auth = response.json::<YggdrasilAuthResponse>().await?;
++                auth.selected_profile.take().unwrap_or(player)
++            }
++        };
++
++        Ok(YggdrasilSignIn::SignedIn {
++            credentials: Self {
++                offline_profile: server.profile(player)?,
++                access_token: auth.access_token,
++                refresh_token: server.refresh_token(&auth.client_token),
++                // Yggdrasil servers do not say when a token expires. The
++                // expiry column is used as "check again after" instead, so the
++                // launcher asks the server about the token a few times a day
++                // rather than on every read of the account list.
++                expires: Utc::now() + Duration::hours(6),
++                active: true,
+             },
+-            access_token: auth.access_token,
+-            refresh_token: format!(
+-                "{ELY_REFRESH_TOKEN_PREFIX}{}",
+-                auth.client_token
+-            ),
+-            // Ely.by does not say when its token expires. The expiry column is
+-            // used as "check again after" instead, so the launcher asks Ely.by
+-            // about the token a few times a day rather than on every read of
+-            // the account list.
+-            expires: Utc::now() + Duration::hours(6),
+-            active: true,
+         })
+     }
+ 
+-    /// Renews an Ely.by token pair, returning whether it is now usable.
++    /// Renews a Yggdrasil token pair, returning whether it is now usable.
+     ///
+-    /// Ely.by refuses a pair that has been invalidated elsewhere - signing in
+-    /// from another launcher does that - and there is no way back from it
+-    /// without the password, so the caller is told rather than the launch
+-    /// failing on its own later.
+-    async fn refresh_ely(&mut self) -> crate::Result<bool> {
+-        let Some(client_token) = self.ely_client_token() else {
+-            return Ok(false);
+-        };
+-
+-        let response = INSECURE_REQWEST_CLIENT
+-            .post(format!("{ELY_AUTHSERVER}/auth/refresh"))
+-            .json(&json!({
+-                "accessToken": &self.access_token,
+-                "clientToken": client_token,
+-                "requestUser": false,
+-            }))
+-            .send()
++    /// A server refuses a pair that has been invalidated elsewhere - signing
++    /// in from another launcher does that on Ely.by - and there is no way back
++    /// from it without the password, so the caller is told rather than the
++    /// launch failing on its own later.
++    async fn refresh_yggdrasil(
++        &mut self,
++        server: &AuthServer,
++        client_token: &str,
++    ) -> crate::Result<bool> {
++        let response = server
++            .post(
++                "refresh",
++                json!({
++                    "accessToken": &self.access_token,
++                    "clientToken": client_token,
++                    "requestUser": false,
++                }),
++            )
+             .await;
+ 
+         let response = match response {
+             Ok(response) => response,
+-            // Ely.by being unreachable says nothing about the token. Leave it
+-            // alone: an offline launch with a still-valid token works.
++            // The server being unreachable says nothing about the token. Leave
++            // it alone: an offline launch with a still-valid token works.
+             Err(error) => {
+-                tracing::warn!("Could not reach Ely.by to refresh: {error}");
++                tracing::warn!(
++                    "Could not reach {} to refresh: {error}",
++                    server.name()
++                );
+                 return Ok(true);
+             }
+         };
+@@ -516,30 +677,26 @@ impl Credentials {
+             return Ok(false);
+         }
+ 
+-        let auth = response.json::<ElyAuthResponse>().await?;
++        let auth = response.json::<YggdrasilAuthResponse>().await?;
+         self.access_token = auth.access_token;
+-        self.refresh_token =
+-            format!("{ELY_REFRESH_TOKEN_PREFIX}{}", auth.client_token);
+-        self.offline_profile = MinecraftProfile {
+-            id: parse_ely_uuid(&auth.selected_profile.id)?,
+-            name: auth.selected_profile.name,
+-            ..MinecraftProfile::default()
+-        };
++        self.refresh_token = server.refresh_token(&auth.client_token);
++        // The player stays bound to the token, and not every server repeats it.
++        if let Some(player) = auth.selected_profile {
++            self.offline_profile = server.profile(player)?;
++        }
+ 
+         Ok(true)
+     }
+ 
+-    /// Whether Ely.by still accepts this account's access token.
+-    async fn ely_token_is_valid(&self) -> bool {
+-        let response = INSECURE_REQWEST_CLIENT
+-            .post(format!("{ELY_AUTHSERVER}/auth/validate"))
+-            .json(&json!({ "accessToken": &self.access_token }))
+-            .send()
++    /// Whether the server still accepts this account's access token.
++    async fn yggdrasil_token_is_valid(&self, server: &AuthServer) -> bool {
++        let response = server
++            .post("validate", json!({ "accessToken": &self.access_token }))
+             .await;
+ 
+         match response {
+             Ok(response) => response.status().is_success(),
+-            // Unreachable is not invalid; see `refresh_ely`.
++            // Unreachable is not invalid; see `refresh_yggdrasil`.
+             Err(_) => true,
+         }
+     }
+@@ -563,14 +720,16 @@ impl Credentials {
+             return Ok(());
+         }
+ 
+-        // Ely.by issues its own tokens and renews them at its own endpoint,
+-        // so Microsoft is not involved at any point below.
+-        if self.is_ely() {
+-            if !self.ely_token_is_valid().await && !self.refresh_ely().await? {
+-                return Err(crate::ErrorKind::OtherError(
+-                    "Ely.by no longer accepts this account's session. Sign in again."
+-                        .to_string(),
+-                )
++        // Yggdrasil servers issue their own tokens and renew them at their own
++        // endpoints, so Microsoft is not involved at any point below.
++        if let Some((server, client_token)) = self.yggdrasil() {
++            if !self.yggdrasil_token_is_valid(&server).await
++                && !self.refresh_yggdrasil(&server, &client_token).await?
++            {
++                return Err(crate::ErrorKind::OtherError(format!(
++                    "{} no longer accepts this account's session. Sign in again.",
++                    server.name()
++                ))
+                 .into());
+             }
+ 
+@@ -652,10 +811,10 @@ impl Credentials {
+         &self,
+         cache_intent: OnlineProfileCacheIntent,
+     ) -> Option<Arc<MinecraftProfile>> {
+-        // Neither offline nor Ely.by accounts have a Mojang profile, so skip
++        // Neither offline nor Yggdrasil accounts have a Mojang profile, so skip
+         // the request that would only ever fail and fall back to the profile
+         // recorded locally, which already holds the right id and name.
+-        if self.is_offline() || self.is_ely() {
++        if self.is_offline() || self.yggdrasil().is_some() {
+             return None;
+         }
+ 
+@@ -990,7 +1149,7 @@ impl Serialize for Credentials {
+                 ),
+         };
+ 
+-        let mut ser = serializer.serialize_struct("Credentials", 6)?;
++        let mut ser = serializer.serialize_struct("Credentials", 8)?;
+         ser.serialize_field("profile", &*profile)?;
+         ser.serialize_field("access_token", &self.access_token)?;
+         ser.serialize_field("refresh_token", &self.refresh_token)?;
+@@ -998,6 +1157,11 @@ impl Serialize for Credentials {
+         ser.serialize_field("active", &self.active)?;
+         // So the skin page can manage an Ely.by account's skins on Ely.by.
+         ser.serialize_field("ely", &self.is_ely())?;
++        // So accounts on other servers can be told apart.
++        ser.serialize_field(
++            "auth_server",
++            &self.auth_server().map(|server| server.name()),
++        )?;
+         ser.end()
+     }
+ }
+diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
+index dc099f9..709e6d0 100644
+--- a/packages/app-lib/src/util/authlib_injector.rs
++++ b/packages/app-lib/src/util/authlib_injector.rs
+@@ -1,16 +1,133 @@
+-//! Downloads and caches the authlib-injector Java agent.
++//! The authlib-injector Java agent, and the servers it works with.
+ //!
+-//! Minecraft asks Mojang who a player is. An Ely.by account is not a Mojang
+-//! account, so the game has to be told to ask Ely.by instead, and there is no
+-//! switch for that: authlib-injector is a Java agent that rewrites the calls
+-//! on the way out. Without it an Ely.by account cannot start the game at all.
++//! Minecraft asks Mojang who a player is. An account on Ely.by or another
++//! Yggdrasil server is not a Mojang account, so the game has to be told to ask
++//! that server instead, and there is no switch for that: authlib-injector is a
++//! Java agent that rewrites the calls on the way out. Without it such an
++//! account cannot start the game at all.
+ 
+ use std::path::PathBuf;
+ 
++use reqwest::Response;
++use reqwest::header::ACCEPT;
++use serde::{Deserialize, Serialize};
++use url::Url;
++
+ use crate::state::DirectoryInfo;
+-use crate::util::fetch::REQWEST_CLIENT;
++use crate::util::fetch::{INSECURE_REQWEST_CLIENT, REQWEST_CLIENT};
+ use crate::util::io;
+ 
++/// An authlib-injector server, as its own metadata describes it.
++#[derive(Serialize, Debug, Clone)]
++pub struct AuthlibServer {
++    /// Where the Yggdrasil endpoints are, without a trailing slash.
++    pub api_root: String,
++    pub name: String,
++    /// The server software, such as `Drasl`.
++    pub implementation: Option<String>,
++    pub homepage: Option<String>,
++    pub register: Option<String>,
++}
++
++#[derive(Deserialize)]
++struct Metadata {
++    meta: Meta,
++    // Every server has one, and asking for it tells the metadata apart from
++    // any other JSON.
++    #[serde(rename = "signaturePublickey")]
++    _signature_public_key: String,
++}
++
++#[derive(Deserialize)]
++struct Meta {
++    #[serde(rename = "serverName")]
++    server_name: Option<String>,
++    #[serde(rename = "implementationName")]
++    implementation_name: Option<String>,
++    #[serde(default)]
++    links: Links,
++}
++
++#[derive(Deserialize, Default)]
++struct Links {
++    homepage: Option<String>,
++    register: Option<String>,
++}
++
++/// Finds the server behind an address a player typed in.
++///
++/// That is usually the server's website, which names the API root in the
++/// `X-Authlib-Injector-API-Location` header, the way authlib-injector itself
++/// finds it. An address without a scheme is taken to be https; plain http is
++/// allowed for servers on the local network.
++pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
++    let address = address.trim();
++    let url = if address.contains("://") {
++        address.to_owned()
++    } else {
++        format!("https://{address}")
++    };
++    let url = Url::parse(&url)
++        .ok()
++        .filter(|url| {
++            matches!(url.scheme(), "http" | "https") && url.host_str().is_some()
++        })
++        .ok_or_else(|| {
++            crate::ErrorKind::InputError(format!(
++                "\"{address}\" is not a server address"
++            ))
++        })?;
++
++    async fn get(url: &Url) -> crate::Result<Response> {
++        INSECURE_REQWEST_CLIENT
++            .get(url.clone())
++            .header(ACCEPT, "application/json")
++            .send()
++            .await
++            .map_err(|error| {
++                crate::ErrorKind::OtherError(format!(
++                    "Could not reach {}: {error}",
++                    url.host_str().unwrap_or_default()
++                ))
++                .as_error()
++            })
++    }
++
++    let response = get(&url).await?;
++    let location = response
++        .headers()
++        .get("x-authlib-injector-api-location")
++        .and_then(|location| location.to_str().ok())
++        .and_then(|location| url.join(location).ok());
++
++    let (api_root, response) = match location {
++        Some(root) if root != url => {
++            let response = get(&root).await?;
++            (root, response)
++        }
++        _ => (url, response),
++    };
++
++    let host = api_root.host_str().unwrap_or_default().to_owned();
++    let metadata = response.json::<Metadata>().await.map_err(|_| {
++        crate::ErrorKind::OtherError(format!(
++            "{host} is not a supported account server"
++        ))
++    })?;
++
++    Ok(AuthlibServer {
++        api_root: api_root.as_str().trim_end_matches('/').to_owned(),
++        name: metadata
++            .meta
++            .server_name
++            .filter(|name| !name.trim().is_empty())
++            .unwrap_or(host),
++        implementation: metadata.meta.implementation_name,
++        homepage: metadata.meta.links.homepage,
++        register: metadata.meta.links.register,
++    })
++}
++
+ /// The agent's own distribution metadata.
+ const LATEST_URL: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";
+ 
+@@ -22,8 +139,7 @@ struct LatestArtifact {
+ /// Returns the path to the agent jar, downloading it once if it is not cached.
+ ///
+ /// The cached copy is reused as it is. The agent is not tied to a game or
+-/// launcher version, so there is nothing to keep up to date, and reusing it
+-/// means an Ely.by account still launches with no network at all.
++/// launcher version, so there is nothing to keep up to date.
+ pub async fn get_authlib_injector(
+     directories: &DirectoryInfo,
+ ) -> crate::Result<PathBuf> {
+@@ -35,7 +151,7 @@ pub async fn get_authlib_injector(
+         return Ok(jar);
+     }
+ 
+-    tracing::info!("Downloading authlib-injector for an Ely.by launch");
++    tracing::info!("Downloading authlib-injector");
+ 
+     let latest = REQWEST_CLIENT
+         .get(LATEST_URL)
