@@ -104,16 +104,20 @@ log "Clearing $ARTIFACTS"
 rm -rf "$ARTIFACTS"
 mkdir -p "$ARTIFACTS"
 
-log "Building for $platform"
-(cd "$WORKTREE" && pnpm --filter=@modrinth/app run tauri build "${tauri_args[@]}")
-
-log "Collecting bundles into $ARTIFACTS"
-
 if [ "$platform" = macos ]; then
 	bundle_dir="$WORKTREE/target/universal-apple-darwin/release/bundle"
 else
 	bundle_dir="$WORKTREE/target/release/bundle"
 fi
+
+# Tauri leaves earlier bundles, and their signatures, where they were. A build
+# without the key would otherwise ship an older build's signatures.
+rm -rf "$bundle_dir"
+
+log "Building for $platform"
+(cd "$WORKTREE" && pnpm --filter=@modrinth/app run tauri build "${tauri_args[@]}")
+
+log "Collecting bundles into $ARTIFACTS"
 
 found=0
 while IFS= read -r -d '' artifact; do
