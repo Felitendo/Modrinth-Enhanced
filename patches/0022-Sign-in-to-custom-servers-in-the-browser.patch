@@ -1,0 +1,1069 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Thu, 17 Sep 2026 15:21:24 +0200
+Subject: [PATCH] Sign in to custom servers in the browser
+
+Sending a password to the auth server leaves no room for two-factor
+authentication, and players who signed up with another service have no
+password at all. Yggdrasil Connect is the answer LittleSkin and Blessing
+Skin with Janus give: OAuth's device flow on the server's own page.
+
+A server that offers it, per the `feature.openid_configuration_url` in
+its metadata, gets "Sign in in the browser" above the password fields.
+The page opens in the player's browser with the code filled in, the
+launcher asks the server as often as it allows whether the player is
+done, and the account is added with the player picked on that page. Its
+access token is renewed with the refresh token when it runs out.
+
+Using it takes a client id: the one the server shares, or one this
+launcher has registered with that server. LittleSkin shares none, and
+no app is registered there yet, so the table of them is empty and such
+a server keeps the password form alone.
+
+A Connect account is a row in `minecraft_users` like the others, its
+session in the refresh token column as JSON behind a marker.
+---
+ .../src/components/ui/AuthlibAccountModal.vue | 179 +++++++-
+ apps/app-frontend/src/helpers/auth.js         |  23 +-
+ apps/app/build.rs                             |   2 +
+ apps/app/src/api/auth.rs                      |  49 +++
+ packages/app-lib/src/api/minecraft_auth.rs    |  47 +-
+ packages/app-lib/src/state/minecraft_auth.rs  | 402 +++++++++++++++++-
+ packages/app-lib/src/util/authlib_injector.rs |  94 ++++
+ 7 files changed, 782 insertions(+), 14 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
+index 4aab3f9..b67b2c7 100644
+--- a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
++++ b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
+@@ -1,5 +1,11 @@
+ <template>
+-	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
++	<NewModal
++		ref="modal"
++		:header="formatMessage(messages.header)"
++		max-width="480px"
++		width="100%"
++		:on-hide="stopBrowser"
++	>
+ 		<div class="flex flex-col gap-4">
+ 			<p class="m-0 leading-tight text-secondary">
+ 				{{ formatMessage(messages.description) }}
+@@ -40,6 +46,52 @@
+ 					</p>
+ 				</div>
+ 
++				<div v-if="server?.connect" class="flex flex-col gap-2">
++					<Button
++						type="colored"
++						color="brand"
++						native-type="button"
++						:disabled="browserStarting"
++						@click="startBrowserSignIn"
++					>
++						<SpinnerIcon v-if="browserStarting" aria-hidden="true" class="animate-spin" />
++						<ExternalIcon v-else aria-hidden="true" />
++						{{ formatMessage(browser ? messages.browserAgain : messages.browserSignIn) }}
++					</Button>
++					<p v-if="!browser" class="m-0 text-sm leading-tight text-secondary">
++						{{ formatMessage(messages.browserHint, { server: server.name }) }}
++					</p>
++					<div
++						v-if="browser"
++						class="flex flex-col items-center gap-1 rounded-2xl bg-surface-2 px-4 py-3"
++					>
++						<span class="text-sm text-secondary">{{ formatMessage(messages.codeLabel) }}</span>
++						<div class="flex items-center gap-2">
++							<span class="select-all font-mono text-2xl font-bold tracking-widest text-contrast">
++								{{ browser.user_code }}
++							</span>
++							<IconButton
++								v-tooltip="formatMessage(messages.copyCode)"
++								type="quiet"
++								size="sm"
++								:label="formatMessage(messages.copyCode)"
++								@click="copyCode"
++							>
++								<CheckIcon v-if="copied" />
++								<CopyIcon v-else />
++							</IconButton>
++						</div>
++						<span class="flex items-center gap-2 text-sm text-secondary">
++							<SpinnerIcon aria-hidden="true" class="animate-spin" />
++							{{ formatMessage(messages.waiting) }}
++						</span>
++					</div>
++					<p v-if="browserError" class="m-0 text-sm leading-tight text-red">{{ browserError }}</p>
++					<span class="pt-2 text-sm font-semibold text-secondary">
++						{{ formatMessage(messages.orPassword) }}
++					</span>
++				</div>
++
+ 				<div class="flex flex-col gap-2">
+ 					<label class="font-semibold text-contrast" for="authlib-account-username">
+ 						{{ formatMessage(messages.usernameLabel) }}
+@@ -126,6 +178,8 @@
+ <script setup lang="ts">
+ import {
+ 	CheckIcon,
++	CopyIcon,
++	ExternalIcon,
+ 	GlobeIcon,
+ 	KeyIcon,
+ 	LogInIcon,
+@@ -138,13 +192,20 @@ import {
+ 	Chips,
+ 	commonMessages,
+ 	defineMessages,
++	IconButton,
+ 	Input,
+ 	NewModal,
+ 	useVIntl,
+ } from '@modrinth/ui'
++import { openUrl } from '@tauri-apps/plugin-opener'
+ import { nextTick, ref, watch } from 'vue'
+ 
+-import { authlib_server, login_authlib } from '@/helpers/auth'
++import {
++	authlib_server,
++	login_authlib,
++	login_authlib_connect_begin,
++	login_authlib_connect_poll,
++} from '@/helpers/auth'
+ 
+ type Server = {
+ 	api_root: string
+@@ -152,8 +213,16 @@ type Server = {
+ 	implementation?: string
+ 	homepage?: string
+ 	register?: string
++	/** Yggdrasil Connect, for signing in on the server's own page. */
++	connect?: object | null
+ }
+ type Profile = { id: string; name: string }
++type DeviceCode = {
++	device_code: string
++	user_code: string
++	verification_uri: string
++	verification_uri_complete?: string | null
++}
+ 
+ const { formatMessage } = useVIntl()
+ 
+@@ -171,7 +240,15 @@ const profiles = ref<Profile[]>([])
+ const profile = ref<Profile | null>(null)
+ const error = ref('')
+ const submitting = ref(false)
++const browser = ref<DeviceCode | null>(null)
++const browserStarting = ref(false)
++const browserError = ref('')
++const copied = ref(false)
+ let lookup = 0
++// Bumped whenever a browser sign-in starts over or is given up on, so that a
++// poll from before does not carry on.
++let browserAttempt = 0
++let pollTimeout: ReturnType<typeof setTimeout> | undefined
+ 
+ function message(e: unknown) {
+ 	return typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
+@@ -187,6 +264,8 @@ watch(address, () => {
+ 	lookup++
+ 	server.value = null
+ 	serverError.value = ''
++	stopBrowser()
++	browserError.value = ''
+ })
+ 
+ function show(event?: MouseEvent) {
+@@ -199,6 +278,8 @@ function show(event?: MouseEvent) {
+ 	profile.value = null
+ 	error.value = ''
+ 	submitting.value = false
++	stopBrowser()
++	browserError.value = ''
+ 	modal.value?.show(event)
+ 	void nextTick(() => {
+ 		document.getElementById('authlib-account-server')?.focus()
+@@ -219,6 +300,72 @@ async function lookUpServer() {
+ 	}
+ }
+ 
++function stopBrowser() {
++	browserAttempt++
++	clearTimeout(pollTimeout)
++	browser.value = null
++	browserStarting.value = false
++	copied.value = false
++}
++
++/**
++ * Signs in on the server's own page, in the player's browser. Asking again
++ * while one is open just shows the page again.
++ */
++async function startBrowserSignIn() {
++	if (browser.value) {
++		void openUrl(browser.value.verification_uri_complete ?? browser.value.verification_uri)
++		return
++	}
++
++	stopBrowser()
++	const current = browserAttempt
++	browserError.value = ''
++	browserStarting.value = true
++
++	try {
++		const started = (await login_authlib_connect_begin(address.value.trim())) as DeviceCode
++		if (current !== browserAttempt) return
++		browser.value = started
++		schedulePoll(current, started)
++	} catch (e) {
++		if (current === browserAttempt) browserError.value = message(e)
++	} finally {
++		if (current === browserAttempt) browserStarting.value = false
++	}
++}
++
++// The launcher only asks the server as often as the server allows.
++function schedulePoll(current: number, started: DeviceCode) {
++	pollTimeout = setTimeout(() => void poll(current, started), 2000)
++}
++
++async function poll(current: number, started: DeviceCode) {
++	try {
++		const account = await login_authlib_connect_poll(started.device_code)
++		if (account) {
++			// The account exists now, so it is announced even if the dialog was
++			// closed in the meantime.
++			if (current === browserAttempt) modal.value?.hide()
++			emit('created', account)
++		} else if (current === browserAttempt) {
++			schedulePoll(current, started)
++		}
++	} catch (e) {
++		if (current === browserAttempt) {
++			stopBrowser()
++			browserError.value = message(e)
++		}
++	}
++}
++
++async function copyCode() {
++	if (!browser.value) return
++	await navigator.clipboard.writeText(browser.value.user_code)
++	copied.value = true
++	setTimeout(() => (copied.value = false), 1500)
++}
++
+ async function submit() {
+ 	if (submitting.value) return
+ 
+@@ -282,6 +429,34 @@ const messages = defineMessages({
+ 		id: 'app.authlib-account.password-label',
+ 		defaultMessage: 'Password',
+ 	},
++	browserSignIn: {
++		id: 'app.authlib-account.browser-sign-in',
++		defaultMessage: 'Sign in in the browser',
++	},
++	browserAgain: {
++		id: 'app.authlib-account.browser-again',
++		defaultMessage: 'Open the browser again',
++	},
++	browserHint: {
++		id: 'app.authlib-account.browser-hint',
++		defaultMessage: "On {server}'s own page, two-factor authentication included.",
++	},
++	codeLabel: {
++		id: 'app.authlib-account.code-label',
++		defaultMessage: 'If the page asks for a code, enter',
++	},
++	copyCode: {
++		id: 'app.authlib-account.copy-code',
++		defaultMessage: 'Copy code',
++	},
++	waiting: {
++		id: 'app.authlib-account.waiting',
++		defaultMessage: 'Waiting for you to sign in…',
++	},
++	orPassword: {
++		id: 'app.authlib-account.or-password',
++		defaultMessage: 'Or with a password',
++	},
+ 	draslTokenHint: {
+ 		id: 'app.authlib-account.drasl-token-hint',
+ 		defaultMessage:
+diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
+index f4d24a1..f93f4e9 100644
+--- a/apps/app-frontend/src/helpers/auth.js
++++ b/apps/app-frontend/src/helpers/auth.js
+@@ -89,7 +89,7 @@ export async function login_ely(username, password) {
+  * address of its website or API.
+  *
+  * @param {string} address
+- * @returns {Promise<{api_root: string, name: string, implementation?: string, homepage?: string, register?: string}>}
++ * @returns {Promise<{api_root: string, name: string, implementation?: string, homepage?: string, register?: string, connect?: object}>}
+  */
+ export async function authlib_server(address) {
+ 	return await invoke('plugin:auth|authlib_server', { address })
+@@ -110,6 +110,27 @@ export async function login_authlib(server, username, password, profile) {
+ 	return await invoke('plugin:auth|login_authlib', { server, username, password, profile })
+ }
+ 
++/**
++ * Starts signing in to an authlib-injector server on its own page, where it offers
++ * Yggdrasil Connect, and opens that page in the player's browser.
++ *
++ * @param {string} server Address of the server's website or API
++ * @returns {Promise<object>} the code, to show and to poll {@link login_authlib_connect_poll} with
++ */
++export async function login_authlib_connect_begin(server) {
++	return await invoke('plugin:auth|login_authlib_connect_begin', { server })
++}
++
++/**
++ * Checks on a sign-in started with {@link login_authlib_connect_begin}.
++ *
++ * @param {string} deviceCode the `device_code` from {@link login_authlib_connect_begin}
++ * @returns {Promise<Credential | null>} the new account, or null while the player is still signing in
++ */
++export async function login_authlib_connect_poll(deviceCode) {
++	return await invoke('plugin:auth|login_authlib_connect_poll', { deviceCode })
++}
++
+ /**
+  * Retrieves the default user
+  * @return {Promise<UUID | undefined>}
+diff --git a/apps/app/build.rs b/apps/app/build.rs
+index 94f7a8e..507ad2f 100644
+--- a/apps/app/build.rs
++++ b/apps/app/build.rs
+@@ -20,6 +20,8 @@ fn main() {
+                         "login_ely",
+                         "authlib_server",
+                         "login_authlib",
++                        "login_authlib_connect_begin",
++                        "login_authlib_connect_poll",
+                         "remove_user",
+                         "get_default_user",
+                         "set_default_user",
+diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
+index c856d40..fc08b8b 100644
+--- a/apps/app/src/api/auth.rs
++++ b/apps/app/src/api/auth.rs
+@@ -16,6 +16,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+             login_ely,
+             authlib_server,
+             login_authlib,
++            login_authlib_connect_begin,
++            login_authlib_connect_poll,
+             remove_user,
+             get_default_user,
+             set_default_user,
+@@ -194,6 +196,53 @@ pub async fn login_authlib(
+     .await?)
+ }
+ 
++/// Starts signing in to an authlib-injector server on its own page, in the
++/// player's browser.
++#[tauri::command]
++pub async fn login_authlib_connect_begin<R: Runtime>(
++    app: tauri::AppHandle<R>,
++    server: String,
++) -> Result<minecraft_auth::ConnectDeviceCode> {
++    let code = minecraft_auth::begin_authlib_connect(&server).await?;
++    let page = code
++        .verification_uri_complete
++        .as_deref()
++        .unwrap_or(&code.verification_uri);
++
++    app.opener()
++        .open_url(page, None::<String>)
++        .map_err(|error| {
++            theseus::ErrorKind::OtherError(format!(
++                "Could not open a browser to sign in with: {error}"
++            ))
++            .as_error()
++        })?;
++
++    Ok(code)
++}
++
++/// Checks on a sign-in started with [`login_authlib_connect_begin`], and
++/// brings the launcher back to the front once it is done.
++#[tauri::command]
++pub async fn login_authlib_connect_poll<R: Runtime>(
++    app: tauri::AppHandle<R>,
++    device_code: String,
++) -> Result<Option<Credentials>> {
++    let credentials =
++        minecraft_auth::poll_authlib_connect(&device_code).await?;
++
++    if credentials.is_some()
++        && let Some(window) = app.get_webview_window("main")
++    {
++        let _ = window.unminimize();
++        let _ = window.set_focus();
++        let _ = window
++            .request_user_attention(Some(UserAttentionType::Informational));
++    }
++
++    Ok(credentials)
++}
++
+ #[tauri::command]
+ pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
+     Ok(minecraft_auth::remove_user(user).await?)
+diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
+index fe95027..5c29113 100644
+--- a/packages/app-lib/src/api/minecraft_auth.rs
++++ b/packages/app-lib/src/api/minecraft_auth.rs
+@@ -7,7 +7,7 @@ use crate::state::{AuthServer, Credentials, MinecraftLoginFlow};
+ use crate::util::authlib_injector;
+ use crate::util::fetch::INSECURE_REQWEST_CLIENT;
+ 
+-pub use crate::state::{YggdrasilProfile, YggdrasilSignIn};
++pub use crate::state::{ConnectDeviceCode, YggdrasilProfile, YggdrasilSignIn};
+ pub use crate::util::authlib_injector::AuthlibServer;
+ 
+ #[tracing::instrument]
+@@ -170,6 +170,51 @@ pub async fn login_authlib(
+     .await
+ }
+ 
++/// Starts signing in to an authlib-injector server on its own page, in the
++/// player's browser, where the server offers Yggdrasil Connect.
++#[tracing::instrument]
++pub async fn begin_authlib_connect(
++    server: &str,
++) -> crate::Result<ConnectDeviceCode> {
++    let server = authlib_injector::resolve_server(server).await?;
++    let Some(config) = server.connect else {
++        return Err(crate::ErrorKind::OtherError(format!(
++            "{} has no sign-in in the browser",
++            server.name
++        ))
++        .into());
++    };
++
++    crate::state::connect_device_begin(server.api_root, config).await
++}
++
++/// Checks on a sign-in started with [`begin_authlib_connect`]: `None` until
++/// the player has finished it in the browser, after which the account is the
++/// active one.
++#[tracing::instrument(skip(device_code))]
++pub async fn poll_authlib_connect(
++    device_code: &str,
++) -> crate::Result<Option<Credentials>> {
++    let Some(credentials) =
++        crate::state::connect_device_poll(device_code).await?
++    else {
++        return Ok(None);
++    };
++
++    let state = State::get().await?;
++    credentials.upsert(&state.pool).await?;
++
++    if let Err(error) =
++        crate::onboarding_checklist::mark_logged_into_minecraft().await
++    {
++        tracing::warn!(
++            "Failed to mark Minecraft login in onboarding checklist: {error}"
++        );
++    }
++
++    Ok(Some(credentials))
++}
++
+ async fn sign_in(
+     server: AuthServer,
+     username: &str,
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index b916a6d..e9fa853 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -1,5 +1,6 @@
+ use crate::ErrorKind;
+-use crate::util::fetch::INSECURE_REQWEST_CLIENT;
++use crate::util::authlib_injector::ConnectConfig;
++use crate::util::fetch::{INSECURE_REQWEST_CLIENT, REQWEST_CLIENT};
+ use base64::Engine;
+ use base64::prelude::{BASE64_STANDARD, BASE64_URL_SAFE_NO_PAD};
+ use chrono::{DateTime, Duration, TimeZone, Utc};
+@@ -287,6 +288,306 @@ const ELY_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:ely:";
+ /// holds a bare space, so the two always split apart again.
+ const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
+ 
++/// Marker stored in front of an account signed in with Yggdrasil Connect,
++/// followed by its [`ConnectSession`] as JSON: its OAuth refresh token may hold
++/// any character.
++const CONNECT_REFRESH_TOKEN_PREFIX: &str =
++    "modrinth-enhanced:yggdrasil-connect:";
++
++/// What renews an account signed in with Yggdrasil Connect.
++#[derive(Serialize, Deserialize)]
++struct ConnectSession {
++    api_root: String,
++    client_id: String,
++    token_endpoint: String,
++    refresh_token: Option<String>,
++}
++
++impl ConnectSession {
++    fn to_column(&self) -> String {
++        format!(
++            "{CONNECT_REFRESH_TOKEN_PREFIX}{}",
++            serde_json::to_string(self).unwrap_or_default()
++        )
++    }
++}
++
++/// How an account on a Yggdrasil server keeps its session.
++enum YggdrasilSession {
++    /// Signed in with a password, renewed with the client token issued then.
++    Password(String),
++    Connect(ConnectSession),
++}
++
++#[derive(Deserialize)]
++struct OAuthTokens {
++    access_token: String,
++    refresh_token: Option<String>,
++    expires_in: Option<i64>,
++}
++
++#[derive(Deserialize, Default)]
++struct OAuthError {
++    #[serde(default)]
++    error: String,
++    error_description: Option<String>,
++}
++
++/// A Yggdrasil Connect sign-in waiting for the player to finish it in the
++/// browser.
++#[derive(Serialize, Debug, Clone)]
++pub struct ConnectDeviceCode {
++    pub device_code: String,
++    pub user_code: String,
++    pub verification_uri: String,
++    pub verification_uri_complete: Option<String>,
++    pub expires_in: u64,
++}
++
++struct PendingConnect {
++    device_code: String,
++    api_root: String,
++    config: ConnectConfig,
++    interval: std::time::Duration,
++    next_poll: Instant,
++}
++
++/// Sign-ins started with [`connect_device_begin`] and not finished yet.
++static PENDING_CONNECT: Mutex<Vec<PendingConnect>> =
++    Mutex::const_new(Vec::new());
++
++/// Starts a Yggdrasil Connect sign-in: the player confirms it on the server's
++/// own page, which is where its two-factor authentication happens as well.
++pub async fn connect_device_begin(
++    api_root: String,
++    config: ConnectConfig,
++) -> crate::Result<ConnectDeviceCode> {
++    #[derive(Deserialize)]
++    struct DeviceAuthorization {
++        device_code: String,
++        user_code: String,
++        verification_uri: String,
++        verification_uri_complete: Option<String>,
++        expires_in: u64,
++        interval: Option<u64>,
++    }
++
++    let server = AuthServer::Authlib(api_root.clone());
++    let response = REQWEST_CLIENT
++        .post(&config.device_authorization_endpoint)
++        .form(&[
++            ("client_id", config.client_id.as_str()),
++            ("scope", config.scope.as_str()),
++        ])
++        .send()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not reach {}: {error}",
++                server.name()
++            ))
++        })?;
++
++    if !response.status().is_success() {
++        return Err(connect_error(&server, response).await);
++    }
++
++    let device = response.json::<DeviceAuthorization>().await?;
++    let pages = [
++        Some(&device.verification_uri),
++        device.verification_uri_complete.as_ref(),
++    ];
++    if pages
++        .iter()
++        .flatten()
++        .any(|page| !page.starts_with("https://"))
++    {
++        return Err(crate::ErrorKind::OtherError(format!(
++            "{} sent a sign-in page that is not https",
++            server.name()
++        ))
++        .into());
++    }
++
++    let interval =
++        std::time::Duration::from_secs(device.interval.unwrap_or(5).max(1));
++    let mut pending = PENDING_CONNECT.lock().await;
++    pending.retain(|pending| pending.device_code != device.device_code);
++    pending.push(PendingConnect {
++        device_code: device.device_code.clone(),
++        api_root,
++        config,
++        interval,
++        next_poll: Instant::now() + interval,
++    });
++
++    Ok(ConnectDeviceCode {
++        device_code: device.device_code,
++        user_code: device.user_code,
++        verification_uri: device.verification_uri,
++        verification_uri_complete: device.verification_uri_complete,
++        expires_in: device.expires_in,
++    })
++}
++
++/// Checks on a sign-in started with [`connect_device_begin`]: `None` until the
++/// player has finished it in the browser.
++///
++/// Asks the server no more often than it allows, however often it is called.
++pub async fn connect_device_poll(
++    device_code: &str,
++) -> crate::Result<Option<Credentials>> {
++    let (api_root, config) = {
++        let mut pending = PENDING_CONNECT.lock().await;
++        let Some(sign_in) = pending
++            .iter_mut()
++            .find(|pending| pending.device_code == device_code)
++        else {
++            return Err(crate::ErrorKind::OtherError(
++                "This sign-in has ended. Start it again.".to_owned(),
++            )
++            .into());
++        };
++
++        if Instant::now() < sign_in.next_poll {
++            return Ok(None);
++        }
++        sign_in.next_poll = Instant::now() + sign_in.interval;
++        (sign_in.api_root.clone(), sign_in.config.clone())
++    };
++
++    let server = AuthServer::Authlib(api_root.clone());
++    let response = REQWEST_CLIENT
++        .post(&config.token_endpoint)
++        .form(&[
++            ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
++            ("device_code", device_code),
++            ("client_id", config.client_id.as_str()),
++        ])
++        .send()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not reach {}: {error}",
++                server.name()
++            ))
++        })?;
++
++    if !response.status().is_success() {
++        let status = response.status();
++        let error = response.json::<OAuthError>().await.unwrap_or_default();
++        let mut pending = PENDING_CONNECT.lock().await;
++
++        match error.error.as_str() {
++            "authorization_pending" => return Ok(None),
++            "slow_down" => {
++                if let Some(sign_in) = pending
++                    .iter_mut()
++                    .find(|pending| pending.device_code == device_code)
++                {
++                    sign_in.interval += std::time::Duration::from_secs(5);
++                    sign_in.next_poll = Instant::now() + sign_in.interval;
++                }
++                return Ok(None);
++            }
++            _ => {}
++        }
++
++        pending.retain(|pending| pending.device_code != device_code);
++        let message = match error.error.as_str() {
++            "access_denied" => "The sign-in was declined.".to_owned(),
++            "expired_token" => {
++                "The sign-in took too long. Start it again.".to_owned()
++            }
++            _ => error.error_description.unwrap_or_else(|| {
++                format!("{} refused the sign-in ({status})", server.name())
++            }),
++        };
++        return Err(crate::ErrorKind::OtherError(message).into());
++    }
++
++    PENDING_CONNECT
++        .lock()
++        .await
++        .retain(|pending| pending.device_code != device_code);
++
++    let tokens = response.json::<OAuthTokens>().await?;
++    let player = connect_player(&server, &config, &tokens.access_token).await?;
++
++    Ok(Some(Credentials {
++        offline_profile: server.profile(player)?,
++        access_token: tokens.access_token,
++        refresh_token: ConnectSession {
++            api_root,
++            client_id: config.client_id,
++            token_endpoint: config.token_endpoint,
++            refresh_token: tokens.refresh_token,
++        }
++        .to_column(),
++        expires: Utc::now()
++            + Duration::seconds(tokens.expires_in.unwrap_or(3600)),
++        active: true,
++    }))
++}
++
++/// The player an access token from Yggdrasil Connect was issued for.
++async fn connect_player(
++    server: &AuthServer,
++    config: &ConnectConfig,
++    access_token: &str,
++) -> crate::Result<YggdrasilProfile> {
++    #[derive(Deserialize)]
++    struct UserInfo {
++        #[serde(rename = "selectedProfile")]
++        selected_profile: Option<YggdrasilProfile>,
++    }
++
++    let response = REQWEST_CLIENT
++        .get(&config.userinfo_endpoint)
++        .bearer_auth(access_token)
++        .send()
++        .await
++        .map_err(|error| {
++            crate::ErrorKind::OtherError(format!(
++                "Could not reach {}: {error}",
++                server.name()
++            ))
++        })?;
++
++    if !response.status().is_success() {
++        return Err(connect_error(server, response).await);
++    }
++
++    response
++        .json::<UserInfo>()
++        .await?
++        .selected_profile
++        .ok_or_else(|| {
++            crate::ErrorKind::OtherError(format!(
++                "{} did not say which player to play as",
++                server.name()
++            ))
++            .into()
++        })
++}
++
++/// Reads the error out of an OAuth refusal, falling back to the status.
++async fn connect_error(
++    server: &AuthServer,
++    response: Response,
++) -> crate::Error {
++    let status = response.status();
++    let error = response.json::<OAuthError>().await.unwrap_or_default();
++    let message = error
++        .error_description
++        .filter(|description| !description.is_empty())
++        .unwrap_or_else(|| {
++            format!("{} refused the sign-in ({status})", server.name())
++        });
++
++    crate::ErrorKind::OtherError(message).as_error()
++}
++
+ /// Ely.by's Yggdrasil endpoints.
+ const ELY_AUTHSERVER: &str = "https://authserver.ely.by/auth";
+ 
+@@ -701,12 +1002,27 @@ impl Credentials {
+         self.yggdrasil().map(|(server, _)| server)
+     }
+ 
+-    /// The account's server and the client token it issued.
+-    fn yggdrasil(&self) -> Option<(AuthServer, String)> {
++    /// The account's server and how it keeps its session there.
++    fn yggdrasil(&self) -> Option<(AuthServer, YggdrasilSession)> {
+         if let Some(client_token) =
+             self.refresh_token.strip_prefix(ELY_REFRESH_TOKEN_PREFIX)
+         {
+-            return Some((AuthServer::Ely, client_token.to_owned()));
++            return Some((
++                AuthServer::Ely,
++                YggdrasilSession::Password(client_token.to_owned()),
++            ));
++        }
++
++        if let Some(session) = self
++            .refresh_token
++            .strip_prefix(CONNECT_REFRESH_TOKEN_PREFIX)
++        {
++            let session =
++                serde_json::from_str::<ConnectSession>(session).ok()?;
++            return Some((
++                AuthServer::Authlib(session.api_root.clone()),
++                YggdrasilSession::Connect(session),
++            ));
+         }
+ 
+         let (root, client_token) = self
+@@ -716,7 +1032,7 @@ impl Credentials {
+ 
+         Some((
+             AuthServer::Authlib(root.to_owned()),
+-            client_token.to_owned(),
++            YggdrasilSession::Password(client_token.to_owned()),
+         ))
+     }
+ 
+@@ -881,6 +1197,59 @@ impl Credentials {
+         Ok(true)
+     }
+ 
++    /// Renews the access token of an account signed in with Yggdrasil Connect,
++    /// returning whether it is usable. Its expiry is the token's own.
++    async fn refresh_connect(
++        &mut self,
++        server: &AuthServer,
++        mut session: ConnectSession,
++    ) -> crate::Result<bool> {
++        let Some(refresh_token) = session.refresh_token.clone() else {
++            return Ok(false);
++        };
++
++        let response = REQWEST_CLIENT
++            .post(&session.token_endpoint)
++            .form(&[
++                ("grant_type", "refresh_token"),
++                ("refresh_token", refresh_token.as_str()),
++                ("client_id", session.client_id.as_str()),
++            ])
++            .send()
++            .await;
++
++        let response = match response {
++            Ok(response) => response,
++            // As with a password session: unreachable says nothing about it.
++            Err(error) => {
++                tracing::warn!(
++                    "Could not reach {} to refresh: {error}",
++                    server.name()
++                );
++                return Ok(true);
++            }
++        };
++
++        if response.status().is_server_error() {
++            return Ok(true);
++        }
++
++        if !response.status().is_success() {
++            return Ok(false);
++        }
++
++        let tokens = response.json::<OAuthTokens>().await?;
++        self.access_token = tokens.access_token;
++        self.expires =
++            Utc::now() + Duration::seconds(tokens.expires_in.unwrap_or(3600));
++        if tokens.refresh_token.is_some() {
++            session.refresh_token = tokens.refresh_token;
++        }
++        self.refresh_token = session.to_column();
++
++        Ok(true)
++    }
++
+     /// Whether the server still accepts this account's access token.
+     async fn yggdrasil_token_is_valid(&self, server: &AuthServer) -> bool {
+         let response = server
+@@ -915,10 +1284,24 @@ impl Credentials {
+ 
+         // Yggdrasil servers issue their own tokens and renew them at their own
+         // endpoints, so Microsoft is not involved at any point below.
+-        if let Some((server, client_token)) = self.yggdrasil() {
+-            if !self.yggdrasil_token_is_valid(&server).await
+-                && !self.refresh_yggdrasil(&server, &client_token).await?
+-            {
++        if let Some((server, session)) = self.yggdrasil() {
++            let renewed = match session {
++                YggdrasilSession::Password(client_token) => {
++                    let renewed = self.yggdrasil_token_is_valid(&server).await
++                        || self
++                            .refresh_yggdrasil(&server, &client_token)
++                            .await?;
++                    if renewed {
++                        self.expires = Utc::now() + Duration::hours(6);
++                    }
++                    renewed
++                }
++                YggdrasilSession::Connect(session) => {
++                    self.refresh_connect(&server, session).await?
++                }
++            };
++
++            if !renewed {
+                 return Err(crate::ErrorKind::OtherError(format!(
+                     "{} no longer accepts this account's session. Sign in again.",
+                     server.name()
+@@ -926,7 +1309,6 @@ impl Credentials {
+                 .into());
+             }
+ 
+-            self.expires = Utc::now() + Duration::hours(6);
+             self.upsert(exec).await?;
+             return Ok(());
+         }
+diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
+index 709e6d0..8788563 100644
+--- a/packages/app-lib/src/util/authlib_injector.rs
++++ b/packages/app-lib/src/util/authlib_injector.rs
+@@ -17,6 +17,90 @@ use crate::state::DirectoryInfo;
+ use crate::util::fetch::{INSECURE_REQWEST_CLIENT, REQWEST_CLIENT};
+ use crate::util::io;
+ 
++/// This launcher's registrations with Yggdrasil Connect servers that share no
++/// client id, by issuer. The id of a client that cannot keep a secret is none.
++///
++/// LittleSkin wants an OAuth app with `https://littleskin.cn/yggc/client/public`
++/// among its callback URLs; its client id goes here as
++/// `("https://open.littleskin.cn", "<client id>")`.
++const CONNECT_CLIENT_IDS: &[(&str, &str)] = &[];
++
++/// The scopes a Yggdrasil Connect sign-in for playing needs.
++const CONNECT_SCOPES: [&str; 3] =
++    ["openid", "Yggdrasil.PlayerProfiles.Select", "Yggdrasil.Server.Join"];
++
++/// How to sign in to a server with Yggdrasil Connect, OAuth's device flow on
++/// the server's own page.
++#[derive(Serialize, Debug, Clone)]
++pub struct ConnectConfig {
++    pub client_id: String,
++    pub device_authorization_endpoint: String,
++    pub token_endpoint: String,
++    pub userinfo_endpoint: String,
++    pub scope: String,
++}
++
++#[derive(Deserialize)]
++struct OpenIdConfiguration {
++    issuer: String,
++    device_authorization_endpoint: Option<String>,
++    token_endpoint: String,
++    userinfo_endpoint: String,
++    #[serde(default)]
++    scopes_supported: Vec<String>,
++    shared_client_id: Option<String>,
++}
++
++/// Yggdrasil Connect on a server, if it has it in a way this launcher can use:
++/// the device flow, over https, with a client id for us.
++async fn connect_config(url: &str) -> Option<ConnectConfig> {
++    let config = REQWEST_CLIENT
++        .get(url)
++        .header(ACCEPT, "application/json")
++        .send()
++        .await
++        .ok()?
++        .json::<OpenIdConfiguration>()
++        .await
++        .ok()?;
++
++    let device_authorization_endpoint = config.device_authorization_endpoint?;
++    let https = [
++        &device_authorization_endpoint,
++        &config.token_endpoint,
++        &config.userinfo_endpoint,
++    ]
++    .iter()
++    .all(|endpoint| endpoint.starts_with("https://"));
++    let supported = |scope: &str| {
++        config.scopes_supported.iter().any(|supported| supported == scope)
++    };
++    if !https || !CONNECT_SCOPES.iter().all(|scope| supported(scope)) {
++        return None;
++    }
++
++    let mut scope = CONNECT_SCOPES.join(" ");
++    // Without it the session ends with the first access token.
++    if supported("offline_access") {
++        scope.push_str(" offline_access");
++    }
++
++    let client_id = config.shared_client_id.or_else(|| {
++        CONNECT_CLIENT_IDS
++            .iter()
++            .find(|(issuer, _)| *issuer == config.issuer)
++            .map(|(_, client_id)| (*client_id).to_owned())
++    })?;
++
++    Some(ConnectConfig {
++        client_id,
++        device_authorization_endpoint,
++        token_endpoint: config.token_endpoint,
++        userinfo_endpoint: config.userinfo_endpoint,
++        scope,
++    })
++}
++
+ /// An authlib-injector server, as its own metadata describes it.
+ #[derive(Serialize, Debug, Clone)]
+ pub struct AuthlibServer {
+@@ -27,6 +111,8 @@ pub struct AuthlibServer {
+     pub implementation: Option<String>,
+     pub homepage: Option<String>,
+     pub register: Option<String>,
++    /// Signing in on the server's own page, where it has one.
++    pub connect: Option<ConnectConfig>,
+ }
+ 
+ #[derive(Deserialize)]
+@@ -46,6 +132,8 @@ struct Meta {
+     implementation_name: Option<String>,
+     #[serde(default)]
+     links: Links,
++    #[serde(rename = "feature.openid_configuration_url")]
++    openid_configuration_url: Option<String>,
+ }
+ 
+ #[derive(Deserialize, Default)]
+@@ -115,6 +203,11 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
+         ))
+     })?;
+ 
++    let connect = match &metadata.meta.openid_configuration_url {
++        Some(url) => connect_config(url).await,
++        None => None,
++    };
++
+     Ok(AuthlibServer {
+         api_root: api_root.as_str().trim_end_matches('/').to_owned(),
+         name: metadata
+@@ -125,6 +218,7 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
+         implementation: metadata.meta.implementation_name,
+         homepage: metadata.meta.links.homepage,
+         register: metadata.meta.links.register,
++        connect,
+     })
+ }
+ 

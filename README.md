@@ -34,6 +34,7 @@ works.
 | `0019-Add-accounts-from-other-...`         | Sign in to Drasl, Blessing Skin and other account servers, as with Ely.by.                                                                  |
 | `0020-Keep-the-settings-tabs-clear-of-...` | The settings tab list scrolls instead of running over the app version on Linux.                                                             |
 | `0021-Show-and-change-skins-of-custom-...` | A custom server account's skin is shown and changed on the skin page, and its head in the account list.                                     |
+| `0022-Sign-in-to-custom-servers-in-...`    | Servers with Yggdrasil Connect, such as LittleSkin, sign in on their own page, with two-factor authentication.                              |
 
 ### Offline accounts
 
@@ -86,7 +87,13 @@ header. The dialog then shows the server's name and a link to sign up there. An 
 players asks which one to play as.
 
 On Drasl, a player who signed up through another service uses the Minecraft token from their
-account page as the password; the dialog says so.
+account page as the password; the dialog says so. Servers with
+[Yggdrasil Connect](https://github.com/yushijinhun/authlib-injector/issues/268), such as LittleSkin or
+Blessing Skin with Janus, also offer "Sign in in the browser": the server's own page opens with the
+code filled in, two-factor authentication included, and the launcher picks the account up once it is
+done. That takes a client id, which the server either shares or has registered for this launcher;
+the registered ones are listed in `CONNECT_CLIENT_IDS` in
+`0022-Sign-in-to-custom-servers-in-the-browser.patch`, and there are none yet.
 
 The account list shows which server an account is on, with the head of the skin worn there. The
 skin page shows that skin, and picking or adding one uploads it to the server through

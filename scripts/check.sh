@@ -116,6 +116,8 @@ check "their skins are uploaded to the server" \
 	contains "$WORKTREE/packages/app-lib/src/state/minecraft_skins/mojang_api.rs" 'change_texture(credentials, "skin"'
 check "their profile comes from the server" \
 	contains "$WORKTREE/packages/app-lib/src/state/minecraft_auth.rs" 'server.session_profile(self.offline_profile.id)'
+check "Yggdrasil Connect is found in the metadata" \
+	contains "$WORKTREE/packages/app-lib/src/util/authlib_injector.rs" 'feature.openid_configuration_url'
 
 log "Ely.by skins"
 check "the frontend can tell an Ely.by account" \
