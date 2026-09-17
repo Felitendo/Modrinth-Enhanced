@@ -60,8 +60,8 @@ launcher is still one click away in the dialog, for when the browser does not wo
 ### Ely.by accounts
 
 "Add Ely.by account" sits in the same account card. It asks for an Ely.by account name or email and
-a password, which go to `authserver.ely.by` and nowhere else. With two-factor authentication on,
-append the current code to the password after a colon, which is Ely.by's own convention.
+a password. With two-factor authentication on, append the current code to the password after a
+colon, which is Ely.by's own convention.
 
 At launch the game is pointed at Ely.by with
 [authlib-injector](https://github.com/yushijinhun/authlib-injector), downloaded once and cached, so

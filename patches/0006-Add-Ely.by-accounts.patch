@@ -4,10 +4,9 @@ Date: Mon, 14 Sep 2026 13:24:41 +0200
 Subject: [PATCH] Add Ely.by accounts
 
 Ely.by is an alternative Minecraft account system. "Add Ely.by account"
-sits next to the Microsoft and offline options in the account card; the
-account name and password go to authserver.ely.by and nowhere else, and
-a two-factor code is appended to the password after a colon, which is
-Ely.by's own convention.
+sits next to the Microsoft and offline options in the account card and
+asks for the account name and password. A two-factor code is appended
+to the password after a colon, which is Ely.by's own convention.
 
 Minecraft asks Mojang who the player is, so an Ely.by account cannot
 start the game on its own. The authlib-injector agent points those calls
@@ -141,7 +140,7 @@ index ebc92c1..35c21fa 100644
  		defaultMessage: 'Remove account',
 diff --git a/apps/app-frontend/src/components/ui/ElyAccountModal.vue b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 new file mode 100644
-index 0000000..d909ec3
+index 0000000..4b50494
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 @@ -0,0 +1,166 @@
@@ -282,7 +281,7 @@ index 0000000..d909ec3
 +	description: {
 +		id: 'app.ely-account.description',
 +		defaultMessage:
-+			'Ely.by is an alternative Minecraft account system. Your credentials go to Ely.by and nowhere else; the game is pointed at it with authlib-injector when the instance launches.',
++			'Ely.by is an alternative Minecraft account system. Its accounts can play singleplayer and join any server that accepts Ely.by.',
 +	},
 +	usernameLabel: {
 +		id: 'app.ely-account.username-label',
@@ -487,10 +486,10 @@ index a7fac4a..2d18da3 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 7910694..e623cab 100644
+index 17d20af..93cfd20 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1059,6 +1059,22 @@ pub async fn launch_minecraft(
+@@ -1072,6 +1072,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -514,10 +513,10 @@ index 7910694..e623cab 100644
          .arg("com.modrinth.theseus.MinecraftLaunch")
          .arg(version_info.main_class.clone())
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index d97d233..25c6dfb 100644
+index 14455ec..4130488 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -241,6 +241,67 @@ pub fn offline_uuid(username: &str) -> Uuid {
+@@ -239,6 +239,67 @@ pub fn offline_uuid(username: &str) -> Uuid {
      Uuid::from_bytes(bytes)
  }
  
@@ -585,7 +584,7 @@ index d97d233..25c6dfb 100644
  /// An entry in the player profile cache, keyed by player UUID.
  pub(super) enum ProfileCacheEntry {
      /// A cached profile that is valid, even though it may be stale.
-@@ -321,6 +382,135 @@ impl Credentials {
+@@ -319,6 +380,135 @@ impl Credentials {
          self.refresh_token == OFFLINE_REFRESH_TOKEN
      }
  
@@ -721,7 +720,7 @@ index d97d233..25c6dfb 100644
      /// Refreshes the authentication tokens for this user if they are expired, or
      /// very close to expiration.
      async fn refresh(
-@@ -340,6 +530,22 @@ impl Credentials {
+@@ -338,6 +528,22 @@ impl Credentials {
              return Ok(());
          }
  
@@ -744,7 +743,7 @@ index d97d233..25c6dfb 100644
          let oauth_token = oauth_refresh(&self.refresh_token).await?;
          let (pair, current_date) =
              DeviceTokenPair::refresh_and_get_device_token(
-@@ -413,9 +619,10 @@ impl Credentials {
+@@ -411,9 +617,10 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {
