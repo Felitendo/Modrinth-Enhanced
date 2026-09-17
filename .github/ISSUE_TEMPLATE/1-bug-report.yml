@@ -1,0 +1,119 @@
+name: 🐛 Bug report
+description: Something in Modrinth Enhanced does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Modrinth Enhanced is the Modrinth App with a series of patches applied. If the same thing
+        happens in the official Modrinth App, it belongs
+        [upstream](https://github.com/modrinth/code/issues/new/choose) instead.
+
+  - type: checkboxes
+    attributes:
+      label: Please confirm the following.
+      options:
+        - label: I checked the [existing issues](https://github.com/Felitendo/Modrinth-Enhanced/issues?q=is%3Aissue) for the same problem
+          required: true
+        - label: I am on the [latest release](https://github.com/Felitendo/Modrinth-Enhanced/releases/latest)
+          required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Which version are you on?
+      description: Settings, bottom left, next to the Modrinth logo.
+      placeholder: Modrinth Enhanced 0.21.4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - AppImage
+        - Windows installer
+        - macOS disk image
+        - Debian or Ubuntu package
+        - Fedora package
+        - Arch Linux (modrinth-enhanced-bin)
+        - Built it myself
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Which operating system?
+      multiple: true
+      options:
+        - Windows
+        - macOS
+        - Linux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: What is it about?
+      options:
+        - Accounts (offline, Ely.by, custom servers)
+        - Skins
+        - Instances, launching or logs
+        - Sidebar, title bar or window
+        - Updates or installation
+        - Something else
+    validations:
+      required: true
+
+  - type: dropdown
+    id: upstream
+    attributes:
+      label: Does the official Modrinth App do it too?
+      options:
+        - I have not tried it
+        - 'No: only Modrinth Enhanced'
+        - 'Yes: the official app as well'
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happens?
+      description: What goes wrong, and what you expected instead. Screenshots help.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can it be reproduced?
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Launcher log
+      description: |
+        The newest file in `launcher_logs`, in the app's folder:
+        `%APPDATA%\ModrinthApp` on Windows, `~/Library/Application Support/ModrinthApp` on macOS,
+        `~/.local/share/ModrinthApp` on Linux. Remove anything you would rather not share.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Whatever else may matter, such as the account server or the instance it happens with.
+    validations:
+      required: false

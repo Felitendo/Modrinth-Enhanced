@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 🎮 Bug in the Modrinth App itself
+    about: Anything that the official Modrinth App does too belongs upstream.
+    url: https://github.com/modrinth/code/issues/new/choose
+  - name: 🫶 Using the Modrinth App
+    about: Questions about the app, your account or Modrinth itself.
+    url: https://support.modrinth.com
+  - name: 📦 Downloads
+    about: Installers for Windows, macOS and Linux, and what changed in each release.
+    url: https://github.com/Felitendo/Modrinth-Enhanced/releases/latest
