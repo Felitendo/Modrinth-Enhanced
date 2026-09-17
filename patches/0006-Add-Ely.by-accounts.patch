@@ -27,7 +27,7 @@ and needs an OAuth application registered with Ely.by; there is none for
 Modrinth Enhanced yet.
 ---
  .../src/components/ui/AccountsCard.vue        |  30 ++-
- .../src/components/ui/ElyAccountModal.vue     | 166 ++++++++++++++
+ .../src/components/ui/ElyAccountModal.vue     | 168 ++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 ++-
  apps/app-frontend/src/helpers/auth.js         |  15 ++
  apps/app/build.rs                             |   1 +
@@ -37,7 +37,7 @@ Modrinth Enhanced yet.
  packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
  packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
  packages/app-lib/src/util/mod.rs              |   1 +
- 11 files changed, 579 insertions(+), 13 deletions(-)
+ 11 files changed, 581 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
@@ -140,10 +140,10 @@ index ebc92c1..35c21fa 100644
  		defaultMessage: 'Remove account',
 diff --git a/apps/app-frontend/src/components/ui/ElyAccountModal.vue b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 new file mode 100644
-index 0000000..4b50494
+index 0000000..c589375
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,168 @@
 +<template>
 +	<NewModal ref="modal" :header="formatMessage(messages.header)" max-width="480px" width="100%">
 +		<div class="flex flex-col gap-4">
@@ -264,8 +264,10 @@ index 0000000..4b50494
 +		modal.value?.hide()
 +		emit('created', account)
 +	} catch (e) {
-+		error.value =
++		const text =
 +			typeof e === 'string' ? e : ((e as Error)?.message ?? formatMessage(messages.genericError))
++		// The launcher's own label for the kind of error says nothing here.
++		error.value = text.replace(/^(Error|Invalid input): /, '')
 +	} finally {
 +		submitting.value = false
 +	}
