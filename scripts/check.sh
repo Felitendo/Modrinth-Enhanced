@@ -34,6 +34,17 @@ missing() {
 	! grep -qrF "$2" "$1"
 }
 
+# Every installer the updater can take has its signature next to it.
+signed() {
+	local artifact found=0
+	for artifact in "$1"/*.AppImage "$1"/*-setup.exe "$1"/*.app.tar.gz; do
+		[ -e "$artifact" ] || continue
+		[ -s "$artifact.sig" ] || return 1
+		found=1
+	done
+	[ "$found" = 1 ]
+}
+
 log "Branding"
 check "tauri.conf.json is named Modrinth Enhanced" \
 	contains "$WORKTREE/apps/app/tauri.conf.json" '"productName": "Modrinth Enhanced"'
@@ -169,6 +180,12 @@ check "file pickers use the desktop portal on Linux" \
 check "NVIDIA under Wayland does not crash the webview" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")'
 
+log "Updates"
+check "updates do not come from Modrinth" \
+	missing "$WORKTREE/apps/app-frontend/src/App.vue" 'launcher-files.modrinth.com/updates.json'
+check "the updater tells revisions apart" \
+	contains "$WORKTREE/apps/app/src/main.rs" 'default_version_comparator'
+
 log "No advertising or upsells"
 check "no Modrinth+ upsell in the app" \
 	missing "$WORKTREE/apps/app-frontend/src/App.vue" "modrinth.plus"
@@ -218,6 +235,9 @@ if [ -d "$artifacts" ] && [ -n "$(ls -A "$artifacts" 2>/dev/null)" ]; then
 			;;
 		esac
 	done
+	if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+		check "the installers are signed for the updater" signed "$artifacts"
+	fi
 fi
 
 if [ "$failures" -gt 0 ]; then

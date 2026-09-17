@@ -16,6 +16,10 @@ on:
         description: Upstream tag to build instead of the one in upstream.txt
         type: string
         required: false
+      revision:
+        description: Which release of the upstream version this is, for the updater
+        type: string
+        required: false
     outputs:
       version:
         description: Version the app was built as
@@ -27,6 +31,7 @@ concurrency:
 
 env:
   UPSTREAM_REF: ${{ inputs.upstream-ref }}
+  MODRINTH_ENHANCED_REVISION: ${{ inputs.revision }}
 
 jobs:
   build:
@@ -104,12 +109,19 @@ jobs:
         shell: bash
         run: scripts/check.sh
 
+      # Without the key, as for a pull request from a fork, the build simply
+      # has no updater.
       - name: Build
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: scripts/build.sh
 
       - name: Check the build output
         shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: scripts/check.sh
 
       - name: Upload installers

@@ -30,6 +30,7 @@ works.
 | `0015-Use-the-desktop-s-file-picker-...`   | File pickers on Linux are the desktop's own, such as KDE's, through the XDG desktop portal.                                                 |
 | `0016-Show-the-account-in-the-title-bar-...` | With the right sidebar folded away, the Minecraft account is shown in the title bar and managed from there.                         |
 | `0017-Start-on-Wayland-with-an-NVIDIA-GPU` | The app no longer crashes at start under Wayland with the NVIDIA driver.                                                                    |
+| `0018-Update-from-Modrinth-Enhanced-s-...` | Updates come from this project's own signed releases rather than Modrinth's.                                                                |
 
 ### Offline accounts
 
@@ -155,6 +156,14 @@ without making anyone more private.
 neither ends up in a build; removing the entries would mean carrying a patch against the lockfile
 for no practical gain.
 
+### Updates
+
+The app updates itself from this project's releases on GitHub: on Windows, on macOS, and as an
+AppImage on Linux. Updates are signed with this project's own key, whose public half is
+`updater.pub`, and Modrinth is no longer asked, since its update would be the official app.
+Installs from the AUR, a `.deb` or a `.rpm` are updated like any other package; the app shows a
+notice with a button to the release when there is a new one.
+
 ## Relationship to the official app
 
 Modrinth Enhanced keeps the upstream bundle identifier, which means it uses **the same data
@@ -218,6 +227,10 @@ scripts/prepare.sh
   release of that upstream version, it is released again as `v0.21.2-2`, `v0.21.2-3` and so on.
   The app and installers still carry the upstream version: RPM and the Windows installers do not
   accept a suffix in it.
+- **Updates** are published with every release as `latest.json`, next to installers signed with the
+  `TAURI_SIGNING_PRIVATE_KEY` secret. A release without signatures fails instead of shipping, since
+  every install it reached could never update again. Builds without the secret, such as pull
+  requests from forks, have no updater.
 
 `scripts/check.sh` is what makes the automation trustworthy. A patch can apply cleanly and still
 stop doing its job if upstream moves the thing it was holding down, so the checks assert the

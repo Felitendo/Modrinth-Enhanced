@@ -33,6 +33,7 @@ jobs:
     outputs:
       upstream: ${{ steps.check.outputs.upstream }}
       tag: ${{ steps.check.outputs.tag }}
+      revision: ${{ steps.check.outputs.revision }}
       proceed: ${{ steps.check.outputs.proceed }}
     steps:
       - uses: actions/checkout@v4
@@ -64,20 +65,22 @@ jobs:
           )"
 
           if [ -z "$last" ]; then
+            revision=1
             tag="$upstream"
           else
-            revision="${last%% *}"
             last_tag="${last#* }"
             git fetch --no-tags --depth=1 origin "refs/tags/$last_tag:refs/tags/$last_tag"
             # Only what goes into the build counts, not docs or CI.
-            if git diff --quiet "$last_tag" HEAD -- patches scripts; then
+            if git diff --quiet "$last_tag" HEAD -- patches scripts updater.pub; then
               echo "$last_tag already ships the current patches; nothing to do."
               echo "proceed=false" >> "$GITHUB_OUTPUT"
               exit 0
             fi
-            tag="$upstream-$((revision + 1))"
+            revision="$(( ${last%% *} + 1 ))"
+            tag="$upstream-$revision"
           fi
 
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "proceed=true" >> "$GITHUB_OUTPUT"
           echo "Releasing $tag"
@@ -89,6 +92,8 @@ jobs:
     uses: ./.github/workflows/build.yml
     with:
       upstream-ref: ${{ needs.detect.outputs.upstream }}
+      revision: ${{ needs.detect.outputs.revision }}
+    secrets: inherit
 
   release:
     name: Release
@@ -117,6 +122,63 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      # The app looks for updates in releases/latest/download/latest.json.
+      # Spaces in asset names become dots first, as GitHub would make them, so
+      # the addresses written into it are exact. A release without signatures
+      # stops here: every install it reached could never update again.
+      - name: Write the update manifest
+        env:
+          TAG: ${{ needs.detect.outputs.tag }}
+          UPSTREAM: ${{ needs.detect.outputs.upstream }}
+          REVISION: ${{ needs.detect.outputs.revision }}
+        run: |
+          set -euo pipefail
+          for file in artifacts/*' '*; do
+            if [ -e "$file" ]; then mv "$file" "${file// /.}"; fi
+          done
+          python3 - <<'EOF'
+          import datetime, json, os, pathlib
+
+          artifacts = pathlib.Path("artifacts")
+          tag = os.environ["TAG"]
+          repository = os.environ["GITHUB_REPOSITORY"]
+
+          # The app's version is the upstream one. A revision comes along as
+          # build metadata, which the app compares itself.
+          version = os.environ["UPSTREAM"].removeprefix("v")
+          if int(os.environ["REVISION"]) > 1:
+              version += "+" + os.environ["REVISION"]
+
+
+          def signed(suffix):
+              matches = [p for p in artifacts.iterdir() if p.name.endswith(suffix)]
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected one *{suffix}, found {[p.name for p in matches]}")
+              signature = pathlib.Path(f"{matches[0]}.sig")
+              if not signature.is_file():
+                  raise SystemExit(f"{matches[0].name} is not signed: is TAURI_SIGNING_PRIVATE_KEY set?")
+              return {
+                  "signature": signature.read_text().strip(),
+                  "url": f"https://github.com/{repository}/releases/download/{tag}/{matches[0].name}",
+              }
+
+
+          macos = signed(".app.tar.gz")
+          manifest = {
+              "version": version,
+              "notes": f"Modrinth Enhanced {tag}",
+              "pub_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "platforms": {
+                  "linux-x86_64": signed(".AppImage"),
+                  "windows-x86_64": signed("-setup.exe"),
+                  "darwin-x86_64": macos,
+                  "darwin-aarch64": macos,
+              },
+          }
+          (artifacts / "latest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          print((artifacts / "latest.json").read_text())
+          EOF
 
       - name: Publish the release
         env:

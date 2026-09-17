@@ -56,6 +56,47 @@ Darwin)
 	;;
 esac
 
+# The repository releases come from, which the app's update notice points at.
+export MODRINTH_ENHANCED_REPOSITORY="${GITHUB_REPOSITORY:-$(git -C "$REPO_ROOT" remote get-url origin | sed -E 's#^.*github\.com[:/]##; s#\.git$##')}"
+
+# Updates come from this repository's own releases, signed with its own key
+# (the public half is updater.pub). A build without the private key, such as
+# one for a pull request or a local one, has nothing to sign them with and
+# leaves the updater out.
+if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+	repository="$MODRINTH_ENHANCED_REPOSITORY"
+	updater_conf="$REPO_ROOT/build/updater.conf.json"
+	mkdir -p "$(dirname "$updater_conf")"
+	node -e '
+		const fs = require("fs")
+		const [conf, pubkey, repository] = process.argv.slice(1)
+		const { capabilities } = JSON.parse(fs.readFileSync(conf, "utf8")).app.security
+		console.log(JSON.stringify({
+			bundle: { createUpdaterArtifacts: true },
+			build: { features: ["updater"] },
+			app: { security: { capabilities: [...capabilities, "updater"] } },
+			plugins: {
+				updater: {
+					pubkey: fs.readFileSync(pubkey, "utf8").trim(),
+					endpoints: [`https://github.com/${repository}/releases/latest/download/latest.json`],
+					windows: { installMode: "passive" },
+				},
+			},
+		}, null, "\t"))
+	' "$WORKTREE/apps/app/tauri.conf.json" "$REPO_ROOT/updater.pub" "$repository" >"$updater_conf"
+	tauri_args+=(--config "$updater_conf")
+	# Tauri asks for the password when none is set, which fails without a
+	# terminal. The project's key has none.
+	export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="${TAURI_SIGNING_PRIVATE_KEY_PASSWORD-}"
+	log "Updates will come from github.com/$repository"
+else
+	warn "TAURI_SIGNING_PRIVATE_KEY is not set, so this build has no updater"
+fi
+
+# Which release of this upstream version this is, for the updater to tell
+# v1.2.3-2 from v1.2.3, since the app's own version cannot carry it.
+export MODRINTH_ENHANCED_REVISION="${MODRINTH_ENHANCED_REVISION:-1}"
+
 # Emptied before the build, not after it: a build that fails halfway would
 # otherwise leave the previous run's installers sitting here, where
 # scripts/check.sh would happily pass them off as this build's output.
@@ -80,7 +121,8 @@ while IFS= read -r -d '' artifact; do
 	found=1
 done < <(find "$bundle_dir" -maxdepth 2 -type f \
 	\( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
-	-o -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*-setup.exe' \) -print0)
+	-o -name '*.dmg' -o -name '*.app.tar.gz' -o -name '*-setup.exe' \
+	-o -name '*.sig' \) -print0)
 
 [ "$found" = 1 ] || die "No bundles were produced under $bundle_dir"
 

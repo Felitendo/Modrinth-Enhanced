@@ -1,0 +1,176 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Tue, 15 Sep 2026 18:43:17 +0200
+Subject: [PATCH] Update from Modrinth Enhanced's own releases
+
+The updater asked Modrinth, whose update is the official app and would
+replace this one. It now takes this project's own signed releases, with
+the endpoint and key given at build time by scripts/build.sh.
+
+Revisions of one upstream version share the app's version, since the
+installers refuse a suffix in it, so a release carries its revision as
+build metadata and the comparison looks at that. On Linux only the
+AppImage updates itself; other installs, and builds without the updater,
+get a notice with a button to the release on GitHub.
+---
+ apps/app-frontend/src/App.vue | 63 ++++++++++++++++++++++++-----------
+ apps/app/src/main.rs          | 32 ++++++++++++++++++
+ apps/app/tauri.conf.json      |  2 +-
+ 3 files changed, 76 insertions(+), 21 deletions(-)
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 5cbe7d8..dfdcdb1 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -1888,9 +1888,13 @@ const updatePopupMessages = defineMessages({
+ 		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
+ 	},
+ 	linuxBody: {
+-		id: 'app.update-popup.body.linux',
++		id: 'app.update-popup.body.linux-release',
+ 		defaultMessage:
+-			'Modrinth App v{version} is available. Use your package manager to update for the latest features and fixes!',
++			'Modrinth Enhanced v{version} is available. Update it with your package manager, or download it from the release on GitHub.',
++	},
++	openRelease: {
++		id: 'app.update-popup.open-release',
++		defaultMessage: 'Open release',
+ 	},
+ 	reload: {
+ 		id: 'app.update-popup.reload',
+@@ -2065,28 +2069,47 @@ async function checkUpdates() {
+ 	)
+ }
+ 
++// A .deb or .rpm install, or a build without the updater, is only told about
++// a new release: this project's own on GitHub, not Modrinth's, whose update
++// would be the official app.
+ async function checkLinuxUpdates() {
+ 	try {
+-		const [response, currentVersion] = await Promise.all([
+-			fetch('https://launcher-files.modrinth.com/updates.json'),
++		const [repository, currentVersion, currentRevision] = await Promise.all([
++			invoke('release_repository'),
+ 			getVersion(),
++			invoke('app_revision'),
+ 		])
+-		const updates = await response.json()
+-		const latestVersion = updates?.version
+-
+-		if (latestVersion && latestVersion !== currentVersion) {
+-			markAppUpdateActionable(latestVersion)
+-			const nextPopupTime = getNextAppUpdatePopupTime(latestVersion)
+-			if (nextPopupTime !== null && Date.now() >= nextPopupTime) {
+-				addPopupNotification({
+-					contentType: 'standard',
+-					title: formatMessage(updatePopupMessages.updateAvailable),
+-					text: formatMessage(updatePopupMessages.linuxBody, { version: latestVersion }),
+-					type: 'info',
+-					autoCloseMs: null,
+-				})
+-				markAppUpdatePopupShown(latestVersion)
+-			}
++		const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`)
++		if (!response.ok) return
++		const release = await response.json()
++
++		// v1.2.3 is the first release of an upstream version, v1.2.3-2 the next.
++		const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-(\d+))?$/.exec(release?.tag_name ?? '')
++		if (!match) return
++		const latest = [...match.slice(1, 4).map(Number), Number(match[4] ?? 1)]
++		const current = [...currentVersion.split('.').map(Number), currentRevision]
++		const differs = latest.findIndex((part, i) => part !== current[i])
++		if (differs === -1 || latest[differs] < current[differs]) return
++
++		const latestVersion = release.tag_name.replace(/^v/, '')
++		markAppUpdateActionable(latestVersion)
++		const nextPopupTime = getNextAppUpdatePopupTime(latestVersion)
++		if (nextPopupTime !== null && Date.now() >= nextPopupTime) {
++			addPopupNotification({
++				contentType: 'standard',
++				title: formatMessage(updatePopupMessages.updateAvailable),
++				text: formatMessage(updatePopupMessages.linuxBody, { version: latestVersion }),
++				type: 'info',
++				autoCloseMs: null,
++				buttons: [
++					{
++						label: formatMessage(updatePopupMessages.openRelease),
++						action: () => openUrl(release.html_url),
++						color: 'brand',
++					},
++				],
++			})
++			markAppUpdatePopupShown(latestVersion)
+ 		}
+ 	} catch (e) {
+ 		console.error('Failed to check for updates:', e)
+diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
+index 5cdab91..1deb12f 100644
+--- a/apps/app/src/main.rs
++++ b/apps/app/src/main.rs
+@@ -77,6 +77,25 @@ fn is_dev() -> bool {
+ fn are_updates_enabled() -> bool {
+     cfg!(feature = "updater")
+         && env::var("MODRINTH_EXTERNAL_UPDATE_PROVIDER").is_err()
++        // On Linux the updater replaces the AppImage it runs from. A .deb or
++        // .rpm install gets the notice pointing at the release instead.
++        && (!cfg!(target_os = "linux") || env::var_os("APPIMAGE").is_some())
++}
++
++/// Which release of the upstream version this build is: 2 for v1.2.3-2. The
++/// version itself stays the upstream one, since installers refuse a suffix.
++#[tauri::command]
++fn app_revision() -> u64 {
++    option_env!("MODRINTH_ENHANCED_REVISION")
++        .and_then(|revision| revision.parse().ok())
++        .unwrap_or(1)
++}
++
++/// The repository this build takes its updates from.
++#[tauri::command]
++fn release_repository() -> &'static str {
++    option_env!("MODRINTH_ENHANCED_REPOSITORY")
++        .unwrap_or("Felitendo/Modrinth-Enhanced")
+ }
+ 
+ #[cfg(feature = "updater")]
+@@ -187,6 +206,17 @@ fn main() {
+                     HeaderValue::from_str(&launcher_user_agent()).unwrap(),
+                 )
+                 .unwrap()
++                // A release carries its revision as build metadata, 1.2.3+2,
++                // which version ordering ignores.
++                .default_version_comparator(|current, release| {
++                    let remote = release.version;
++                    let ours = (current.major, current.minor, current.patch);
++                    let theirs = (remote.major, remote.minor, remote.patch);
++                    if theirs != ours {
++                        return theirs > ours;
++                    }
++                    remote.build.as_str().parse().unwrap_or(1) > app_revision()
++                })
+                 .build(),
+         );
+     }
+@@ -303,6 +333,8 @@ fn main() {
+             initialize_state,
+             is_dev,
+             are_updates_enabled,
++            app_revision,
++            release_repository,
+             get_update_size,
+             enqueue_update_for_installation,
+             remove_enqueued_update,
+diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
+index e5bbabe..bd2434d 100644
+--- a/apps/app/tauri.conf.json
++++ b/apps/app/tauri.conf.json
+@@ -102,7 +102,7 @@
+ 			"capabilities": ["ads", "core", "plugins"],
+ 			"csp": {
+ 				"default-src": "'self' customprotocol: asset:",
+-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
++				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org https://api.github.com 'self' data: blob:",
+ 				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
+ 				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
+ 				"style-src": "'unsafe-inline' 'self'",
