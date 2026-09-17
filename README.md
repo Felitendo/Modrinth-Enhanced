@@ -246,6 +246,10 @@ scripts/build.sh     # build installers into build/artifacts
 `FAST=1 scripts/build.sh` builds with thin link-time optimization instead of the full one, which
 roughly halves the Rust build at the cost of a few megabytes. Releases are built without it.
 
+`DEV=1 scripts/build.sh` builds "Modrinth Enhanced (dev)" instead, under the bundle identifier
+`ModrinthAppDev`. It has a data directory of its own and no updater, so it can be installed and run
+beside a release without sharing instances, accounts or settings with it.
+
 `build/` is scratch space and is never committed.
 
 ## Working on the patches

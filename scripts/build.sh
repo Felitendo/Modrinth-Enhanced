@@ -63,7 +63,9 @@ export MODRINTH_ENHANCED_REPOSITORY="${GITHUB_REPOSITORY:-$(git -C "$REPO_ROOT" 
 # (the public half is updater.pub). A build without the private key, such as
 # one for a pull request or a local one, has nothing to sign them with and
 # leaves the updater out.
-if [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
+if [ -n "${DEV:-}" ]; then
+	warn "DEV is set, so this build has no updater"
+elif [ -n "${TAURI_SIGNING_PRIVATE_KEY:-}" ]; then
 	repository="$MODRINTH_ENHANCED_REPOSITORY"
 	updater_conf="$REPO_ROOT/build/updater.conf.json"
 	mkdir -p "$(dirname "$updater_conf")"
@@ -96,6 +98,33 @@ fi
 # Which release of this upstream version this is, for the updater to tell
 # v1.2.3-2 from v1.2.3, since the app's own version cannot carry it.
 export MODRINTH_ENHANCED_REVISION="${MODRINTH_ENHANCED_REVISION:-1}"
+
+# A dev build is an app of its own: its own name, and with it its own bundle
+# identifier, which is what decides the data directory. It shares no instances,
+# accounts or settings with an installed Modrinth Enhanced, and is installed
+# beside one rather than over it.
+if [ -n "${DEV:-}" ]; then
+	dev_conf="$REPO_ROOT/build/dev.conf.json"
+	mkdir -p "$(dirname "$dev_conf")"
+	node -e '
+		const fs = require("fs")
+		const [base, platform] = process.argv.slice(1)
+		const config = JSON.parse(fs.readFileSync(base, "utf8"))
+		// The platform file replaces the windows of the one it is merged into.
+		const platformConfig = fs.existsSync(platform)
+			? JSON.parse(fs.readFileSync(platform, "utf8"))
+			: {}
+		const windows = platformConfig.app?.windows ?? config.app.windows
+		const name = "Modrinth Enhanced (dev)"
+		console.log(JSON.stringify({
+			productName: name,
+			identifier: "ModrinthAppDev",
+			app: { windows: windows.map((window) => ({ ...window, title: name })) },
+		}, null, "\t"))
+	' "$WORKTREE/apps/app/tauri.conf.json" "$WORKTREE/apps/app/tauri.$platform.conf.json" >"$dev_conf"
+	tauri_args+=(--config "$dev_conf")
+	log "Building Modrinth Enhanced (dev), which shares nothing with a stable install"
+fi
 
 # A local build to try something out does not need the last few percent of the
 # release profile. Thin LTO across several cores takes well under half the time
