@@ -109,6 +109,8 @@ check "the skins folder can be opened" \
 log "Another copy of a running instance"
 check "a running instance can start again" \
 	contains "$WORKTREE/packages/app-lib/src/api/instance/run.rs" 'pub async fn run_additional'
+check "neither running check refuses another copy" \
+	test "$(grep -c 'if !additional' "$WORKTREE/packages/app-lib/src/launcher/mod.rs")" -ge 2
 check "each copy has a console" \
 	contains "$WORKTREE/apps/app-frontend/src/pages/instance/logs/index.vue" 'ProcessConsole'
 check "log events say which copy" \

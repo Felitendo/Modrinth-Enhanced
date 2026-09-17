@@ -38,9 +38,9 @@ Adapted from Noctrinth (https://github.com/Everelsu/Noctrinth).
  packages/app-lib/src/api/instance/run.rs      |  24 +++-
  packages/app-lib/src/api/logs.rs              |  23 +++-
  packages/app-lib/src/event/mod.rs             |   2 +
- packages/app-lib/src/launcher/mod.rs          |  41 +++---
+ packages/app-lib/src/launcher/mod.rs          |  46 ++++---
  packages/app-lib/src/state/process.rs         | 123 ++++++++++++++----
- 20 files changed, 418 insertions(+), 51 deletions(-)
+ 20 files changed, 422 insertions(+), 52 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ProcessConsole.vue
 
 diff --git a/apps/app-frontend/src/components/ui/ProcessConsole.vue b/apps/app-frontend/src/components/ui/ProcessConsole.vue
@@ -649,7 +649,7 @@ index 833349d..84b9a87 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 5378b99..658c529 100644
+index 5378b99..4199bff 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -825,6 +825,9 @@ pub async fn launch_minecraft(
@@ -705,7 +705,19 @@ index 5378b99..658c529 100644
      }
  
      if let Some(path) = download::missing_runtime_file(
-@@ -1225,6 +1234,8 @@ pub async fn launch_minecraft(
+@@ -1178,7 +1187,10 @@ pub async fn launch_minecraft(
+     let _store_lease = state.content_store.lease().await;
+     state.content_store.recover(Some(&instance.id)).await?;
+     // state.content_store.validate_instance(instance).await?;
+-    if crate::state::instance_has_running_process(&instance.id, &state).await? {
++    if !additional
++        && crate::state::instance_has_running_process(&instance.id, &state)
++            .await?
++    {
+         return Err(crate::ErrorKind::LauncherError(format!(
+             "Instance {} is already running",
+             instance.id
+@@ -1225,6 +1237,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,
