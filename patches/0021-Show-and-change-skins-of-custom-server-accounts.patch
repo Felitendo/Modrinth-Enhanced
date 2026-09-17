@@ -1,0 +1,572 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Thu, 17 Sep 2026 15:09:57 +0200
+Subject: [PATCH] Show and change skins of custom server accounts
+
+A custom server account got the skin page of an offline one: Steve, and
+nothing it could change. Its profile now comes from the server's session
+server, as the game gets it, so the page shows the skin and cape it
+wears there, and the account list and title bar show its head instead of
+asking mc-heads.net, which only knows Mojang's players.
+
+Picking or adding a skin uploads it through authlib-injector's texture
+API, which Drasl, Blessing Skin and LittleSkin all have, and resetting
+it removes it there. The skin library works as for a Microsoft account.
+
+Capes are left alone. Such a server only knows the one cape uploaded on
+its website, and taking it off would delete it, so the cape picker gives
+way to a note. The textures are handed to the page as data URLs, since
+these servers send no CORS headers for them.
+
+Ely.by accounts get their heads the same way; their skin page stays the
+Ely.by one.
+---
+ .../src/components/ui/AccountsCard.vue        |  31 ++-
+ .../src/components/ui/skin/EditSkinModal.vue  |  15 +-
+ apps/app-frontend/src/pages/Skins.vue         |   1 +
+ packages/app-lib/src/api/minecraft_skins.rs   |   4 +-
+ packages/app-lib/src/state/minecraft_auth.rs  | 242 +++++++++++++++++-
+ .../src/state/minecraft_skins/mojang_api.rs   |  64 +++--
+ 6 files changed, 326 insertions(+), 31 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+index 03a61f2..364aef0 100644
+--- a/apps/app-frontend/src/components/ui/AccountsCard.vue
++++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+@@ -185,11 +185,14 @@ type MinecraftCredential = {
+ 	profile: {
+ 		id: string
+ 		name: string
++		skins?: ProfileSkin[]
+ 	}
+ 	/** The Yggdrasil server a non-Microsoft account is on, such as Ely.by. */
+ 	auth_server?: string | null
+ }
+ 
++type ProfileSkin = { state: string; url: string; textureKey?: string }
++
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
+@@ -200,6 +203,8 @@ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+ const equippedHeadUrl = ref<string>()
+ let headRequest = 0
++// Heads of accounts on other servers, which mc-heads.net does not know.
++const serverHeads = ref<Record<string, string>>({})
+ 
+ async function updateHeadUrl(skin: Skin | null) {
+ 	const request = ++headRequest
+@@ -214,13 +219,30 @@ async function updateHeadUrl(skin: Skin | null) {
+ onUnmounted(() => {
+ 	headRequest++
+ 	if (equippedHeadUrl.value) URL.revokeObjectURL(equippedHeadUrl.value)
++	Object.values(serverHeads.value).forEach((url) => URL.revokeObjectURL(url))
+ })
+ 
++async function updateServerHeads() {
++	const heads: Record<string, string> = {}
++	for (const account of accounts.value) {
++		const skin = account.profile.skins?.find((s) => s.state === 'ACTIVE')
++		if (!account.auth_server || !skin?.textureKey) continue
++		heads[account.profile.id] = await getPlayerHeadUrl({
++			texture_key: skin.textureKey,
++			texture: skin.url,
++		} as Skin).catch(() => '')
++	}
++	const previous = serverHeads.value
++	serverHeads.value = heads
++	Object.values(previous).forEach((url) => URL.revokeObjectURL(url))
++}
++
+ async function refreshValues() {
+ 	defaultUser.value = await get_default_user().catch(handleError)
+ 	const userList = await users().catch(handleError)
+ 	accounts.value = Array.isArray(userList) ? [...userList] : []
+ 	accounts.value.sort((a, b) => (a.profile?.name ?? '').localeCompare(b.profile?.name ?? ''))
++	void updateServerHeads()
+ 
+ 	try {
+ 		const skins = await get_available_skins()
+@@ -272,7 +294,10 @@ const avatarUrl = computed(() => {
+ 		return `https://mc-heads.net/avatar/${equippedSkin.value.texture_key}/128`
+ 	}
+ 	if (selectedAccount.value?.profile?.id) {
+-		return `https://mc-heads.net/avatar/${selectedAccount.value.profile.id}/128`
++		return (
++			serverHeads.value[selectedAccount.value.profile.id] ||
++			`https://mc-heads.net/avatar/${selectedAccount.value.profile.id}/128`
++		)
+ 	}
+ 	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
+ })
+@@ -308,7 +333,9 @@ function getAccountAvatarUrl(account: MinecraftCredential) {
+ 			return cachedUrl
+ 		}
+ 	}
+-	return `https://mc-heads.net/avatar/${account.profile.id}/128`
++	return (
++		serverHeads.value[account.profile.id] || `https://mc-heads.net/avatar/${account.profile.id}/128`
++	)
+ }
+ 
+ async function setAccount(account: MinecraftCredential) {
+diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
+index ee32e2e..7d9b78d 100644
+--- a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
++++ b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
+@@ -47,7 +47,11 @@
+ 					</RadioButtons>
+ 				</section>
+ 
+-				<section>
++				<section v-if="capesLocked">
++					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
++					<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.capesOnServer) }}</p>
++				</section>
++				<section v-else>
+ 					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
+ 					<div class="relative w-fit max-w-full">
+ 						<Transition
+@@ -194,6 +198,10 @@ const messages = defineMessages({
+ 		id: 'app.skins.modal.cape-section',
+ 		defaultMessage: 'Cape',
+ 	},
++	capesOnServer: {
++		id: 'app.skins.modal.capes-on-server',
++		defaultMessage: "Capes are changed on your account server's website.",
++	},
+ 	noCapeTooltip: {
+ 		id: 'app.skins.modal.no-cape-tooltip',
+ 		defaultMessage: 'No cape',
+@@ -248,7 +256,8 @@ const previewSkin = ref<string>('')
+ 
+ const variant = ref<SkinModel>('CLASSIC')
+ const selectedCape = ref<Cape | undefined>(undefined)
+-const props = defineProps<{ capes?: Cape[]; demo?: boolean }>()
++// An account on another server keeps the cape uploaded there.
++const props = defineProps<{ capes?: Cape[]; demo?: boolean; capesLocked?: boolean }>()
+ 
+ const selectedCapeTexture = computed(() => selectedCape.value?.texture)
+ const canEditTextureAndModel = computed(() => currentSkin.value?.source !== 'default')
+@@ -379,7 +388,7 @@ async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
+ 	currentSkin.value = null
+ 	uploadedTextureUrl.value = skinTextureUrl
+ 	variant.value = await determineModelType(skinTextureUrl.original)
+-	selectedCape.value = undefined
++	selectedCape.value = props.capesLocked ? props.capes?.find((c) => c.is_equipped) : undefined
+ 
+ 	await loadPreviewSkin()
+ 
+diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
+index 9a10f0e..3b58ea9 100644
+--- a/apps/app-frontend/src/pages/Skins.vue
++++ b/apps/app-frontend/src/pages/Skins.vue
+@@ -1448,6 +1448,7 @@ await loadAccountSkins()
+ 	<EditSkinModal
+ 		ref="editSkinModal"
+ 		:capes="capes"
++		:capes-locked="!!currentUser?.auth_server"
+ 		:demo="!currentUser"
+ 		@saved="onSkinSaved"
+ 		@deleted="() => loadSkins()"
+diff --git a/packages/app-lib/src/api/minecraft_skins.rs b/packages/app-lib/src/api/minecraft_skins.rs
+index e5431e3..aae52e3 100644
+--- a/packages/app-lib/src/api/minecraft_skins.rs
++++ b/packages/app-lib/src/api/minecraft_skins.rs
+@@ -81,7 +81,7 @@ mod assets {
+     pub use default::DEFAULT_SKINS;
+ }
+ 
+-mod png_util;
++pub(crate) mod png_util;
+ 
+ const SKIN_CHANGE_DEBOUNCE: Duration = Duration::from_secs(10);
+ 
+@@ -1345,7 +1345,7 @@ fn is_bundled_skin(texture_key: &str, variant: MinecraftSkinVariant) -> bool {
+     })
+ }
+ 
+-fn get_fallback_default_skin() -> crate::Result<&'static Skin> {
++pub(crate) fn get_fallback_default_skin() -> crate::Result<&'static Skin> {
+     assets::DEFAULT_SKINS
+         .iter()
+         .find(|skin| {
+diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
+index 0245152..b916a6d 100644
+--- a/packages/app-lib/src/state/minecraft_auth.rs
++++ b/packages/app-lib/src/state/minecraft_auth.rs
+@@ -290,6 +290,10 @@ const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
+ /// Ely.by's Yggdrasil endpoints.
+ const ELY_AUTHSERVER: &str = "https://authserver.ely.by/auth";
+ 
++/// Where Ely.by answers the game's questions about players.
++const ELY_SESSIONSERVER: &str =
++    "https://authserver.ely.by/api/authlib-injector/sessionserver";
++
+ /// An account server that speaks Yggdrasil, the protocol Mojang's own used to,
+ /// and that authlib-injector can point the game at.
+ #[derive(Debug, Clone)]
+@@ -334,6 +338,195 @@ impl AuthServer {
+         INSECURE_REQWEST_CLIENT.post(url).json(&body).send().await
+     }
+ 
++    /// The player's profile as this server hands it to the game, with the skin
++    /// and cape it has.
++    ///
++    /// The textures come along as data URLs: the skin page draws capes straight
++    /// from their URL, and these servers neither send CORS headers nor always
++    /// use https.
++    async fn session_profile(
++        &self,
++        id: Uuid,
++    ) -> Result<MinecraftProfile, MinecraftAuthenticationError> {
++        #[derive(Deserialize)]
++        struct SessionProfile {
++            name: String,
++            #[serde(default)]
++            properties: Vec<Property>,
++        }
++
++        #[derive(Deserialize)]
++        struct Property {
++            name: String,
++            value: String,
++        }
++
++        #[derive(Deserialize, Default)]
++        struct TexturesProperty {
++            #[serde(default)]
++            textures: Textures,
++        }
++
++        #[derive(Deserialize, Default)]
++        struct Textures {
++            #[serde(rename = "SKIN")]
++            skin: Option<Texture>,
++            #[serde(rename = "CAPE")]
++            cape: Option<Texture>,
++        }
++
++        #[derive(Deserialize)]
++        struct Texture {
++            url: Url,
++            #[serde(default)]
++            metadata: Option<TextureMetadata>,
++        }
++
++        #[derive(Deserialize)]
++        struct TextureMetadata {
++            model: Option<String>,
++        }
++
++        let step = MinecraftAuthStep::MinecraftProfile;
++        let sessionserver = match self {
++            Self::Ely => ELY_SESSIONSERVER.to_owned(),
++            Self::Authlib(root) => format!("{root}/sessionserver"),
++        };
++
++        let response = INSECURE_REQWEST_CLIENT
++            .get(format!(
++                "{sessionserver}/session/minecraft/profile/{}",
++                id.simple()
++            ))
++            .query(&[("unsigned", "true")])
++            .timeout(std::time::Duration::from_secs(10))
++            .send()
++            .await
++            .map_err(|source| MinecraftAuthenticationError::Request {
++                source,
++                step,
++            })?;
++
++        let status = response.status();
++        let text = response.text().await.map_err(|source| {
++            MinecraftAuthenticationError::Request { source, step }
++        })?;
++        let profile = serde_json::from_str::<SessionProfile>(&text).map_err(
++            |source| MinecraftAuthenticationError::DeserializeResponse {
++                source,
++                raw: text,
++                step,
++                status_code: status,
++            },
++        )?;
++
++        let textures = profile
++            .properties
++            .iter()
++            .find(|property| property.name == "textures")
++            .and_then(|property| BASE64_STANDARD.decode(&property.value).ok())
++            .and_then(|json| {
++                serde_json::from_slice::<TexturesProperty>(&json).ok()
++            })
++            .unwrap_or_default()
++            .textures;
++
++        let skin = match textures.skin {
++            Some(texture) => Some(MinecraftSkin {
++                id: texture_id(&texture.url),
++                state: MinecraftCharacterExpressionState::Active,
++                texture_key: texture
++                    .url
++                    .path_segments()
++                    .and_then(|mut segments| segments.next_back())
++                    .map(|name| Arc::from(name.trim_end_matches(".png"))),
++                variant: match texture
++                    .metadata
++                    .and_then(|metadata| metadata.model)
++                {
++                    Some(model) if model == "slim" => {
++                        MinecraftSkinVariant::Slim
++                    }
++                    _ => MinecraftSkinVariant::Classic,
++                },
++                url: texture_data_url(texture.url).await,
++                name: None,
++            }),
++            // A player without a skin of their own wears a default one.
++            None => crate::api::minecraft_skins::get_fallback_default_skin()
++                .ok()
++                .map(|default| MinecraftSkin {
++                    id: Uuid::nil(),
++                    state: MinecraftCharacterExpressionState::Active,
++                    url: Arc::clone(&default.texture),
++                    texture_key: Some(Arc::clone(&default.texture_key)),
++                    variant: default.variant,
++                    name: default.name.as_deref().map(str::to_owned),
++                }),
++        };
++
++        let capes = match textures.cape {
++            Some(texture) => vec![MinecraftCape {
++                id: texture_id(&texture.url),
++                state: MinecraftCharacterExpressionState::Active,
++                url: texture_data_url(texture.url).await,
++                name: Arc::from("Cape"),
++            }],
++            None => Vec::new(),
++        };
++
++        Ok(MinecraftProfile {
++            id,
++            name: profile.name,
++            skins: skin.into_iter().collect(),
++            capes,
++            fetch_time: Some(Instant::now()),
++        })
++    }
++
++    /// Uploads a skin or cape to this server, or with no form removes it, per
++    /// authlib-injector's texture API. Ely.by has no such API.
++    pub(crate) async fn change_texture(
++        &self,
++        credentials: &Credentials,
++        kind: &str,
++        form: Option<reqwest::multipart::Form>,
++    ) -> crate::Result<()> {
++        let Self::Authlib(root) = self else {
++            return Err(crate::ErrorKind::OtherError(format!(
++                "Skins on {} cannot be changed from here",
++                self.name()
++            ))
++            .into());
++        };
++
++        let url = format!(
++            "{root}/api/user/profile/{}/{kind}",
++            credentials.offline_profile.id.simple()
++        );
++        let request = match form {
++            Some(form) => INSECURE_REQWEST_CLIENT.put(url).multipart(form),
++            None => INSECURE_REQWEST_CLIENT.delete(url),
++        };
++
++        let response = request
++            .bearer_auth(&credentials.access_token)
++            .send()
++            .await
++            .map_err(|error| {
++                crate::ErrorKind::OtherError(format!(
++                    "Could not reach {}: {error}",
++                    self.name()
++                ))
++            })?;
++
++        if !response.status().is_success() {
++            return Err(self.error(response).await);
++        }
++
++        Ok(())
++    }
++
+     fn refresh_token(&self, client_token: &str) -> String {
+         match self {
+             Self::Ely => format!("{ELY_REFRESH_TOKEN_PREFIX}{client_token}"),
+@@ -811,10 +1004,10 @@ impl Credentials {
+         &self,
+         cache_intent: OnlineProfileCacheIntent,
+     ) -> Option<Arc<MinecraftProfile>> {
+-        // Neither offline nor Yggdrasil accounts have a Mojang profile, so skip
+-        // the request that would only ever fail and fall back to the profile
+-        // recorded locally, which already holds the right id and name.
+-        if self.is_offline() || self.yggdrasil().is_some() {
++        // Offline accounts have a profile nowhere, so skip the request that
++        // would only ever fail and fall back to the profile recorded locally,
++        // which already holds the right id and name.
++        if self.is_offline() {
+             return None;
+         }
+ 
+@@ -864,7 +1057,15 @@ impl Credentials {
+             stale_profile
+         };
+ 
+-        match minecraft_profile(&self.access_token).await {
++        // A Yggdrasil account's skin and cape are on its own server.
++        let fetched = match self.auth_server() {
++            Some(server) => {
++                server.session_profile(self.offline_profile.id).await
++            }
++            None => minecraft_profile(&self.access_token).await,
++        };
++
++        match fetched {
+             Ok(profile) => {
+                 let profile = Arc::new(profile);
+                 let cache_entry = ProfileCacheEntry::Hit(Arc::clone(&profile));
+@@ -1959,6 +2160,37 @@ impl Deref for MaybeOnlineMinecraftProfile<'_> {
+     }
+ }
+ 
++/// A stable id for a texture from another account server, which has none.
++fn texture_id(url: &Url) -> Uuid {
++    Uuid::from_bytes(md5::compute(url.as_str()).0)
++}
++
++/// A texture from another account server as a data URL, or as it was if it
++/// cannot be fetched.
++async fn texture_data_url(url: Url) -> Arc<Url> {
++    let texture = async {
++        INSECURE_REQWEST_CLIENT
++            .get(url.clone())
++            .timeout(std::time::Duration::from_secs(10))
++            .send()
++            .await?
++            .error_for_status()?
++            .bytes()
++            .await
++    };
++
++    match texture.await {
++        Ok(bytes) => {
++            crate::api::minecraft_skins::png_util::blob_to_data_url(bytes)
++                .unwrap_or_else(|| Arc::new(url))
++        }
++        Err(error) => {
++            tracing::warn!("Could not fetch the texture at {url}: {error}");
++            Arc::new(url)
++        }
++    }
++}
++
+ #[tracing::instrument(skip(token))]
+ async fn minecraft_profile(
+     token: &str,
+diff --git a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
+index 9e89537..d037c47 100644
+--- a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
++++ b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
+@@ -25,6 +25,12 @@ impl MinecraftCapeOperation {
+         credentials: &Credentials,
+         cape_id: Uuid,
+     ) -> crate::Result<()> {
++        // Another account server only has the one cape uploaded there, and it
++        // is always worn.
++        if credentials.auth_server().is_some() {
++            return Ok(());
++        }
++
+         update_profile_cache_from_response(
+             INSECURE_REQWEST_CLIENT
+ 				.put("https://api.minecraftservices.com/minecraft/profile/capes/active")
+@@ -45,6 +51,11 @@ impl MinecraftCapeOperation {
+     }
+ 
+     pub async fn unequip_any(credentials: &Credentials) -> crate::Result<()> {
++        // Taking it off there deletes it, which is left to the server's website.
++        if credentials.auth_server().is_some() {
++            return Ok(());
++        }
++
+         update_profile_cache_from_response(
+ 			INSECURE_REQWEST_CLIENT
+ 				.delete("https://api.minecraftservices.com/minecraft/profile/capes/active")
+@@ -75,26 +86,37 @@ impl MinecraftSkinOperation {
+         TextureStream::Error: Into<Box<dyn Error + Send + Sync>>,
+         Bytes: From<TextureStream::Ok>,
+     {
++        let variant = match variant {
++            MinecraftSkinVariant::Slim => "slim",
++            MinecraftSkinVariant::Classic => "classic",
++            _ => {
++                return Err(ErrorKind::OtherError(
++                    "Cannot equip skin of unknown model variant".into(),
++                )
++                .into());
++            }
++        };
++        let file = Part::stream(Body::wrap_stream(texture))
++            .mime_str("image/png")?
++            .file_name("skin.png");
++
++        // Another account server takes the skin through authlib-injector's
++        // texture API, where the wide model is no model at all. The profile is
++        // read again afterwards.
++        if let Some(server) = credentials.auth_server() {
++            let model = if variant == "slim" { "slim" } else { "" };
++            let form = reqwest::multipart::Form::new()
++                .text("model", model)
++                .part("file", file);
++            server
++                .change_texture(credentials, "skin", Some(form))
++                .await?;
++            return Ok(None);
++        }
++
+         let form = reqwest::multipart::Form::new()
+-            .text(
+-                "variant",
+-                match variant {
+-                    MinecraftSkinVariant::Slim => "slim",
+-                    MinecraftSkinVariant::Classic => "classic",
+-                    _ => {
+-                        return Err(ErrorKind::OtherError(
+-                            "Cannot equip skin of unknown model variant".into(),
+-                        )
+-                        .into());
+-                    }
+-                },
+-            )
+-            .part(
+-                "file",
+-                Part::stream(Body::wrap_stream(texture))
+-                    .mime_str("image/png")?
+-                    .file_name("skin.png"),
+-            );
++            .text("variant", variant)
++            .part("file", file);
+ 
+         let profile = update_profile_cache_from_response(
+             INSECURE_REQWEST_CLIENT
+@@ -115,6 +137,10 @@ impl MinecraftSkinOperation {
+     }
+ 
+     pub async fn unequip_any(credentials: &Credentials) -> crate::Result<()> {
++        if let Some(server) = credentials.auth_server() {
++            return server.change_texture(credentials, "skin", None).await;
++        }
++
+         update_profile_cache_from_response(
+ 			INSECURE_REQWEST_CLIENT
+ 				.delete("https://api.minecraftservices.com/minecraft/profile/skins/active")

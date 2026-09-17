@@ -112,6 +112,10 @@ check "the game is pointed at the account's server" \
 	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'server.api_root()'
 check "the account card offers it" \
 	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'authlibAccountModal?.show'
+check "their skins are uploaded to the server" \
+	contains "$WORKTREE/packages/app-lib/src/state/minecraft_skins/mojang_api.rs" 'change_texture(credentials, "skin"'
+check "their profile comes from the server" \
+	contains "$WORKTREE/packages/app-lib/src/state/minecraft_auth.rs" 'server.session_profile(self.offline_profile.id)'
 
 log "Ely.by skins"
 check "the frontend can tell an Ely.by account" \

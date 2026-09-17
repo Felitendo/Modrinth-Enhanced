@@ -33,6 +33,7 @@ works.
 | `0018-Update-from-Modrinth-Enhanced-s-...` | Updates come from this project's own signed releases rather than Modrinth's.                                                                |
 | `0019-Add-accounts-from-other-...`         | Sign in to Drasl, Blessing Skin and other account servers, as with Ely.by.                                                                  |
 | `0020-Keep-the-settings-tabs-clear-of-...` | The settings tab list scrolls instead of running over the app version on Linux.                                                             |
+| `0021-Show-and-change-skins-of-custom-...` | A custom server account's skin is shown and changed on the skin page, and its head in the account list.                                     |
 
 ### Offline accounts
 
@@ -87,7 +88,10 @@ players asks which one to play as.
 On Drasl, a player who signed up through another service uses the Minecraft token from their
 account page as the password; the dialog says so.
 
-The account list shows which server an account is on.
+The account list shows which server an account is on, with the head of the skin worn there. The
+skin page shows that skin, and picking or adding one uploads it to the server through
+authlib-injector's texture API, which Drasl, Blessing Skin and LittleSkin all have. Capes are changed
+on the server's website: it only knows the one uploaded there, and taking it off would delete it.
 
 ### Sidebar and news
 
