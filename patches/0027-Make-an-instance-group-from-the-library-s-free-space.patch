@@ -1,0 +1,88 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Fri, 18 Sep 2026 10:42:13 +0200
+Subject: [PATCH] Make an instance group from the library's free space
+
+Right-clicking the empty space around the library offered a new instance
+and nothing else, so making a group meant finding the toolbar button.
+The same menu now offers it, and opens the dialog that button does.
+---
+ .../src/components/ui/library/index.vue          |  4 ++++
+ apps/app-frontend/src/pages/Index.vue            | 16 ++++++++++++++--
+ 2 files changed, 18 insertions(+), 2 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/library/index.vue b/apps/app-frontend/src/components/ui/library/index.vue
+index 20000b6..1849835 100644
+--- a/apps/app-frontend/src/components/ui/library/index.vue
++++ b/apps/app-frontend/src/components/ui/library/index.vue
+@@ -53,6 +53,7 @@ const {
+ 	currentDeleteInstances,
+ 	clearLibraryInstanceSelection,
+ 	deleteInstance,
++	openNewGroupModal,
+ 	handleInstanceIconSaved,
+ 	selectedLibraryInstances,
+ 	setSelectedLibraryInstances,
+@@ -260,6 +261,9 @@ watch(selectedLibraryInstances, (selectedInstances) => {
+ 		anchorInstance.value = null
+ 	}
+ })
++
++// So the page's own menu, on the free space around the library, can offer it.
++defineExpose({ openNewGroupModal })
+ </script>
+ 
+ <template>
+diff --git a/apps/app-frontend/src/pages/Index.vue b/apps/app-frontend/src/pages/Index.vue
+index 1c5fb5d..074e709 100644
+--- a/apps/app-frontend/src/pages/Index.vue
++++ b/apps/app-frontend/src/pages/Index.vue
+@@ -1,5 +1,5 @@
+ <script setup lang="ts">
+-import { PlayIcon, PlusIcon } from '@modrinth/assets'
++import { PlayIcon, PlusIcon, SquarePlusIcon } from '@modrinth/assets'
+ import { ContextMenu, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
+ import { useQuery } from '@tanstack/vue-query'
+ import dayjs from 'dayjs'
+@@ -25,6 +25,7 @@ const { handleError } = injectNotificationManager()
+ const { hasCreatedInstance, isReady } = injectOnboardingChecklist()
+ const showCreationModal = inject<() => void>('showCreationModal')
+ const pageOptions = ref<InstanceType<typeof ContextMenu>>()
++const librarySection = ref<InstanceType<typeof LibrarySection>>()
+ const appSettings = useAppSettings()
+ onBeforeRouteLeave(() => {
+ 	libraryScrollTop.value = document.querySelector('.app-viewport')?.scrollTop ?? 0
+@@ -39,6 +40,11 @@ const messages = defineMessages({
+ 		id: 'app.library.context-menu.create-instance',
+ 		defaultMessage: 'New instance',
+ 	},
++	// The library toolbar's button, so this is translated wherever that is.
++	newGroup: {
++		id: 'app.library.group.new',
++		defaultMessage: 'New group',
++	},
+ 	libraryActionsLabel: {
+ 		id: 'app.library.actions.label',
+ 		defaultMessage: 'Library actions',
+@@ -84,6 +90,12 @@ function openPageContextMenu(event: MouseEvent) {
+ 			icon: PlusIcon,
+ 			action: () => showCreationModal?.(),
+ 		},
++		{
++			id: 'new_group',
++			label: formatMessage(messages.newGroup),
++			icon: SquarePlusIcon,
++			action: () => librarySection.value?.openNewGroupModal(),
++		},
+ 	])
+ }
+ </script>
+@@ -100,7 +112,7 @@ function openPageContextMenu(event: MouseEvent) {
+ 			v-if="recentInstances?.length > 0 && appSettings.getFeatureFlag('worlds_in_home')"
+ 			:recent-instances="recentInstances"
+ 		/>
+-		<LibrarySection :instances="instances" />
++		<LibrarySection ref="librarySection" :instances="instances" />
+ 		<ContextMenu ref="pageOptions" :label="formatMessage(messages.libraryActionsLabel)" />
+ 	</div>
+ </template>
