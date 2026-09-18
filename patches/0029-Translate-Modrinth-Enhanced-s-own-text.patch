@@ -47,7 +47,7 @@ first start as well.
  34 files changed, 12240 insertions(+)
 
 diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
-index 739db25..43747eb 100644
+index 739db25..a5da18e 100644
 --- a/apps/app-frontend/src/locales/de-CH/index.json
 +++ b/apps/app-frontend/src/locales/de-CH/index.json
 @@ -200,6 +200,66 @@
@@ -555,7 +555,7 @@ index 739db25..43747eb 100644
      "message": "Neue Instanz erstellen"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} ausblenden"
++    "message": "«{name}» ausblenden"
 +  },
    "app.nav.home": {
      "message": "Startseite"
@@ -937,7 +937,7 @@ index 739db25..43747eb 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
-index 0b0e958..5787813 100644
+index 0b0e958..79d8035 100644
 --- a/apps/app-frontend/src/locales/de-DE/index.json
 +++ b/apps/app-frontend/src/locales/de-DE/index.json
 @@ -200,6 +200,66 @@
@@ -1060,7 +1060,7 @@ index 0b0e958..5787813 100644
 +    "message": "Das Spiel beschreibt es so: {description}"
 +  },
 +  "app.crash.rule.datapack-blocked-world.fix": {
-+    "message": "Ein Mod, der Rezepte oder Weltgenerierung hinzufügt, wurde entfernt oder geändert. Setze ihn zurück oder öffne die Welt im „abgesicherten Modus\", um sie ohne das defekte Datapack zu laden."
++    "message": "Ein Mod, der Rezepte oder Weltgenerierung hinzufügt, wurde entfernt oder geändert. Setze ihn zurück oder öffne die Welt im „abgesicherten Modus“, um sie ohne das defekte Datapack zu laden."
 +  },
 +  "app.crash.rule.datapack-blocked-world.title": {
 +    "message": "Die Welt ließ sich nicht laden, weil ein Datapack Fehler hat"
@@ -1445,7 +1445,7 @@ index 0b0e958..5787813 100644
      "message": "Neue Instanz erstellen"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} ausblenden"
++    "message": "„{name}“ ausblenden"
 +  },
    "app.nav.home": {
      "message": "Startseite"
@@ -1827,7 +1827,7 @@ index 0b0e958..5787813 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
-index f69928f..0c5661f 100644
+index f69928f..97bc3f3 100644
 --- a/apps/app-frontend/src/locales/es-419/index.json
 +++ b/apps/app-frontend/src/locales/es-419/index.json
 @@ -200,6 +200,66 @@
@@ -2335,7 +2335,7 @@ index f69928f..0c5661f 100644
      "message": "Crear una instancia nueva"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Ocultar {name}"
++    "message": "Ocultar «{name}»"
 +  },
    "app.nav.home": {
      "message": "Inicio"
@@ -2717,7 +2717,7 @@ index f69928f..0c5661f 100644
      "message": "Inicia sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
-index 9642053..476dd7d 100644
+index 9642053..a8a0fb9 100644
 --- a/apps/app-frontend/src/locales/es-ES/index.json
 +++ b/apps/app-frontend/src/locales/es-ES/index.json
 @@ -200,6 +200,66 @@
@@ -3225,7 +3225,7 @@ index 9642053..476dd7d 100644
      "message": "Crear nueva instancia"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Ocultar {name}"
++    "message": "Ocultar «{name}»"
 +  },
    "app.nav.home": {
      "message": "Inicio"
@@ -3607,7 +3607,7 @@ index 9642053..476dd7d 100644
      "message": "Iniciar sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
-index f5d47d3..b6e82d2 100644
+index f5d47d3..c8d5a6f 100644
 --- a/apps/app-frontend/src/locales/fr-FR/index.json
 +++ b/apps/app-frontend/src/locales/fr-FR/index.json
 @@ -200,6 +200,66 @@
@@ -4115,7 +4115,7 @@ index f5d47d3..b6e82d2 100644
      "message": "Créer une nouvelle instance"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Masquer {name}"
++    "message": "Masquer « {name} »"
 +  },
    "app.nav.home": {
      "message": "Accueil"
@@ -4497,7 +4497,7 @@ index f5d47d3..b6e82d2 100644
      "message": "Se connecter à Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
-index 5e4a7e7..3b3dfd0 100644
+index 5e4a7e7..2049a35 100644
 --- a/apps/app-frontend/src/locales/hu-HU/index.json
 +++ b/apps/app-frontend/src/locales/hu-HU/index.json
 @@ -200,6 +200,66 @@
@@ -4620,7 +4620,7 @@ index 5e4a7e7..3b3dfd0 100644
 +    "message": "A játék így írta le: {description}"
 +  },
 +  "app.crash.rule.datapack-blocked-world.fix": {
-+    "message": "Egy receptet vagy világgenerálást hozzáadó modot eltávolítottak vagy módosítottak. Tedd vissza, vagy nyisd meg a világot „biztonságos módban\", hogy a hibás adatcsomag nélkül töltsön be."
++    "message": "Egy receptet vagy világgenerálást hozzáadó modot eltávolítottak vagy módosítottak. Tedd vissza, vagy nyisd meg a világot „biztonságos módban”, hogy a hibás adatcsomag nélkül töltsön be."
 +  },
 +  "app.crash.rule.datapack-blocked-world.title": {
 +    "message": "A világ nem töltődött be, mert egy adatcsomag hibás"
@@ -5005,7 +5005,7 @@ index 5e4a7e7..3b3dfd0 100644
      "message": "Új példány létrehozása"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} elrejtése"
++    "message": "„{name}” elrejtése"
 +  },
    "app.nav.home": {
      "message": "Kezdőlap"
@@ -5387,7 +5387,7 @@ index 5e4a7e7..3b3dfd0 100644
      "message": "Bejelentkezés a Microsft-ba"
    },
 diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
-index 8fdd732..1bf6072 100644
+index 8fdd732..abdedc5 100644
 --- a/apps/app-frontend/src/locales/it-IT/index.json
 +++ b/apps/app-frontend/src/locales/it-IT/index.json
 @@ -200,6 +200,66 @@
@@ -5895,7 +5895,7 @@ index 8fdd732..1bf6072 100644
      "message": "Crea nuova istanza"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Nascondi {name}"
++    "message": "Nascondi «{name}»"
 +  },
    "app.nav.home": {
      "message": "Home"
@@ -6277,7 +6277,7 @@ index 8fdd732..1bf6072 100644
      "message": "Accedi a Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
-index 3703076..5c2622c 100644
+index 3703076..fb9a660 100644
 --- a/apps/app-frontend/src/locales/ja-JP/index.json
 +++ b/apps/app-frontend/src/locales/ja-JP/index.json
 @@ -200,6 +200,66 @@
@@ -6778,7 +6778,7 @@ index 3703076..5c2622c 100644
      "message": "新しいインスタンスを作成"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} を隠す"
++    "message": "「{name}」を隠す"
 +  },
    "app.nav.home": {
      "message": "ホーム"
@@ -7160,7 +7160,7 @@ index 3703076..5c2622c 100644
      "message": "Microsoftにサインイン"
    },
 diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
-index 958f44d..3118c36 100644
+index 958f44d..e5f1741 100644
 --- a/apps/app-frontend/src/locales/nl-NL/index.json
 +++ b/apps/app-frontend/src/locales/nl-NL/index.json
 @@ -200,6 +200,66 @@
@@ -7668,7 +7668,7 @@ index 958f44d..3118c36 100644
      "message": "Nieuwe instantie aanmaken"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} verbergen"
++    "message": "‘{name}’ verbergen"
 +  },
    "app.nav.home": {
      "message": "Start"
@@ -8050,7 +8050,7 @@ index 958f44d..3118c36 100644
      "message": "Aanmelden bij Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
-index a59e418..86edf38 100644
+index a59e418..49290c4 100644
 --- a/apps/app-frontend/src/locales/pl-PL/index.json
 +++ b/apps/app-frontend/src/locales/pl-PL/index.json
 @@ -200,6 +200,66 @@
@@ -8173,7 +8173,7 @@ index a59e418..86edf38 100644
 +    "message": "Gra opisała to tak: {description}"
 +  },
 +  "app.crash.rule.datapack-blocked-world.fix": {
-+    "message": "Mod dodający receptury albo generowanie świata został usunięty lub zmieniony. Przywróć go albo otwórz świat w „trybie awaryjnym\", żeby wczytać go bez zepsutego datapacka."
++    "message": "Mod dodający receptury albo generowanie świata został usunięty lub zmieniony. Przywróć go albo otwórz świat w „trybie awaryjnym”, żeby wczytać go bez zepsutego datapacka."
 +  },
 +  "app.crash.rule.datapack-blocked-world.title": {
 +    "message": "Świat nie wczytał się, bo datapack ma błędy"
@@ -8558,7 +8558,7 @@ index a59e418..86edf38 100644
      "message": "Utwórz instancję"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Ukryj {name}"
++    "message": "Ukryj „{name}”"
 +  },
    "app.nav.home": {
      "message": "Strona główna"
@@ -8940,7 +8940,7 @@ index a59e418..86edf38 100644
      "message": "Zaloguj się do Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
-index 57ebf13..68217c5 100644
+index 57ebf13..e55bb14 100644
 --- a/apps/app-frontend/src/locales/pt-BR/index.json
 +++ b/apps/app-frontend/src/locales/pt-BR/index.json
 @@ -200,6 +200,66 @@
@@ -9448,7 +9448,7 @@ index 57ebf13..68217c5 100644
      "message": "Criar instância nova"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Ocultar {name}"
++    "message": "Ocultar “{name}”"
 +  },
    "app.nav.home": {
      "message": "Início"
@@ -9830,7 +9830,7 @@ index 57ebf13..68217c5 100644
      "message": "Entrar na Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
-index 8aaafd3..893c881 100644
+index 8aaafd3..e9daac6 100644
 --- a/apps/app-frontend/src/locales/ru-RU/index.json
 +++ b/apps/app-frontend/src/locales/ru-RU/index.json
 @@ -200,6 +200,66 @@
@@ -10338,7 +10338,7 @@ index 8aaafd3..893c881 100644
      "message": "Создать новую сборку"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Скрыть {name}"
++    "message": "Скрыть «{name}»"
 +  },
    "app.nav.home": {
      "message": "Главная"
@@ -10720,7 +10720,7 @@ index 8aaafd3..893c881 100644
      "message": "Войти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
-index 5203ed3..fb8eba8 100644
+index 5203ed3..ee49f7e 100644
 --- a/apps/app-frontend/src/locales/sv-SE/index.json
 +++ b/apps/app-frontend/src/locales/sv-SE/index.json
 @@ -200,6 +200,66 @@
@@ -11228,7 +11228,7 @@ index 5203ed3..fb8eba8 100644
      "message": "Skapa ny instans"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Dölj {name}"
++    "message": "Dölj ”{name}”"
 +  },
    "app.nav.home": {
      "message": "Hem"
@@ -11610,7 +11610,7 @@ index 5203ed3..fb8eba8 100644
      "message": "Logga in på Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
-index 3d2c134..0b19eca 100644
+index 3d2c134..79c33a4 100644
 --- a/apps/app-frontend/src/locales/tr-TR/index.json
 +++ b/apps/app-frontend/src/locales/tr-TR/index.json
 @@ -200,6 +200,66 @@
@@ -12118,7 +12118,7 @@ index 3d2c134..0b19eca 100644
      "message": "Yeni kurulum oluştur"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "{name} ögesini gizle"
++    "message": "“{name}” ögesini gizle"
 +  },
    "app.nav.home": {
      "message": "Ana Sayfa"
@@ -12500,7 +12500,7 @@ index 3d2c134..0b19eca 100644
      "message": "Microsoft'a giriş yap"
    },
 diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
-index fe07513..ca012d6 100644
+index fe07513..266ea11 100644
 --- a/apps/app-frontend/src/locales/uk-UA/index.json
 +++ b/apps/app-frontend/src/locales/uk-UA/index.json
 @@ -200,6 +200,66 @@
@@ -13008,7 +13008,7 @@ index fe07513..ca012d6 100644
      "message": "Створити новий примірник"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "Сховати {name}"
++    "message": "Сховати «{name}»"
 +  },
    "app.nav.home": {
      "message": "Головна"
@@ -13390,7 +13390,7 @@ index fe07513..ca012d6 100644
      "message": "Увійти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
-index 466e4bf..5675ab0 100644
+index 466e4bf..429db04 100644
 --- a/apps/app-frontend/src/locales/zh-CN/index.json
 +++ b/apps/app-frontend/src/locales/zh-CN/index.json
 @@ -200,6 +200,66 @@
@@ -13897,7 +13897,7 @@ index 466e4bf..5675ab0 100644
      "message": "创建实例"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "隐藏 {name}"
++    "message": "隐藏“{name}”"
 +  },
    "app.nav.home": {
      "message": "首页"
@@ -14279,7 +14279,7 @@ index 466e4bf..5675ab0 100644
      "message": "登录 Microsoft 账户"
    },
 diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
-index e969156..46a8eea 100644
+index e969156..f4c0f1e 100644
 --- a/apps/app-frontend/src/locales/zh-TW/index.json
 +++ b/apps/app-frontend/src/locales/zh-TW/index.json
 @@ -200,6 +200,66 @@
@@ -14787,7 +14787,7 @@ index e969156..46a8eea 100644
      "message": "建立新實例"
    },
 +  "app.nav.hide-from-sidebar": {
-+    "message": "隱藏 {name}"
++    "message": "隱藏「{name}」"
 +  },
    "app.nav.home": {
      "message": "首頁"

@@ -26,7 +26,7 @@ where they belong; only the number of instances stays there.
  create mode 100644 apps/app-frontend/src/composables/use-sidebar-layout.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 6539d4a..2bd8eb3 100644
+index 6539d4a..871a8b9 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -15,6 +15,7 @@ import {
@@ -153,7 +153,7 @@ index 6539d4a..2bd8eb3 100644
 +	},
 +	hideFromSidebar: {
 +		id: 'app.nav.hide-from-sidebar',
-+		defaultMessage: 'Hide {name}',
++		defaultMessage: 'Hide “{name}”',
 +	},
 +	arrangeSidebar: {
 +		id: 'app.nav.arrange-sidebar',
