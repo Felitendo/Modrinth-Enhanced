@@ -176,6 +176,8 @@ check "they can be arranged in the settings" \
 	contains "$WORKTREE/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue" 'content: SidebarSettings'
 check "right-clicking one hides it" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'openSidebarMenu'
+check "an instance can be deleted from the sidebar" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue" 'askToDelete'
 check "the news section can be collapsed" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
 check "the right sidebar has a fold button" \

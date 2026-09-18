@@ -1,0 +1,116 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Fri, 18 Sep 2026 09:43:57 +0200
+Subject: [PATCH] Delete an instance from the sidebar
+
+Right-clicking an instance in the sidebar offered play, stop, open and
+show in folder, but deleting one meant going to the library first. It is
+in that menu now, in red and below a divider, and asks first with the
+same dialog the library uses. An instance that is running has to be
+stopped first, which the entry says.
+---
+ .../components/ui/QuickInstanceSwitcher.vue   | 49 ++++++++++++++++++-
+ 1 file changed, 47 insertions(+), 2 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue b/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
+index 5c58a50..2ad9979 100644
+--- a/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
++++ b/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
+@@ -1,5 +1,12 @@
+ <script setup>
+-import { EyeIcon, FolderOpenIcon, PlayIcon, SpinnerIcon, StopCircleIcon } from '@modrinth/assets'
++import {
++	EyeIcon,
++	FolderOpenIcon,
++	PlayIcon,
++	SpinnerIcon,
++	StopCircleIcon,
++	TrashIcon,
++} from '@modrinth/assets'
+ import {
+ 	Avatar,
+ 	commonMessages,
+@@ -13,6 +20,7 @@ import dayjs from 'dayjs'
+ import { computed, onMounted, onUnmounted, ref } from 'vue'
+ import { useRouter } from 'vue-router'
+ 
++import ConfirmDeleteInstanceModal from '@/components/ui/modal/ConfirmDeleteInstanceModal.vue'
+ import NavButton from '@/components/ui/NavButton.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { handleSevereError } from '@/composables/use-error.js'
+@@ -21,7 +29,7 @@ import {
+ 	useQuickInstanceLimit,
+ } from '@/composables/use-quick-instance-limit.ts'
+ import { trackEvent } from '@/helpers/analytics'
+-import { getInstanceIconUrl, kill, run } from '@/helpers/instance'
++import { getInstanceIconUrl, kill, remove, run } from '@/helpers/instance'
+ import { get_all } from '@/helpers/process'
+ import { showInstanceInFolder } from '@/helpers/utils'
+ import { instanceListQueryOptions } from '@/pages/instance/query-options'
+@@ -31,6 +39,9 @@ const { handleError } = injectNotificationManager()
+ const instancesQuery = useQuery(instanceListQueryOptions())
+ const router = useRouter()
+ const instanceOptions = ref()
++const confirmDeleteModal = ref()
++// The instance the delete dialog is about, kept for its text and the deleting.
++const instanceToDelete = ref(null)
+ const runningInstances = ref([])
+ 
+ const { formatMessage } = useVIntl()
+@@ -212,6 +223,10 @@ const messages = defineMessages({
+ 		id: 'app.quick-instance-switcher.instance-locked',
+ 		defaultMessage: 'This instance has been locked',
+ 	},
++	deleteWhileRunning: {
++		id: 'app.quick-instance-switcher.delete-while-running',
++		defaultMessage: 'Stop the instance first',
++	},
+ 	title: {
+ 		id: 'app.quick-instance-switcher.title',
+ 		defaultMessage: 'Recent instances',
+@@ -285,8 +300,33 @@ function openContextMenu(event, instance) {
+ 			icon: FolderOpenIcon,
+ 			action: () => showInstanceInFolder(instance.id),
+ 		},
++		{ type: 'divider' },
++		{
++			id: 'delete',
++			label: formatMessage(commonMessages.deleteLabel),
++			icon: TrashIcon,
++			tone: 'red',
++			disabled: playing,
++			tooltip: playing ? formatMessage(messages.deleteWhileRunning) : undefined,
++			action: () => askToDelete(instance),
++		},
+ 	])
+ }
++
++/** Deleting an instance takes everything in it, so it is asked about first. */
++function askToDelete(instance) {
++	instanceToDelete.value = instance
++	confirmDeleteModal.value?.show()
++}
++
++async function deleteInstance() {
++	const instance = instanceToDelete.value
++	if (!instance) return
++
++	instanceToDelete.value = null
++	await remove(instance.id).catch(handleError)
++	trackEvent('InstanceRemove', { source: 'QuickInstanceSwitcher' })
++}
+ </script>
+ 
+ <template>
+@@ -326,6 +366,11 @@ function openContextMenu(event, instance) {
+ 			</TransitionGroup>
+ 		</div>
+ 		<ContextMenu ref="instanceOptions" :label="formatMessage(messages.instanceActions)" />
++		<ConfirmDeleteInstanceModal
++			ref="confirmDeleteModal"
++			:instances="instanceToDelete ? [instanceToDelete] : []"
++			@delete="deleteInstance"
++		/>
+ 		<div
+ 			v-tooltip.right="dividerTooltip"
+ 			role="separator"

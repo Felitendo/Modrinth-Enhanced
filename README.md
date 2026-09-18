@@ -62,6 +62,7 @@ sudo dnf install "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-E
 | `0023-Browse-LittleSkin-s-skin-library`    | LittleSkin's skin library in the Browse tab, with search, sorting and likes.                                                                |
 | `0024-Offer-the-launchers-instances-...`   | Every launcher the importers read is offered, with the folder it keeps instances in.                                                        |
 | `0025-Arrange-the-left-sidebar`            | The buttons in the left sidebar are reordered and hidden in a settings tab of their own.                                                    |
+| `0026-Delete-an-instance-from-the-sidebar` | Right-clicking an instance in the sidebar can delete it.                                                                                    |
 
 ### Offline accounts
 
@@ -133,6 +134,9 @@ Settings > Sidebar has the buttons above the instances — Home, Discover, Skins
 Modrinth Hosting — in a list: move one up or down, hide it, or put the usual order back.
 Right-clicking one of them in the sidebar hides it or opens that tab. Where it all sits is kept on
 this machine, since it is about how the app looks here.
+
+Right-clicking an instance in the sidebar plays or stops it, opens it or its folder, and deletes it,
+which asks first and is refused while the instance is running.
 
 The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
 folds away with the arrow button in the title bar. Upstream shows that button only once "Hide right
