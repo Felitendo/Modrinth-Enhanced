@@ -286,7 +286,8 @@ scripts/prepare.sh
 - **Upstream release** (`.github/workflows/upstream-release.yml`) runs daily. If Modrinth has
   published a newer release than `upstream.txt`, it rebases the patches onto it, rebuilds and — only if every
   platform built and every check passed — commits the bump, tags it with the upstream version and
-  publishes a release with the installers.
+  publishes a release with the installers. Its notes are the commits since the last release, with
+  the patch list folded away underneath.
 - **Revisions** come from the same run: when `patches/` or `scripts/` changed since the last
   release of that upstream version, it is released again as `v0.21.2-2`, `v0.21.2-3` and so on.
   The app and installers still carry the upstream version: RPM and the Windows installers do not

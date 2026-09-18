@@ -100,7 +100,10 @@ jobs:
     needs: [detect, build]
     runs-on: ubuntu-latest
     steps:
+      # The whole history: the release notes are the commits since the last one.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Record the upstream release we build against
         env:
@@ -200,18 +203,47 @@ jobs:
               }' "$patch"
             done
           )"
+          patch_count="$(printf '%s\n' "$patches" | grep -c '^- ' || true)"
+
+          # What changed here since the last release, as its commit subjects.
+          # The bump of upstream.txt is left out: the line above already says
+          # which Modrinth App this is built from.
+          previous="$(gh release view --json tagName --jq .tagName 2>/dev/null || true)"
+          changes=""
+          if [ -n "$previous" ]; then
+            changes="$(
+              git log --reverse --no-merges --pretty='- %s' "$previous..HEAD" |
+                grep -v '^- Track upstream ' || true
+            )"
+          fi
+          if [ -z "$changes" ]; then
+            changes="- Rebuilt on Modrinth App $UPSTREAM, with the patches unchanged."
+          fi
+          if [ -n "$previous" ]; then
+            changes="$changes
+
+          [Everything since $previous](https://github.com/$GITHUB_REPOSITORY/compare/$previous...$TAG)"
+          fi
+
           notes="$(cat <<EOF
           Modrinth Enhanced $TAG, built from [Modrinth App $UPSTREAM](https://github.com/modrinth/code/releases/tag/$UPSTREAM).
 
-          Same app as upstream, with the patches in \`patches/\` applied:
+          ## What changed
+
+          $changes
+
+          Modrinth's own changes are in the [Modrinth App $UPSTREAM release notes](https://github.com/modrinth/code/releases/tag/$UPSTREAM).
+
+          <details>
+          <summary>The $patch_count patches in this build</summary>
 
           $patches
+
+          </details>
 
           It keeps using the same data directory as the official Modrinth App,
           so instances, settings and accounts carry over. Do not run both at
           the same time.
-
-          See the upstream release notes for everything else that changed.
           EOF
           )"
           # The tag goes on the commit that was built, not on whatever main is
