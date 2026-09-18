@@ -61,6 +61,7 @@ sudo dnf install "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-E
 | `0022-Sign-in-to-custom-servers-in-...`    | Servers with Yggdrasil Connect, such as LittleSkin, sign in on their own page, with two-factor authentication.                              |
 | `0023-Browse-LittleSkin-s-skin-library`    | LittleSkin's skin library in the Browse tab, with search, sorting and likes.                                                                |
 | `0024-Offer-the-launchers-instances-...`   | Every launcher the importers read is offered, with the folder it keeps instances in.                                                        |
+| `0025-Arrange-the-left-sidebar`            | The buttons in the left sidebar are reordered and hidden in a settings tab of their own.                                                    |
 
 ### Offline accounts
 
@@ -128,8 +129,10 @@ on the server's website: it only knows the one uploaded there, and taking it off
 
 ### Sidebar and news
 
-The Modrinth Servers button in the left sidebar can be switched off under
-Settings > Features > Sidebar.
+Settings > Sidebar has the buttons above the instances — Home, Discover, Skins, Screenshots and
+Modrinth Hosting — in a list: move one up or down, hide it, or put the usual order back.
+Right-clicking one of them in the sidebar hides it or opens that tab. Where it all sits is kept on
+this machine, since it is about how the app looks here.
 
 The news section in the right sidebar folds away by clicking its heading. The right sidebar itself
 folds away with the arrow button in the title bar. Upstream shows that button only once "Hide right

@@ -170,8 +170,12 @@ check "the skin page has a Browse tab" \
 	contains "$WORKTREE/apps/app-frontend/src/pages/Skins.vue" '<SkinBrowser'
 
 log "Sidebar and news"
-check "Modrinth Servers is behind a flag" \
-	contains "$WORKTREE/apps/app-frontend/src/App.vue" "getFeatureFlag('show_hosting_in_sidebar')"
+check "the sidebar buttons follow the saved order" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'sidebarLayout.order.value'
+check "they can be arranged in the settings" \
+	contains "$WORKTREE/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue" 'content: SidebarSettings'
+check "right-clicking one hides it" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'openSidebarMenu'
 check "the news section can be collapsed" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
 check "the right sidebar has a fold button" \
