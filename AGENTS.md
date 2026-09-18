@@ -25,3 +25,6 @@ separately, from the AUR, and stays untouched.
   with a desktop entry of its own.
 - `FAST=1` cuts the build to about a third of the time, at the cost of a few megabytes. Use it for
   anything that is not meant to be release-like: `DEV=1 FAST=1 scripts/build.sh`.
+- Build after every change that touches the app, and install it over the last dev build, so it can
+  be tried out right away. Neither pnpm nor a JDK is on PATH by default:
+  `PATH="$PWD/build/bin:$PWD/build/jdk-17.0.20.1+1/bin:$PATH" JAVA_HOME="$PWD/build/jdk-17.0.20.1+1" DEV=1 FAST=1 scripts/build.sh`
