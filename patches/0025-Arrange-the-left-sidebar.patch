@@ -20,8 +20,8 @@ where they belong; only the number of instances stays there.
  .../components/ui/modal/AppSettingsModal.vue  |  22 ++-
  .../ui/settings/display/FeaturesSettings.vue  |  70 ---------
  .../ui/settings/display/SidebarSettings.vue   | 125 ++++++++++++++++
- .../src/composables/use-sidebar-layout.ts     |  64 ++++++++
- 5 files changed, 302 insertions(+), 117 deletions(-)
+ .../src/composables/use-sidebar-layout.ts     |  72 +++++++++
+ 5 files changed, 310 insertions(+), 117 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
  create mode 100644 apps/app-frontend/src/composables/use-sidebar-layout.ts
 
@@ -382,7 +382,7 @@ index 9a9e8ef..7636c46 100644
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
 new file mode 100644
-index 0000000..54e155a
+index 0000000..dc0cd1f
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
 @@ -0,0 +1,125 @@
@@ -390,45 +390,41 @@ index 0000000..54e155a
 +	<h2 class="m-0 text-xl font-semibold text-contrast">{{ formatMessage(messages.title) }}</h2>
 +	<p class="mt-1 mb-0">{{ formatMessage(messages.description) }}</p>
 +
-+	<div class="mt-4 flex flex-col gap-2">
-+		<div
-+			v-for="(item, index) in items"
-+			:key="item.id"
-+			class="flex items-center gap-3 rounded-2xl border border-solid border-surface-4 bg-surface-2 p-3"
-+		>
-+			<component :is="item.icon" class="size-5 shrink-0 text-secondary" />
-+			<span class="font-semibold text-contrast">{{ item.label }}</span>
-+			<div class="ml-auto flex items-center gap-1">
-+				<IconButton
-+					v-tooltip="formatMessage(messages.moveUp)"
-+					type="quiet"
-+					size="sm"
-+					:label="formatMessage(messages.moveUp)"
-+					:disabled="index === 0"
-+					@click="layout.move(item.id, -1)"
++	<Draggable
++		v-model="orderedItems"
++		class="mt-4 flex flex-col gap-2"
++		item-key="id"
++		:animation="200"
++		filter=".sidebar-item-toggle"
++		:prevent-on-filter="false"
++		ghost-class="sidebar-item-ghost"
++	>
++		<template #item="{ element: item }">
++			<div
++				class="flex cursor-grab items-center gap-3 rounded-2xl border border-solid border-surface-4 bg-surface-2 p-3 active:cursor-grabbing"
++			>
++				<button
++					v-tooltip="formatMessage(messages.reorder)"
++					type="button"
++					class="flex cursor-grab border-none bg-transparent p-0 text-secondary active:cursor-grabbing"
++					:aria-label="formatMessage(messages.reorder)"
++					@keydown.up.prevent="layout.move(item.id, -1)"
++					@keydown.down.prevent="layout.move(item.id, 1)"
 +				>
-+					<ArrowUpIcon />
-+				</IconButton>
-+				<IconButton
-+					v-tooltip="formatMessage(messages.moveDown)"
-+					type="quiet"
-+					size="sm"
-+					:label="formatMessage(messages.moveDown)"
-+					:disabled="index === items.length - 1"
-+					@click="layout.move(item.id, 1)"
-+				>
-+					<ArrowDownIcon />
-+				</IconButton>
++					<GripVerticalIcon class="size-5" />
++				</button>
++				<component :is="item.icon" class="size-5 shrink-0 text-secondary" />
++				<span class="font-semibold text-contrast">{{ item.label }}</span>
 +				<Toggle
 +					:id="`sidebar-${item.id}`"
 +					:model-value="!layout.isHidden(item.id)"
 +					:aria-label="formatMessage(messages.show, { name: item.label })"
-+					class="ml-2"
++					class="sidebar-item-toggle ml-auto"
 +					@update:model-value="(shown: boolean) => layout.setHidden(item.id, !shown)"
 +				/>
 +			</div>
-+		</div>
-+	</div>
++		</template>
++	</Draggable>
 +
 +	<Button class="mt-4" @click="layout.reset()">
 +		<RotateCounterClockwiseIcon />
@@ -438,17 +434,17 @@ index 0000000..54e155a
 +
 +<script setup lang="ts">
 +import {
-+	ArrowDownIcon,
-+	ArrowUpIcon,
 +	CompassIcon,
++	GripVerticalIcon,
 +	ImageIcon,
 +	PlayIcon,
 +	RotateCounterClockwiseIcon,
 +	ServerStackIcon,
 +	ShirtIcon,
 +} from '@modrinth/assets'
-+import { Button, commonMessages, defineMessages, IconButton, Toggle, useVIntl } from '@modrinth/ui'
++import { Button, commonMessages, defineMessages, Toggle, useVIntl } from '@modrinth/ui'
 +import { computed } from 'vue'
++import Draggable from 'vuedraggable'
 +
 +import { type SidebarItemId, useSidebarLayout } from '@/composables/use-sidebar-layout'
 +import { appMessages } from '@/utils/app-messages'
@@ -466,13 +462,9 @@ index 0000000..54e155a
 +		defaultMessage:
 +			'The buttons above the instances in the left sidebar. Right-clicking one of them hides it as well.',
 +	},
-+	moveUp: {
-+		id: 'app.sidebar-settings.move-up',
-+		defaultMessage: 'Move up',
-+	},
-+	moveDown: {
-+		id: 'app.sidebar-settings.move-down',
-+		defaultMessage: 'Move down',
++	reorder: {
++		id: 'app.sidebar-settings.reorder',
++		defaultMessage: 'Drag to reorder, or use the arrow keys',
 +	},
 +	show: {
 +		id: 'app.sidebar-settings.show',
@@ -507,16 +499,24 @@ index 0000000..54e155a
 +	hosting: { icon: ServerStackIcon, label: () => formatMessage(messages.hosting) },
 +}
 +
-+const items = computed(() =>
-+	layout.order.value.map((id) => ({ id, icon: ITEMS[id].icon, label: ITEMS[id].label() })),
-+)
++const orderedItems = computed({
++	get: () =>
++		layout.order.value.map((id) => ({ id, icon: ITEMS[id].icon, label: ITEMS[id].label() })),
++	set: (items: { id: SidebarItemId }[]) => layout.setOrder(items.map((item) => item.id)),
++})
 +</script>
++
++<style scoped>
++.sidebar-item-ghost {
++	opacity: 0.4;
++}
++</style>
 diff --git a/apps/app-frontend/src/composables/use-sidebar-layout.ts b/apps/app-frontend/src/composables/use-sidebar-layout.ts
 new file mode 100644
-index 0000000..8d12b8d
+index 0000000..7225c21
 --- /dev/null
 +++ b/apps/app-frontend/src/composables/use-sidebar-layout.ts
-@@ -0,0 +1,64 @@
+@@ -0,0 +1,72 @@
 +/**
 + * The order of the buttons above the instances in the left sidebar, and which
 + * of them are shown.
@@ -575,9 +575,17 @@ index 0000000..8d12b8d
 +		layout.value = { order: ids, hidden: hidden.value }
 +	}
 +
++	/** The order the buttons were dragged into, anything unknown dropped. */
++	function setOrder(ids: SidebarItemId[]) {
++		layout.value = {
++			order: ids.filter((id) => SIDEBAR_ITEMS.includes(id)),
++			hidden: hidden.value,
++		}
++	}
++
 +	function reset() {
 +		layout.value = { order: [...SIDEBAR_ITEMS], hidden: [] }
 +	}
 +
-+	return { order, hidden, isHidden, setHidden, move, reset }
++	return { order, hidden, isHidden, setHidden, move, setOrder, reset }
 +}
