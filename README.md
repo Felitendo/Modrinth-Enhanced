@@ -186,7 +186,6 @@ Importing instances offers every launcher the importers read — Prism Launcher,
 ATLauncher, GDLauncher and CurseForge — whether they are installed or not, each with the folder it
 keeps its instances in on this system, Flatpak and macOS bundles included, and each with its own
 logo. Upstream listed only the launchers it found, and left the rest to a path typed in by hand.
-MultiMC keeps a plain badge instead: its branding may not be passed on.
 
 A running instance can be started again from the button next to Stop, as whichever account is
 selected, and the Logs tab then shows a console for each copy.

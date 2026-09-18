@@ -28,15 +28,17 @@ else's logo around.
  packages/ui/src/assets/launchers/README.md    |  16 ++
  .../ui/src/assets/launchers/atlauncher.svg    |   1 +
  .../ui/src/assets/launchers/gdlauncher.png    | Bin 0 -> 7218 bytes
+ packages/ui/src/assets/launchers/multimc.svg  |   1 +
  packages/ui/src/assets/launchers/polymc.svg   |  21 +++
  .../src/assets/launchers/prism-launcher.svg   |  57 +++++++
  .../components/ImportInstanceStage.vue        | 109 ++++++++++++-
- .../components/LauncherMark.vue               |  47 ++++++
+ .../components/LauncherMark.vue               |  55 +++++++
  packages/ui/src/providers/instance-import.ts  |  14 ++
- 14 files changed, 417 insertions(+), 42 deletions(-)
+ 15 files changed, 426 insertions(+), 42 deletions(-)
  create mode 100644 packages/ui/src/assets/launchers/README.md
  create mode 100644 packages/ui/src/assets/launchers/atlauncher.svg
  create mode 100644 packages/ui/src/assets/launchers/gdlauncher.png
+ create mode 100644 packages/ui/src/assets/launchers/multimc.svg
  create mode 100644 packages/ui/src/assets/launchers/polymc.svg
  create mode 100644 packages/ui/src/assets/launchers/prism-launcher.svg
  create mode 100644 packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
@@ -341,7 +343,7 @@ index 72f315d..15da6da 100644
  /// Checks if this PathBuf is a valid instance for the given launcher type
 diff --git a/packages/ui/src/assets/launchers/README.md b/packages/ui/src/assets/launchers/README.md
 new file mode 100644
-index 0000000..33a2c0a
+index 0000000..4c7d7a6
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/README.md
 @@ -0,0 +1,16 @@
@@ -356,11 +358,11 @@ index 0000000..33a2c0a
 +| `polymc.svg`         | [PolyMC/PolyMC](https://github.com/PolyMC/PolyMC), `program_info`                             | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), unchanged |
 +| `atlauncher.svg`     | [ATLauncher/ATLauncher](https://github.com/ATLauncher/ATLauncher), `packaging/linux`          | GPL-3.0, unchanged                                                         |
 +| `gdlauncher.png`     | [gorilla-devs/GDLauncher](https://github.com/gorilla-devs/GDLauncher), `public/icon.png`      | GPL-3.0, scaled down to 128×128                                            |
++| `multimc.svg`        | [MultiMC/Launcher](https://github.com/MultiMC/Launcher), `branding`                           | No licence given; shown to name the launcher, optimised with svgo          |
 +
 +CurseForge's logo is the one Modrinth already ships in `@modrinth/assets`.
 +
-+MultiMC has none here: its name and logo may not be redistributed, so it keeps a plain badge with
-+its initials.
++A launcher without a logo here falls back to a badge with its initials.
 diff --git a/packages/ui/src/assets/launchers/atlauncher.svg b/packages/ui/src/assets/launchers/atlauncher.svg
 new file mode 100644
 index 0000000..5dd0000
@@ -524,6 +526,14 @@ LS3j3^P6<r_Bp?1#
 literal 0
 HcmV?d00001
 
+diff --git a/packages/ui/src/assets/launchers/multimc.svg b/packages/ui/src/assets/launchers/multimc.svg
+new file mode 100644
+index 0000000..0c072ef
+--- /dev/null
++++ b/packages/ui/src/assets/launchers/multimc.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="68.267" height="68.267"><defs><linearGradient id="g"><stop offset="0" style="stop-color:#98c867;stop-opacity:1"/><stop offset="1" style="stop-color:#5c9a33;stop-opacity:1"/></linearGradient><linearGradient id="a"><stop offset="0" style="stop-color:#75b54b;stop-opacity:1"/><stop offset="1" style="stop-color:#75b54b;stop-opacity:.6"/></linearGradient><linearGradient id="b"><stop offset="0" style="stop-color:#000;stop-opacity:.8"/><stop offset="1" style="stop-color:#000;stop-opacity:.35"/></linearGradient><linearGradient xlink:href="#a" id="n" x1="6.734" x2="50.507" y1="28.511" y2="61.774" gradientTransform="matrix(1.26715 0 0 .8979 -.02 -.008)" gradientUnits="userSpaceOnUse"/><linearGradient xlink:href="#b" id="m" x1="14.312" x2="44.097" y1="9.795" y2="82.973" gradientTransform="scale(1.26715 .8979)" gradientUnits="userSpaceOnUse"/><linearGradient id="d"><stop offset="0" style="stop-color:#000;stop-opacity:.0627451"/><stop offset="1" style="stop-color:#322217;stop-opacity:.58823532"/></linearGradient><linearGradient id="f"><stop offset="0" style="stop-color:#a3704b;stop-opacity:1"/><stop offset="1" style="stop-color:#6a4a33;stop-opacity:1"/></linearGradient><linearGradient id="c"><stop offset="0" style="stop-color:#966c4a;stop-opacity:1"/><stop offset="1" style="stop-color:#593d29;stop-opacity:1"/></linearGradient><linearGradient xlink:href="#c" id="h" x1="36.546" x2="86.416" y1="33.805" y2="97.066" gradientUnits="userSpaceOnUse"/><linearGradient xlink:href="#d" id="k" x1="29.867" x2="38.4" y1="29.868" y2="38.401" gradientTransform="translate(-.001)" gradientUnits="userSpaceOnUse"/><linearGradient xlink:href="#b" id="l" x1="14.312" x2="44.097" y1="9.795" y2="82.973" gradientTransform="matrix(1.26715 0 0 .8979 -.829 -1.001)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#f" id="i" cx="34.133" cy="34.133" r="29.867" fx="34.133" fy="34.133" gradientTransform="translate(0 -.001)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#g" id="j" cx="-42.668" cy="-34.134" r="34.133" fx="-42.668" fy="-34.134" gradientTransform="matrix(1.75003 .125 -.01781 .24936 95.394 18.11)" gradientUnits="userSpaceOnUse"/></defs><g transform="translate(0 .001)"><rect width="68.267" height="68.267" rx="8.533" ry="8.533" style="fill:url(#h);fill-opacity:1;stroke:none;stroke-width:17.06666756"/><rect width="59.733" height="59.733" x="4.266" y="4.266" rx="4.267" ry="4.267" style="fill:url(#i);fill-opacity:1;stroke:none;stroke-width:14.93333435"/><path d="m4.267 4.265-.001 8.533h4.268v4.267h8.533v4.266h4.265V8.532H25.6v8.533h4.266v-4.267h4.267v8.533H38.4v-4.266h4.267v4.266h4.268v-4.266H51.2v-4.267h4.267v4.267H64v-12.8z" style="opacity:.6;fill:#593d29;fill-opacity:1;stroke:none;stroke-width:17.06666756"/><path d="M8.533-.002A8.514 8.514 0 0 0 0 8.531V12.8h4.265V8.531h4.268V12.8h8.533v4.266h4.266v-12.8h4.267v8.533h4.266V8.531h4.268v8.534h4.265v-4.266h4.268v4.266h4.267v-4.266H51.2V8.531h4.268V12.8H64V8.531h4.265a8.514 8.514 0 0 0-8.533-8.533zm-3.02 5.514" style="fill:url(#j);fill-opacity:1;stroke:none;stroke-width:17.06666756"/><path d="M8.532 0A8.514 8.514 0 0 0 0 8.531v51.2a8.516 8.516 0 0 0 8.533 8.535h51.2a8.516 8.516 0 0 0 8.533-8.535v-51.2A8.514 8.514 0 0 0 59.732 0zm0 4.267h51.2a4.257 4.257 0 0 1 4.267 4.265v51.2a4.26 4.26 0 0 1-4.267 4.267h-51.2a4.26 4.26 0 0 1-4.267-4.267v-51.2a4.257 4.257 0 0 1 4.267-4.265" style="opacity:1;fill:url(#k);fill-opacity:1;stroke:none;stroke-width:17.06666756"/></g><path d="M38.887 44.94q-1.462-1.2-3.772-4.008-3.157 4.009-5.94 5.78-3.488 2.136-8.909 2.137-6.363 0-10.56-3.374-4.43-3.54-4.43-9.386 0-5.611 4.43-9.42 3.96-3.374 10.655-3.374 3.442 0 5.986 1.002 2.97 1.102 4.997 3.007 1.885 1.704 3.771 4.008 3.159-4.008 5.94-5.779 3.489-2.137 8.91-2.137 6.363 0 10.56 3.373 4.43 3.54 4.43 9.387 0 5.61-4.43 9.42-3.96 3.373-10.655 3.373-3.442 0-5.986-1.002-2.546-.901-4.997-3.006m-19.14-.468q7.779 0 12.446-8.017-5.988-8.751-12.445-8.751-4.715 0-7.119 2.405-2.592 2.572-2.592 5.979 0 3.741 2.592 6.046 2.64 2.338 7.119 2.338m30.735-16.702q-7.023 0-12.445 8.017 5.94 8.752 12.445 8.752 4.715 0 7.118-2.405 2.593-2.572 2.593-5.98 0-3.74-2.593-6.045-2.64-2.34-7.118-2.339" style="font-style:normal;font-variant:normal;font-weight:400;font-stretch:normal;font-size:76.18933868px;line-height:125%;font-family:&quot;DejaVu Sans&quot;;-inkscape-font-specification:&quot;DejaVu Sans&quot;;letter-spacing:0;word-spacing:0;fill:url(#l);fill-opacity:1;stroke:none;stroke-width:1.06666672;opacity:.5"/><path d="M39.715 45.942q-1.461-1.203-3.77-4.008-3.16 4.008-5.94 5.779-3.489 2.137-8.91 2.137-6.364 0-10.56-3.373-4.43-3.54-4.43-9.387 0-5.61 4.43-9.42 3.96-3.373 10.654-3.373 3.441 0 5.987 1.002 2.97 1.103 4.997 3.006 1.886 1.704 3.771 4.009 3.159-4.009 5.94-5.78 3.488-2.137 8.91-2.137 6.363 0 10.559 3.374 4.43 3.54 4.43 9.386 0 5.611-4.43 9.42-3.96 3.374-10.654 3.374-3.441 0-5.987-1.003-2.546-.9-4.997-3.006m-19.139-.467q7.779 0 12.445-8.017-5.986-8.752-12.445-8.752-4.713 0-7.118 2.405-2.592 2.572-2.593 5.98 0 3.74 2.593 6.045 2.64 2.34 7.118 2.339m30.736-16.702q-7.024 0-12.445 8.017 5.94 8.751 12.445 8.751 4.713 0 7.118-2.405 2.593-2.572 2.593-5.979 0-3.741-2.593-6.046-2.64-2.338-7.118-2.338" style="font-style:normal;font-variant:normal;font-weight:400;font-stretch:normal;font-size:76.18933868px;line-height:125%;font-family:&quot;DejaVu Sans&quot;;-inkscape-font-specification:&quot;DejaVu Sans&quot;;letter-spacing:0;word-spacing:0;fill:url(#m);fill-opacity:1;stroke:none;stroke-width:1.06666672;opacity:.5"/><path d="M37.905 42.952q-1.462-1.203-3.772-4.009-3.157 4.009-5.94 5.78-3.488 2.136-8.909 2.137-6.364 0-10.56-3.374-4.43-3.54-4.43-9.386 0-5.611 4.43-9.42 3.96-3.374 10.654-3.374 3.442 0 5.987 1.002 2.97 1.102 4.997 3.007 1.886 1.704 3.771 4.008 3.159-4.008 5.94-5.779 3.488-2.137 8.91-2.137 6.363 0 10.559 3.373 4.431 3.54 4.431 9.387 0 5.61-4.431 9.42-3.96 3.373-10.654 3.373-3.441 0-5.987-1.002-2.545-.901-4.996-3.006m-19.14-.468q7.778 0 12.446-8.017-5.988-8.751-12.445-8.751-4.715 0-7.119 2.405-2.592 2.572-2.592 5.979 0 3.741 2.592 6.046 2.64 2.338 7.119 2.338M49.5 25.782q-7.024 0-12.445 8.017 5.94 8.752 12.445 8.752 4.714 0 7.118-2.405 2.593-2.572 2.593-5.98 0-3.74-2.593-6.045-2.64-2.34-7.118-2.339" style="font-style:normal;font-variant:normal;font-weight:400;font-stretch:normal;font-size:76.18933868px;line-height:125%;font-family:&quot;DejaVu Sans&quot;;-inkscape-font-specification:&quot;DejaVu Sans&quot;;letter-spacing:0;word-spacing:0;fill:url(#n);fill-opacity:1;stroke:none;stroke-width:1.06666672"/><path d="M19.4 21.167c-4.463 0-8.027 1.15-10.667 3.4-2.954 2.538-4.433 5.658-4.433 9.4 0 3.897 1.48 7.04 4.433 9.4Q6.3 40.299 6.3 35.967c0-3.742 1.48-6.862 4.433-9.4 2.64-2.25 6.204-3.4 10.667-3.4 2.294 0 4.303.365 6 1.033 1.98.735 3.615 1.73 4.967 3 .068.062.131.137.2.2a34 34 0 0 0-2.2-2.2c-1.352-1.27-2.987-2.265-4.967-3-1.697-.668-3.706-1.033-6-1.033m29.6.1c-3.614 0-6.574.741-8.9 2.166-1.818 1.158-3.923 3.292-5.983 5.884a42 42 0 0 1 1.866 2.133c2.106-2.672 4.263-4.836 6.117-6.017 2.326-1.425 5.286-2.166 8.9-2.166 4.243 0 7.77 1.15 10.567 3.4a12.3 12.3 0 0 0-2-2c-2.797-2.25-6.324-3.4-10.567-3.4m8.867 8.1c.909 1.305 1.366 2.857 1.366 4.666 0 2.272-.871 4.286-2.6 6-1.603 1.604-3.957 2.4-7.1 2.4-2.653 0-5.32-1.032-7.833-3.216 3.137 3.509 6.47 5.216 9.833 5.216 3.143 0 5.497-.796 7.1-2.4 1.729-1.714 2.6-3.728 2.6-6 0-2.494-.871-4.496-2.6-6.033-.25-.22-.492-.444-.766-.633m-26.634 4.966c-3.111 5.345-7.248 8.034-12.433 8.034-2.58 0-4.543-.352-6.208-1.517.349.506.59.752 1.075 1.183 1.76 1.56 4.147 2.334 7.133 2.334 5.185 0 9.322-2.69 12.433-8.034zm4.934 6.5c-.041.052-.093.082-.134.134.688.744 1.307 1.36 1.834 1.8-.53-.581-1.079-1.179-1.7-1.934" style="font-style:normal;font-weight:400;font-size:76.18933868px;line-height:125%;font-family:Sans;letter-spacing:0;word-spacing:0;opacity:.3;fill:#cf0;fill-opacity:1;stroke:none;stroke-width:1.06666672"/><path d="M19.73 21.547c-4.462 0-8.026 1.151-10.666 3.4-2.954 2.539-4.434 5.659-4.434 9.4 0 3.897 1.48 7.04 4.434 9.4.043.035.09.066.133.1-2.24-2.228-3.367-5.04-3.367-8.433 0-3.741 1.48-6.861 4.434-9.4 2.64-2.25 6.204-3.4 10.666-3.4 2.295 0 4.303.365 6 1.033 1.871.695 3.424 1.629 4.734 2.8-.314-.309-.653-.583-.967-.867-1.351-1.269-2.987-2.265-4.967-3-1.697-.668-3.705-1.033-6-1.033m29.6.1c-3.614 0-6.574.742-8.9 2.167-1.813 1.154-3.963 3.235-6.016 5.816.355.403.71.8 1.066 1.234 2.106-2.672 4.296-4.803 6.15-5.984 2.326-1.425 5.286-2.166 8.9-2.166 4.225 0 7.743 1.137 10.534 3.366a13 13 0 0 0-1.167-1.033c-2.797-2.249-6.324-3.4-10.567-3.4m8.234 7.333c1.323 1.45 2 3.251 2 5.434 0 2.271-.872 4.285-2.6 6-1.603 1.603-3.958 2.4-7.1 2.4-2.407 0-4.777-.904-7.067-2.7 2.67 2.484 5.437 3.766 8.267 3.766 3.142 0 5.497-.796 7.1-2.4 1.728-1.714 2.6-3.728 2.6-6 0-2.494-.872-4.496-2.6-6.033-.186-.164-.4-.32-.6-.467m-26 5.734c-3.111 5.344-7.248 8.033-12.434 8.033-2.612 0-4.759-.606-6.433-1.8.166.177.314.368.5.533 1.76 1.56 4.148 2.334 7.133 2.334 5.186 0 9.323-2.689 12.434-8.034zm4.133 5.566c-.046.06-.087.109-.133.167 1.038 1.19 1.975 2.17 2.7 2.767.062.053.137.08.2.133-.792-.781-1.706-1.778-2.767-3.067" style="font-style:normal;font-weight:400;font-size:76.18933868px;line-height:125%;font-family:Sans;letter-spacing:0;word-spacing:0;opacity:.6;fill:#cf0;fill-opacity:1;stroke:none;stroke-width:1.06666672"/></svg>
+\ No newline at end of file
 diff --git a/packages/ui/src/assets/launchers/polymc.svg b/packages/ui/src/assets/launchers/polymc.svg
 new file mode 100644
 index 0000000..c192d50
@@ -796,16 +806,22 @@ index a4dfcdb..5384d29 100644
  			type: 'error',
 diff --git a/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
 new file mode 100644
-index 0000000..ead64f1
+index 0000000..aa1b97d
 --- /dev/null
 +++ b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,55 @@
 +<!--
-+	A launcher's own logo, or its initials in a badge where the launcher does not
-+	let its logo be passed on. See src/assets/launchers/README.md.
++	A launcher's own logo, or its initials in a badge for one we have none of.
++	See src/assets/launchers/README.md.
 +-->
 +<template>
-+	<CurseForgeIcon v-if="name === 'CurseForge'" class="size-8 shrink-0 text-contrast" />
++	<!-- CurseForge's is a wide mark rather than a square icon, so it gets a badge. -->
++	<span
++		v-if="name === 'CurseForge'"
++		class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-4"
++	>
++		<CurseForgeIcon class="size-5 text-contrast" />
++	</span>
 +	<img v-else-if="logo" :src="logo" :alt="''" class="size-8 shrink-0 rounded-lg" />
 +	<span
 +		v-else
@@ -824,6 +840,7 @@ index 0000000..ead64f1
 +// and all, rather than an icon that takes the colour around it.
 +import atlauncher from '../../../../assets/launchers/atlauncher.svg?url'
 +import gdlauncher from '../../../../assets/launchers/gdlauncher.png'
++import multimc from '../../../../assets/launchers/multimc.svg?url'
 +import polymc from '../../../../assets/launchers/polymc.svg?url'
 +import prismLauncher from '../../../../assets/launchers/prism-launcher.svg?url'
 +
@@ -831,6 +848,7 @@ index 0000000..ead64f1
 +
 +const LOGOS: Record<string, string> = {
 +	'Prism Launcher': prismLauncher,
++	MultiMC: multimc,
 +	PolyMC: polymc,
 +	ATLauncher: atlauncher,
 +	GDLauncher: gdlauncher,
@@ -838,7 +856,7 @@ index 0000000..ead64f1
 +
 +const logo = computed(() => LOGOS[props.name])
 +
-+// MultiMC gives MM, Custom (foo) gives C.
++// Custom (foo) gives C, MultiMC would give MM.
 +const mark = computed(
 +	() =>
 +		props.name
