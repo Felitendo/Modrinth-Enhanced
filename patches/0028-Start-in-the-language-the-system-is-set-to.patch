@@ -1,0 +1,129 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Fri, 18 Sep 2026 10:24:21 +0200
+Subject: [PATCH] Start in the language the system is set to
+
+The app started in English until someone found the language setting,
+even on a desktop that is not in English. The first start now takes the
+language from the system, as long as upstream has that one translated to
+at least 70 percent - below that the app would be half English anyway,
+which reads worse than all of it being. The system is only asked once,
+and never over a language that was picked in the settings.
+---
+ apps/app-frontend/src/App.vue                 | 17 ++++-
+ .../app-frontend/src/helpers/system-locale.ts | 71 +++++++++++++++++++
+ 2 files changed, 85 insertions(+), 3 deletions(-)
+ create mode 100644 apps/app-frontend/src/helpers/system-locale.ts
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 2bd8eb3..18724bb 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -166,6 +166,7 @@ import {
+ 	syncedServersQueryOptions,
+ } from '@/helpers/synced-options'
+ import { syncedPackQueryOptions } from '@/helpers/synced-packs'
++import { localeFromSystem } from '@/helpers/system-locale'
+ import { get_user_preferences } from '@/helpers/user-preferences.ts'
+ import { parse_modrinth_user_link } from '@/helpers/users'
+ import {
+@@ -938,9 +939,19 @@ async function setupApp() {
+ 		pending_update_toast_for_version,
+ 	} = await traceStartupStep('Read startup settings', getSettings)
+ 
+-	// Initialize locale from saved settings
+-	if (locale) {
+-		await traceStartupStep('Apply startup locale', () => setLocale(locale))
++	// Initialize locale from saved settings, or on the very first start from the
++	// language the desktop is set to.
++	const startupLocale =
++		(await traceStartupStep('Read the system language', () => localeFromSystem(locale)).catch(
++			() => undefined,
++		)) ?? locale
++	if (startupLocale) {
++		await traceStartupStep('Apply startup locale', () => setLocale(startupLocale))
++	}
++	if (startupLocale !== locale) {
++		await getSettings()
++			.then((settings) => setSettings({ ...settings, locale: startupLocale }))
++			.catch(handleError)
+ 	}
+ 
+ 	Object.assign(appSettings.featureFlags, feature_flags)
+diff --git a/apps/app-frontend/src/helpers/system-locale.ts b/apps/app-frontend/src/helpers/system-locale.ts
+new file mode 100644
+index 0000000..2e98fa7
+--- /dev/null
++++ b/apps/app-frontend/src/helpers/system-locale.ts
+@@ -0,0 +1,71 @@
++/**
++ * The language the app starts in the first time it runs, taken from the one the
++ * desktop is set to.
++ *
++ * Only languages upstream has translated far enough are taken. Below that the
++ * app would be half English anyway, which reads worse than all of it being.
++ */
++import { LOCALES } from '@modrinth/ui'
++import { languageCoverage } from '@modrinth/ui/src/layouts/wrapped/settings/language-settings/language-settings-coverage.generated'
++import { locale as osLocale } from '@tauri-apps/plugin-os'
++
++/** How much of the app has to be in a language for it to be picked. */
++const MIN_COVERAGE = 70
++
++/** Written once the system has been asked, so that only ever happens once. */
++const ASKED_KEY = 'modrinth-enhanced:language-from-system'
++
++/** Windows says zh-Hans-CN; the script is what tells the two Chinese apart. */
++const BY_SCRIPT: Record<string, string> = { hans: 'zh-CN', hant: 'zh-TW' }
++
++function coverage(code: string): number {
++	return languageCoverage.app[code]?.percentage ?? 0
++}
++
++/** The language the app calls a tag that is not one of its own codes. */
++function preferred(language: string, region: string | undefined, script: string | undefined) {
++	if (script) return BY_SCRIPT[script]
++	// Spanish outside Spain is the Latin American one.
++	if (language === 'es' && region && region !== 'es') return 'es-419'
++	// Otherwise the country the language is named after: de → de-DE, fr → fr-FR.
++	return `${language}-${language.toUpperCase()}`
++}
++
++/** The best translated language the app has for `tag`, if it has one at all. */
++function bestMatch(tag: string): string | undefined {
++	// de_DE.UTF-8 is a language, a country and how it is encoded.
++	const wanted = tag
++		.replace(/[.@].*$/, '')
++		.replaceAll('_', '-')
++		.toLowerCase()
++	const parts = wanted.split('-')
++	const [language, region] = [parts[0], parts.at(-1)]
++	const second = preferred(
++		language,
++		region,
++		parts.find((part) => part in BY_SCRIPT),
++	)
++
++	const rank = (code: string) => (code.toLowerCase() === wanted ? 2 : code === second ? 1 : 0)
++
++	return LOCALES.map((locale) => locale.code)
++		.filter((code) => code.split('-')[0] === language)
++		.sort((a, b) => rank(b) - rank(a) || coverage(b) - coverage(a))
++		.find((code) => coverage(code) >= MIN_COVERAGE)
++}
++
++/**
++ * The language to start in, or nothing to stay with `current`.
++ *
++ * The system is only asked once, and never over a language that was picked in
++ * the settings.
++ */
++export async function localeFromSystem(current: string): Promise<string | undefined> {
++	if (localStorage.getItem(ASKED_KEY) || (current && current !== 'en-US')) return undefined
++
++	const system = await osLocale().catch(() => null)
++	localStorage.setItem(ASKED_KEY, new Date().toISOString())
++
++	const match = bestMatch(system ?? navigator.language ?? '')
++	return match && match !== current ? match : undefined
++}

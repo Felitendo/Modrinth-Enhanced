@@ -216,6 +216,11 @@ check "the settings tabs scroll instead of covering the version" \
 check "NVIDIA under Wayland does not crash the webview" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")'
 
+log "Language"
+check "the first start takes the system's language" \
+	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'localeFromSystem(locale)'
+check "a barely translated language is left alone" \
+	contains "$WORKTREE/apps/app-frontend/src/helpers/system-locale.ts" 'MIN_COVERAGE = 70'
 log "Updates"
 check "updates do not come from Modrinth" \
 	missing "$WORKTREE/apps/app-frontend/src/App.vue" 'launcher-files.modrinth.com/updates.json'
