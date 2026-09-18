@@ -221,6 +221,13 @@ check "the first start takes the system's language" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'localeFromSystem(locale)'
 check "a barely translated language is left alone" \
 	contains "$WORKTREE/apps/app-frontend/src/helpers/system-locale.ts" 'MIN_COVERAGE = 70'
+# The app's own text lives outside Modrinth's catalogues, so nothing but this
+# keeps it English in languages the rest of the app is translated to.
+for locale in de-CH de-DE es-419 es-ES fr-FR hu-HU it-IT ja-JP nl-NL pl-PL pt-BR ru-RU sv-SE tr-TR uk-UA zh-CN zh-TW; do
+	check "our own text is in $locale" \
+		contains "$WORKTREE/apps/app-frontend/src/locales/$locale/index.json" '"app.crash.header"'
+done
+
 log "Updates"
 check "updates do not come from Modrinth" \
 	missing "$WORKTREE/apps/app-frontend/src/App.vue" 'launcher-files.modrinth.com/updates.json'
