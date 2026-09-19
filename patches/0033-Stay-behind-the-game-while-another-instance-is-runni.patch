@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Sat, 19 Sep 2026 02:22:32 +0200
+Subject: [PATCH] Stay behind the game while another instance is running
+
+---
+ packages/app-lib/src/state/process.rs | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
+index e9aaa3a..a4b24d0 100644
+--- a/packages/app-lib/src/state/process.rs
++++ b/packages/app-lib/src/state/process.rs
+@@ -1064,8 +1064,12 @@ impl Process {
+         let _ = state.friends_socket.update_status(None).await;
+ 
+         // If in tauri, window should show itself again after process exists if it was hidden
++        //
++        // Only once the last instance is gone, though: while another one is
++        // still being played, taking the screen back from it is the last thing
++        // the player wants.
+         #[cfg(feature = "tauri")]
+-        {
++        if state.process_manager.get_all().is_empty() {
+             let window = crate::EventState::get_main_window().await?;
+             if let Some(window) = window {
+                 window.unminimize()?;
