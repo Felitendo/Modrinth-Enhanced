@@ -1,0 +1,535 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Sat, 19 Sep 2026 02:22:32 +0200
+Subject: [PATCH] Keep Modrinth's translations off the text this fork rewrote
+
+---
+ .../minecraft-required-modal/MinecraftRequiredModal.vue  | 4 ++--
+ .../src/components/ui/modal/AppSettingsModal.vue         | 2 +-
+ .../components/ui/settings/account/PrivacySettings.vue   | 2 +-
+ apps/app-frontend/src/locales/de-CH/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/de-DE/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/es-419/index.json          | 9 +++++++++
+ apps/app-frontend/src/locales/es-ES/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/fr-FR/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/hu-HU/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/it-IT/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/ja-JP/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/nl-NL/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/pl-PL/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/pt-BR/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/ru-RU/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/sv-SE/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/tr-TR/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/uk-UA/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/zh-CN/index.json           | 9 +++++++++
+ apps/app-frontend/src/locales/zh-TW/index.json           | 9 +++++++++
+ 20 files changed, 157 insertions(+), 4 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+index 2cb2e5d..4c5e246 100644
+--- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
++++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
+@@ -87,7 +87,7 @@ const accountsCard = inject('accountsCard') as Ref<InstanceType<typeof AccountsC
+ 
+ const messages = defineMessages({
+ 	header: {
+-		id: 'minecraft-required.header',
++		id: 'minecraft-required.modal-title',
+ 		defaultMessage: 'Sign in to Minecraft',
+ 	},
+ 	descriptionHeader: {
+@@ -95,7 +95,7 @@ const messages = defineMessages({
+ 		defaultMessage: 'Sign in to a Microsoft account',
+ 	},
+ 	description: {
+-		id: 'minecraft-required.description',
++		id: 'minecraft-required.microsoft-explainer',
+ 		defaultMessage:
+ 			'A Microsoft account that owns Minecraft is what lets you play online and keep your skin.',
+ 	},
+diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
+index e409510..77d3a15 100644
+--- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
++++ b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
+@@ -331,7 +331,7 @@ const messages = defineMessages({
+ 		defaultMessage: 'Downloading v{version}',
+ 	},
+ 	appVersion: {
+-		id: 'app.settings.app-version',
++		id: 'app.settings.enhanced-version',
+ 		defaultMessage: 'Modrinth Enhanced {version}',
+ 	},
+ 	macos: {
+diff --git a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+index d31e8c5..5061572 100644
+--- a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
++++ b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+@@ -38,7 +38,7 @@ const messages = defineMessages({
+ 		defaultMessage: 'Telemetry',
+ 	},
+ 	telemetryDescription: {
+-		id: 'app.settings.privacy.telemetry.description',
++		id: 'app.settings.privacy.telemetry.none',
+ 		defaultMessage:
+ 			'Modrinth Enhanced collects no analytics or usage data and sends no crash reports, so there is nothing here to turn off.',
+ 	},
+diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
+index 0488f04..7e88f9e 100644
+--- a/apps/app-frontend/src/locales/de-CH/index.json
++++ b/apps/app-frontend/src/locales/de-CH/index.json
+@@ -3173,6 +3173,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth sammelt anonymisierte Analyse- und Nutzungsdaten, um unsere Nutzererfahrung zu verbessern und deine Erfahrung anzupassen. Wenn du diese Option deaktivierst, entscheidest du dich dagegen und deine Daten werden nicht mehr gesammelt."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced sammelt keine Analyse- oder Nutzungsdaten und sendet keine Absturzberichte – hier gibt es also nichts abzuschalten."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetrie"
+   },
+@@ -5030,6 +5033,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft erforderlich"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Mit einem Microsoft-Konto, das Minecraft besitzt, kannst du online spielen und behältst deinen Skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Bei Minecraft anmelden"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
+   },
+diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
+index e84b362..cf8348e 100644
+--- a/apps/app-frontend/src/locales/de-DE/index.json
++++ b/apps/app-frontend/src/locales/de-DE/index.json
+@@ -3173,6 +3173,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth sammelt anonymisierte Analyse- und Nutzungsdaten, um unsere Nutzererfahrung zu verbessern und deine Erfahrung anzupassen. Wenn du diese Option deaktivierst, entscheidest du dich dagegen und deine Daten werden nicht mehr gesammelt."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced sammelt keine Analyse- oder Nutzungsdaten und sendet keine Absturzberichte – hier gibt es also nichts abzuschalten."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetrie"
+   },
+@@ -5030,6 +5033,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft erforderlich"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Mit einem Microsoft-Konto, das Minecraft besitzt, kannst du online spielen und behältst deinen Skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Bei Minecraft anmelden"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
+   },
+diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
+index 20ca77b..0091df5 100644
+--- a/apps/app-frontend/src/locales/es-419/index.json
++++ b/apps/app-frontend/src/locales/es-419/index.json
+@@ -3128,6 +3128,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth recolecta datos analíticos anónimos y datos de uso para mejorar la experiencia de nuestros usuarios y para personalizar tu experiencia. Al desactivar esta opción, tus datos dejarán de ser recolectados."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced no recopila datos de análisis ni de uso, y no envía informes de fallos, así que aquí no hay nada que desactivar."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetría"
+   },
+@@ -4979,6 +4982,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft requerido"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Una cuenta de Microsoft que tenga Minecraft es lo que te permite jugar en línea y conservar tu skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Inicia sesión en Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
+   },
+diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
+index 3a542e3..2e1d85b 100644
+--- a/apps/app-frontend/src/locales/es-ES/index.json
++++ b/apps/app-frontend/src/locales/es-ES/index.json
+@@ -3101,6 +3101,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth recopila análisis y datos de uso anónimos para mejorar la experiencia de usuario y personalizar tu experiencia. Deshabilitando esta opción sus datos dejarán de ser recopilados."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced no recopila datos de análisis ni de uso, y no envía informes de fallos, así que aquí no hay nada que desactivar."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetría"
+   },
+@@ -4952,6 +4955,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft requerido"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Una cuenta de Microsoft que tenga Minecraft es lo que te permite jugar en línea y conservar tu skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Inicia sesión en Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
+   },
+diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
+index d554017..c376646 100644
+--- a/apps/app-frontend/src/locales/fr-FR/index.json
++++ b/apps/app-frontend/src/locales/fr-FR/index.json
+@@ -2726,6 +2726,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth collecte des données d'analyse et d'utilisation anonymes afin d'améliorer l'expérience utilisateur et de personnaliser votre expérience. En désactivant cette option, vous choisissez de ne plus participer et vos données ne seront plus collectées."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced ne collecte aucune donnée d'analyse ou d'utilisation et n'envoie aucun rapport de plantage : il n'y a donc rien à désactiver ici."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Télémétrie"
+   },
+@@ -4115,6 +4118,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft requis"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Un compte Microsoft qui possède Minecraft est ce qui permet de jouer en ligne et de garder son skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Se connecter à Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Ou connectez-vous avec Ely.by ou un serveur personnalisé, ou jouez en solo et sur des serveurs en mode hors ligne sans aucun compte."
+   },
+diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
+index 090daaa..70ab085 100644
+--- a/apps/app-frontend/src/locales/hu-HU/index.json
++++ b/apps/app-frontend/src/locales/hu-HU/index.json
+@@ -3170,6 +3170,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "A Modrinth névtelen használati és telemetriai adatokat gyűjt a felhasználói élmény javítása és személyre szabása érdekében. Ha kikapcsolod ezt a beállítást, leiratkozol erről, és a rendszer többé nem gyűjti az adataidat."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "A Modrinth Enhanced nem gyűjt elemzési vagy használati adatokat, és nem küld összeomlási jelentéseket, így itt nincs mit kikapcsolni."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetria"
+   },
+@@ -5027,6 +5030,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft szükséges"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Egy Minecrafttal rendelkező Microsoft-fiók az, ami lehetővé teszi az online játékot és a skin megtartását."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Bejelentkezés a Minecraftba"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Vagy jelentkezz be Ely.byjal vagy saját szerverrel, vagy játssz egyjátékos módban és offline szervereken bármilyen fiók nélkül."
+   },
+diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
+index 4fbc1d0..c915929 100644
+--- a/apps/app-frontend/src/locales/it-IT/index.json
++++ b/apps/app-frontend/src/locales/it-IT/index.json
+@@ -3167,6 +3167,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth raccoglie dati anonimizzati di analisi e utilizzo per migliorare l'esperienza utente e personalizzarla. Disabilitando questa opzione neghi il consenso e i tuoi dati non saranno più raccolti."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced non raccoglie dati di analisi o di utilizzo e non invia segnalazioni di arresto anomalo: qui non c'è nulla da disattivare."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetria"
+   },
+@@ -5024,6 +5027,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft richiesto"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Un account Microsoft che possiede Minecraft è ciò che ti permette di giocare online e di mantenere la tua skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Accedi a Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Oppure accedi con Ely.by o con un server personalizzato, o gioca in singolo e sui server in modalità offline senza alcun account."
+   },
+diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
+index 9b98f35..9d1581a 100644
+--- a/apps/app-frontend/src/locales/ja-JP/index.json
++++ b/apps/app-frontend/src/locales/ja-JP/index.json
+@@ -2099,6 +2099,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinthはユーザー体験の向上および最適化のために、匿名化されたアナリティクスと利用データを収集しています。このオプションをオフにすることで無効化（オプトアウト）され、以降データの収集は行われません。"
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced は分析データや利用データを一切収集せず、クラッシュレポートも送信しません。そのため、ここで無効にするものはありません。"
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "テレメトリ"
+   },
+@@ -3605,6 +3608,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraftが必要です"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Minecraft を所有する Microsoft アカウントがあれば、オンラインでプレイでき、スキンもそのまま使えます。"
++  },
++  "minecraft-required.modal-title": {
++    "message": "Minecraft にサインイン"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Ely.by やカスタムサーバーでサインインすることも、アカウントなしでシングルプレイやオフラインモードのサーバーで遊ぶこともできます。"
+   },
+diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
+index b153a78..8d634da 100644
+--- a/apps/app-frontend/src/locales/nl-NL/index.json
++++ b/apps/app-frontend/src/locales/nl-NL/index.json
+@@ -3035,6 +3035,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth verzamelt geanonimiseerde analyse- en gebruiksgegevens om de gebruikerservaring te verbeteren en uw ervaring te personaliseren. Door deze optie uit te schakelen, meldt u zich af en worden uw gegevens niet langer verzameld."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced verzamelt geen analyse- of gebruiksgegevens en stuurt geen crashrapporten, dus hier valt niets uit te schakelen."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetrie"
+   },
+@@ -4634,6 +4637,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft vereist"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Met een Microsoft-account dat Minecraft bezit kun je online spelen en houd je je skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Inloggen bij Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Of log in met Ely.by of een eigen server, of speel singleplayer en servers in offlinemodus zonder enig account."
+   },
+diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
+index 42122c9..6c8cf09 100644
+--- a/apps/app-frontend/src/locales/pl-PL/index.json
++++ b/apps/app-frontend/src/locales/pl-PL/index.json
+@@ -3161,6 +3161,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth zbiera anonimowe dane analityczne i użytkowania, aby poprawić komfort naszych użytkowników i dostosować Twoje doświadczenia. Wyłączając tę opcję, rezygnujesz i Twoje dane nie będą już gromadzone."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced nie zbiera żadnych danych analitycznych ani danych o użyciu i nie wysyła raportów o awariach, więc nie ma tu czego wyłączać."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetria"
+   },
+@@ -5018,6 +5021,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft wymagany"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Konto Microsoft z Minecraftem pozwala grać online i zachować swój skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Zaloguj się do Minecrafta"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Albo zaloguj się przez Ely.by lub własny serwer, albo graj w trybie jednoosobowym i na serwerach offline zupełnie bez konta."
+   },
+diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
+index ad277b3..a49acbe 100644
+--- a/apps/app-frontend/src/locales/pt-BR/index.json
++++ b/apps/app-frontend/src/locales/pt-BR/index.json
+@@ -3173,6 +3173,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "O Modrinth coleta analíticas anonimizadas e uso de dados para aprimorar nossa experiência de usuário e personalizar sua experiência. Ao desativar esta opção, você negará e seus dados não serão mais coletados."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "O Modrinth Enhanced não coleta dados de análise ou de uso e não envia relatórios de falha, então não há nada para desativar aqui."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetria"
+   },
+@@ -5030,6 +5033,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft necessário"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Uma conta Microsoft que possui o Minecraft é o que permite jogar online e manter sua skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Entrar no Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Ou entre com o Ely.by ou com um servidor personalizado, ou jogue sozinho e em servidores offline sem conta nenhuma."
+   },
+diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
+index 460fc40..526c357 100644
+--- a/apps/app-frontend/src/locales/ru-RU/index.json
++++ b/apps/app-frontend/src/locales/ru-RU/index.json
+@@ -3149,6 +3149,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth собирает анонимные данные об использовании для персонализации и улучшения сервиса. Отключите этот параметр, чтобы отказаться от сбора данных."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced не собирает аналитику и данные об использовании и не отправляет отчёты о сбоях, поэтому отключать здесь нечего."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Телеметрия"
+   },
+@@ -5003,6 +5006,12 @@
+   "minecraft-required.header": {
+     "message": "Требуется Minecraft"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Аккаунт Microsoft с купленным Minecraft — это то, что позволяет играть по сети и сохранять свой скин."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Вход в Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Или войдите через Ely.by либо свой сервер — или играйте в одиночной игре и на офлайн-серверах вообще без учётной записи."
+   },
+diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
+index b3ab7e7..90aa3c3 100644
+--- a/apps/app-frontend/src/locales/sv-SE/index.json
++++ b/apps/app-frontend/src/locales/sv-SE/index.json
+@@ -2540,6 +2540,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth samlar in anonymiserad statistik och användningsdata för att förbättra vår användarupplevelse och anpassa din upplevelse. Genom att inaktivera det här alternativet avanmäler du dig och din data kommer inte längre samlas in."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced samlar inte in någon analys- eller användningsdata och skickar inga kraschrapporter, så här finns inget att stänga av."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetri"
+   },
+@@ -4091,6 +4094,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft krävs"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Ett Microsoft-konto som äger Minecraft är det som låter dig spela online och behålla ditt skin."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Logga in på Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Eller logga in med Ely.by eller en egen server, eller spela ensamspelarvärldar och servrar i offlineläge helt utan konto."
+   },
+diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
+index 2a96b4d..ea63a7b 100644
+--- a/apps/app-frontend/src/locales/tr-TR/index.json
++++ b/apps/app-frontend/src/locales/tr-TR/index.json
+@@ -2501,6 +2501,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth kullanıcı deneyimimizi geliştirmek için ve deneyiminizi kişiselleştirmek için anonimleştirilmiş analiz ve kullanım verilerini toplar. Bu seçeneği devre dışı bırakarak, bundan vazgeçmiş olursunuz ve verileriniz artık toplanmayacaktır."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced hiçbir analiz veya kullanım verisi toplamaz ve çökme raporu göndermez; burada kapatılacak bir şey yok."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Telemetri"
+   },
+@@ -4010,6 +4013,12 @@
+   "minecraft-required.header": {
+     "message": "Minecraft gereklidir"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Minecraft'a sahip bir Microsoft hesabı, çevrim içi oynamanı ve görünümünü korumanı sağlayan şeydir."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Minecraft'a giriş yap"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Ya da Ely.by veya özel bir sunucuyla oturum açın; ya da hiçbir hesap olmadan tek oyunculu ve çevrimdışı sunucularda oynayın."
+   },
+diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
+index 74ba938..0f6a6a4 100644
+--- a/apps/app-frontend/src/locales/uk-UA/index.json
++++ b/apps/app-frontend/src/locales/uk-UA/index.json
+@@ -3161,6 +3161,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth збирає анонімізовану аналітику та дані про використання для покращення зручності та адаптації сервісу. Вимкнувши цю опцію, ви відмовляєтеся від збору, і ваші дані більше не збиратимуться."
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced не збирає аналітику та дані про використання й не надсилає звіти про збої, тож тут нема чого вимикати."
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "Телеметрія"
+   },
+@@ -5018,6 +5021,12 @@
+   "minecraft-required.header": {
+     "message": "Потрібний Minecraft"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "Обліковий запис Microsoft із придбаним Minecraft — це те, що дозволяє грати онлайн і зберігати свій скін."
++  },
++  "minecraft-required.modal-title": {
++    "message": "Вхід у Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "Або увійдіть через Ely.by чи власний сервер — або грайте в одиночній грі та на офлайн-серверах узагалі без облікового запису."
+   },
+diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
+index e408a3d..9c0cf39 100644
+--- a/apps/app-frontend/src/locales/zh-CN/index.json
++++ b/apps/app-frontend/src/locales/zh-CN/index.json
+@@ -3122,6 +3122,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth 收集匿名分析和使用数据，以提升用户体验并为您提供个性化服务。若禁用此选项，即表示您选择退出，您的数据将不再被收集。"
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced 不收集任何分析或使用数据，也不发送崩溃报告，因此这里没有可关闭的内容。"
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "遥测"
+   },
+@@ -4901,6 +4904,12 @@
+   "minecraft-required.header": {
+     "message": "需要 Minecraft"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "拥有 Minecraft 的 Microsoft 账号才能联机游戏并保留你的皮肤。"
++  },
++  "minecraft-required.modal-title": {
++    "message": "登录 Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "也可以使用 Ely.by 或自定义服务器登录，或者不用任何账户，直接玩单人游戏和离线模式服务器。"
+   },
+diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
+index 6b5ec6d..50bd256 100644
+--- a/apps/app-frontend/src/locales/zh-TW/index.json
++++ b/apps/app-frontend/src/locales/zh-TW/index.json
+@@ -3173,6 +3173,9 @@
+   "app.settings.privacy.telemetry.description": {
+     "message": "Modrinth 會收集匿名化的分析與使用資料，以提升使用者體驗並提供客製化服務。若停用此選項，即表示你選擇退出，你的資料將不再被收集。"
+   },
++  "app.settings.privacy.telemetry.none": {
++    "message": "Modrinth Enhanced 不會收集任何分析或使用資料，也不會傳送當機報告，因此這裡沒有可以關閉的項目。"
++  },
+   "app.settings.privacy.telemetry.title": {
+     "message": "遙測"
+   },
+@@ -5030,6 +5033,12 @@
+   "minecraft-required.header": {
+     "message": "需要 Minecraft"
+   },
++  "minecraft-required.microsoft-explainer": {
++    "message": "擁有 Minecraft 的 Microsoft 帳號才能連線遊玩並保留你的外觀。"
++  },
++  "minecraft-required.modal-title": {
++    "message": "登入 Minecraft"
++  },
+   "minecraft-required.offline-hint": {
+     "message": "也可以用 Ely.by 或自訂伺服器登入，或者不用任何帳號，直接玩單人遊戲和離線模式的伺服器。"
+   },
