@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Sat, 19 Sep 2026 02:04:37 +0200
+Subject: [PATCH] Keep WebKit's own menu off the interface's own images
+
+---
+ apps/app-frontend/src/App.vue                   | 11 ++++++++++-
+ apps/app-frontend/src/pages/project/Gallery.vue |  2 +-
+ 2 files changed, 11 insertions(+), 2 deletions(-)
+
+diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
+index 0bc4490..fcfb5e1 100644
+--- a/apps/app-frontend/src/App.vue
++++ b/apps/app-frontend/src/App.vue
+@@ -2340,7 +2340,16 @@ function handleAuxClick(e) {
+ function handleContextMenu(event) {
+ 	const target = event.target
+ 	if (target instanceof Element) {
+-		if (target.closest('img, textarea, [contenteditable="true"]')) return
++		// WebKit's own menu is worth having on the images a player may want to
++		// save or copy — the ones in descriptions and galleries — but not on
++		// every avatar and icon the interface is built from.
++		if (
++			target instanceof HTMLImageElement &&
++			target.closest('.markdown-body, [data-native-menu]')
++		) {
++			return
++		}
++		if (target.closest('textarea, [contenteditable="true"]')) return
+ 		const input = target.closest('input')
+ 		if (
+ 			input &&
+diff --git a/apps/app-frontend/src/pages/project/Gallery.vue b/apps/app-frontend/src/pages/project/Gallery.vue
+index ac6a31c..70036d1 100644
+--- a/apps/app-frontend/src/pages/project/Gallery.vue
++++ b/apps/app-frontend/src/pages/project/Gallery.vue
+@@ -1,5 +1,5 @@
+ <template>
+-	<div class="gallery">
++	<div class="gallery" data-native-menu>
+ 		<Card v-for="(image, index) in filteredGallery" :key="image.url" class="gallery-item">
+ 			<a @click="expandImage(image, index)">
+ 				<img :src="image.url" :alt="image.title" class="gallery-image" />
