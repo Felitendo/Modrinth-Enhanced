@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
+Date: Sat, 19 Sep 2026 02:22:32 +0200
+Subject: [PATCH] Hold a button's label still as the pointer arrives
+
+---
+ .../src/components/ui/TitleBarAccountSwitcher.vue           | 4 +++-
+ packages/ui/src/components/base/buttons/ButtonFrame.vue     | 6 +++++-
+ 2 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+index b21fae7..f9be6c5 100644
+--- a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
++++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+@@ -28,8 +28,10 @@
+ 					:key="account.profile.id"
+ 					class="flex min-w-0 items-center gap-1"
+ 				>
++					<!-- btn-transparent: the same hover background as the buttons below,
++					     rather than button-base's filter, which makes the text shift. -->
+ 					<button
+-						class="button-base flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent p-2 text-left"
++						class="button-base btn-transparent flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent p-2 text-left hover:bg-surface-4 focus-visible:bg-surface-4"
+ 						@click="choose(account, close)"
+ 					>
+ 						<RadioButtonCheckedIcon v-if="isSelected(account)" class="size-5 shrink-0 text-brand" />
+diff --git a/packages/ui/src/components/base/buttons/ButtonFrame.vue b/packages/ui/src/components/base/buttons/ButtonFrame.vue
+index cc33922..6afd6a5 100644
+--- a/packages/ui/src/components/base/buttons/ButtonFrame.vue
++++ b/packages/ui/src/components/base/buttons/ButtonFrame.vue
+@@ -53,8 +53,12 @@ const typeClasses: Record<ButtonType, string> = {
+ }
+ 
+ const interactionClasses: Record<ButtonInteraction, string> = {
++	// The background carries the hover on its own. Brightening the button as
++	// well puts its label in a filter of its own, which WebKit rasterizes apart
++	// from the page and lands a glyph or two off, so the text appears to shift
++	// as the pointer arrives and again as it leaves.
+ 	surface:
+-		'[&:not(:disabled):not([aria-disabled=true]):hover]:bg-surface-4 [&:not(:disabled):not([aria-disabled=true]):focus-visible]:bg-surface-4',
++		'[&:not(:disabled):not([aria-disabled=true]):hover]:bg-surface-4 [&:not(:disabled):not([aria-disabled=true]):focus-visible]:bg-surface-4 [&:not(:disabled):not([aria-disabled=true]):hover]:!filter-none [&:not(:disabled):not([aria-disabled=true]):focus-visible]:!filter-none',
+ 	filled:
+ 		'[&:not(:disabled):not([aria-disabled=true]):hover]:!bg-[--button-color] [&:not(:disabled):not([aria-disabled=true]):focus-visible]:!bg-[--button-color] [&:not(:disabled):not([aria-disabled=true]):hover]:!text-[var(--color-accent-contrast)] [&:not(:disabled):not([aria-disabled=true]):focus-visible]:!text-[var(--color-accent-contrast)]',
+ 	none: '[&:not(:disabled):not([aria-disabled=true]):hover]:!brightness-100 [&:not(:disabled):not([aria-disabled=true]):focus-visible]:!brightness-100',
