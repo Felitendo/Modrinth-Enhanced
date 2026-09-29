@@ -26,5 +26,8 @@ separately, from the AUR, and stays untouched.
 - `FAST=1` cuts the build to about a third of the time, at the cost of a few megabytes. Use it for
   anything that is not meant to be release-like: `DEV=1 FAST=1 scripts/build.sh`.
 - Build after every change that touches the app, and install it over the last dev build, so it can
-  be tried out right away. Neither pnpm nor a JDK is on PATH by default:
-  `PATH="$PWD/build/bin:$PWD/build/jdk-17.0.20.1+1/bin:$PATH" JAVA_HOME="$PWD/build/jdk-17.0.20.1+1" DEV=1 FAST=1 scripts/build.sh`
+  be tried out right away. The system's pnpm and JDK are the wrong versions, and sharp must not
+  build against the system's libvips:
+  `PATH="$PWD/build/bin:$PWD/build/jdk-17.0.20.1+1/bin:$PATH" JAVA_HOME="$PWD/build/jdk-17.0.20.1+1" SHARP_IGNORE_GLOBAL_LIBVIPS=1 DEV=1 FAST=1 scripts/build.sh`
+- If `build/` is gone: `npm install -g --prefix build pnpm@<packageManager version>` and unpack
+  Temurin 17 from api.adoptium.net into `build/`.
