@@ -420,7 +420,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 0f62dd8..919c91a 100644
+index 24db197..3dbf3dc 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {

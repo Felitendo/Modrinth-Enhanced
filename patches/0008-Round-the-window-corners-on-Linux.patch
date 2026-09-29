@@ -11,7 +11,7 @@ Subject: [PATCH] Round the window corners on Linux
  4 files changed, 53 insertions(+), 1 deletion(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 76da736..dcae1f1 100644
+index f9dd80a..288549d 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -543,6 +543,16 @@ watch([os, isFullscreen], ([osName, fullscreen]) => {

@@ -880,7 +880,7 @@ index e2a59fd..4fcddea 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index f98395e..0fb53a5 100644
+index 8aff73d..85bd5b8 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {

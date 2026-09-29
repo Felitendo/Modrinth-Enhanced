@@ -27,7 +27,7 @@ ads and these prompts were shown, and nothing more.
  2 files changed, 29 insertions(+), 91 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 5faea7c..447f636 100644
+index 564be92..4cd09f9 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -9,7 +9,6 @@ import {
@@ -102,7 +102,7 @@ index 5faea7c..447f636 100644
  	news: {
  		id: 'app.news.title',
  		defaultMessage: 'News',
-@@ -1529,16 +1513,6 @@ const modrinthAccountMenuOptions = computed(() => [
+@@ -1548,16 +1532,6 @@ const modrinthAccountMenuOptions = computed(() => [
  		icon: UserIcon,
  		action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
  	},
@@ -119,7 +119,7 @@ index 5faea7c..447f636 100644
  	{
  		id: 'add-friend',
  		label: formatMessage(messages.addFriend),
-@@ -2484,13 +2458,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2503,13 +2477,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			</RouterView>
  		</div>
  		<div
@@ -134,7 +134,7 @@ index 5faea7c..447f636 100644
  				data-overlayscrollbars-initialize
  			>
  				<OnboardingChecklist
-@@ -2552,17 +2524,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2571,17 +2543,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  					</div>
  				</div>
  			</div>

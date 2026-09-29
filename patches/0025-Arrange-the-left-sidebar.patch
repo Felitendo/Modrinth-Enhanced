@@ -26,7 +26,7 @@ where they belong; only the number of instances stays there.
  create mode 100644 apps/app-frontend/src/composables/use-sidebar-layout.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 6539d4a..871a8b9 100644
+index 9679884..cb688fc 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -15,6 +15,7 @@ import {
@@ -162,7 +162,7 @@ index 6539d4a..871a8b9 100644
  	createNewInstance: {
  		id: 'app.nav.create-new-instance',
  		defaultMessage: 'Create new instance',
-@@ -2327,52 +2409,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2346,52 +2428,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
  		>
  			<NavButton
@@ -223,7 +223,7 @@ index 6539d4a..871a8b9 100644
  			</NavButton>
  			<suspense>
  				<QuickInstanceSwitcher>
-@@ -2456,6 +2501,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2475,6 +2520,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<LogInIcon class="text-brand" />
  			</NavButton>
  		</div>
@@ -293,10 +293,10 @@ index 32a86a3..e409510 100644
  const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
  
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index 9a9e8ef..7636c46 100644
+index 4e55cdd..9bc7ce3 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 +++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-@@ -83,32 +83,6 @@ const messages = defineMessages({
+@@ -82,32 +82,6 @@ const messages = defineMessages({
  		id: 'app.features-settings.sidebar.title',
  		defaultMessage: 'Sidebar',
  	},
@@ -329,7 +329,7 @@ index 9a9e8ef..7636c46 100644
  	quickInstancesTitle: {
  		id: 'app.features-settings.quick-instances.title',
  		defaultMessage: 'Quick instances in sidebar',
-@@ -385,50 +359,6 @@ onBeforeUnmount(() => {
+@@ -384,50 +358,6 @@ onBeforeUnmount(() => {
  			{{ formatMessage(messages.sidebarTitle) }}
  		</h2>
  		<div class="mt-4 flex flex-col gap-6">

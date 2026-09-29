@@ -11,7 +11,7 @@ Subject: [PATCH] Scroll with the middle mouse button
  create mode 100644 apps/app-frontend/src/helpers/autoscroll.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index dcae1f1..e18904b 100644
+index 288549d..4283ebd 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -126,6 +126,7 @@ import {

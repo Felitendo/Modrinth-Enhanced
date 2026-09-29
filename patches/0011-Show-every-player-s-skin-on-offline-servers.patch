@@ -52,7 +52,7 @@ The agent code comes from Noctrinth (https://github.com/Everelsu/Noctrinth).
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
 
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index ae88550..9a9e8ef 100644
+index 2edfeb8..4e55cdd 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 +++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 @@ -1,5 +1,7 @@
@@ -71,15 +71,15 @@ index ae88550..9a9e8ef 100644
  import { screenshotKeys } from '@/pages/instance/query-options.ts'
  import { appSettingsModalContextKey } from '@/providers/app-settings-modal'
  
-@@ -44,6 +47,7 @@ const queryClient = useQueryClient()
+@@ -43,6 +46,7 @@ const quickInstances = useQuickInstanceLimit()
+ const queryClient = useQueryClient()
  
- const showJumpInFlag: FeatureFlag = 'worlds_in_home'
  const showHostingFlag: FeatureFlag = 'show_hosting_in_sidebar'
 +const universalSkinsFlag: FeatureFlag = 'universal_skins'
  
  const messages = defineMessages({
  	syncAcrossDevicesTitle: {
-@@ -126,6 +130,32 @@ const messages = defineMessages({
+@@ -125,6 +129,32 @@ const messages = defineMessages({
  		id: 'app.features-settings.show-jump-in.description',
  		defaultMessage: 'Show recently played worlds and instances at the top of the Play page.',
  	},
@@ -112,7 +112,7 @@ index ae88550..9a9e8ef 100644
  })
  
  type FeaturesSettingsState = {
-@@ -136,6 +166,7 @@ type FeaturesSettingsState = {
+@@ -135,6 +165,7 @@ type FeaturesSettingsState = {
  	showAllScreenshots: boolean
  	showSkinSelector: boolean
  	showHosting: boolean
@@ -120,32 +120,32 @@ index ae88550..9a9e8ef 100644
  	quickInstanceCount: number
  	showJumpIn: boolean
  }
-@@ -156,6 +187,8 @@ function getFeaturesSettingsState(
+@@ -155,6 +186,8 @@ function getFeaturesSettingsState(
  		showAllScreenshots: globalSyncedOptions.screenshots,
  		showSkinSelector: settings.show_skin_selector_in_sidebar,
  		showHosting: settings.feature_flags[showHostingFlag] ?? DEFAULT_FEATURE_FLAGS[showHostingFlag],
 +		universalSkins:
 +			settings.feature_flags[universalSkinsFlag] ?? DEFAULT_FEATURE_FLAGS[universalSkinsFlag],
  		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
- 		showJumpIn: settings.feature_flags[showJumpInFlag] ?? DEFAULT_FEATURE_FLAGS[showJumpInFlag],
+ 		showJumpIn: settings.show_jump_in,
  	}
-@@ -197,6 +230,7 @@ const settingsMutation = useMutation({
+@@ -196,6 +229,7 @@ const settingsMutation = useMutation({
+ 			feature_flags: {
  				...latestSettings.feature_flags,
- 				[showJumpInFlag]: value.showJumpIn,
  				[showHostingFlag]: value.showHosting,
 +				[universalSkinsFlag]: value.universalSkins,
  			},
  		}
  
-@@ -220,6 +254,7 @@ const settingsMutation = useMutation({
+@@ -219,6 +253,7 @@ const settingsMutation = useMutation({
  		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
- 		appSettings.featureFlags[showJumpInFlag] = value.showJumpIn
+ 		appSettings.showJumpIn = value.showJumpIn
  		appSettings.featureFlags[showHostingFlag] = value.showHosting
 +		appSettings.featureFlags[universalSkinsFlag] = value.universalSkins
  
  		if (updateQuickInstanceCount) {
  			quickInstances.setLimit(value.quickInstanceCount)
-@@ -413,6 +448,40 @@ onBeforeUnmount(() => {
+@@ -412,6 +447,40 @@ onBeforeUnmount(() => {
  		</div>
  	</section>
  
@@ -187,10 +187,10 @@ index ae88550..9a9e8ef 100644
  		<h2 class="m-0 text-xl font-semibold text-contrast">
  			{{ formatMessage(messages.playPageTitle) }}
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index 28c78c3..e0c0a89 100644
+index bce1f20..8d6e6f7 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -28,6 +28,7 @@ export const DEFAULT_FEATURE_FLAGS = {
+@@ -15,6 +15,7 @@ export const DEFAULT_FEATURE_FLAGS = {
  	news_collapsed: false,
  	sidebar_fold_explained: false,
  	right_sidebar_collapsed: false,
@@ -214,10 +214,10 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 1e44522..f5af028 100644
+index c1f27a4..ab19b6c 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -399,6 +399,7 @@ fn main() {
+@@ -400,6 +400,7 @@ fn main() {
                          "open_path",
                          "show_launcher_logs_folder",
                          "show_app_db_backups_folder",
@@ -2493,10 +2493,10 @@ index a482f66..76bedc7 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 93cfd20..5378b99 100644
+index fd11a46..ed4c789 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1031,6 +1031,28 @@ pub async fn launch_minecraft(
+@@ -1092,6 +1092,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2525,7 +2525,7 @@ index 93cfd20..5378b99 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1057,6 +1079,7 @@ pub async fn launch_minecraft(
+@@ -1118,6 +1140,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),
@@ -2560,7 +2560,7 @@ index b4fb7e2..fe37974 100644
      #[inline]
      pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
 diff --git a/packages/app-lib/src/state/dirs/move_app_directory.rs b/packages/app-lib/src/state/dirs/move_app_directory.rs
-index 7418675..a25a7fd 100644
+index 3d0abc7..352336d 100644
 --- a/packages/app-lib/src/state/dirs/move_app_directory.rs
 +++ b/packages/app-lib/src/state/dirs/move_app_directory.rs
 @@ -11,13 +11,14 @@ use sqlx::SqlitePool;
@@ -2580,10 +2580,10 @@ index 7418675..a25a7fd 100644
  pub(crate) async fn relocate_tree(from: &Path, to: &Path) -> crate::Result<()> {
      if !fs::try_exists(from).await? {
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index b5f2ec6..69fc7ff 100644
+index 7797e78..2a86714 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -92,6 +92,7 @@ pub enum FeatureFlag {
+@@ -108,6 +108,7 @@ pub enum FeatureFlag {
      NewsCollapsed,
      SidebarFoldExplained,
      RightSidebarCollapsed,

@@ -108,7 +108,7 @@ index 8773f8f..d31e8c5 100644
  
  	<div class="mt-4 flex items-center justify-between gap-4">
 diff --git a/apps/app-frontend/src/helpers/analytics.ts b/apps/app-frontend/src/helpers/analytics.ts
-index b3d2c0a..c9f4846 100644
+index 6118ac3..5ba7d5d 100644
 --- a/apps/app-frontend/src/helpers/analytics.ts
 +++ b/apps/app-frontend/src/helpers/analytics.ts
 @@ -1,4 +1,16 @@
@@ -129,7 +129,7 @@ index b3d2c0a..c9f4846 100644
  
  interface InstanceProperties {
  	loader: string
-@@ -43,72 +55,13 @@ type AnalyticsEventMap = {
+@@ -42,72 +54,13 @@ type AnalyticsEventMap = {
  
  export type AnalyticsEvent = keyof AnalyticsEventMap
  
@@ -206,7 +206,7 @@ index b3d2c0a..c9f4846 100644
  
  type OptionalArgs<T> = Record<string, never> extends T ? [properties?: T] : [properties: T]
  
-@@ -116,10 +69,6 @@ export const trackEvent = <E extends AnalyticsEvent>(
+@@ -115,10 +68,6 @@ export const trackEvent = <E extends AnalyticsEvent>(
  	eventName: E,
  	...args: OptionalArgs<AnalyticsEventMap[E]>
  ) => {
@@ -302,7 +302,7 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index b03a35d..2a589bd 100644
+index 721dd32..6c48b86 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
 @@ -2745,7 +2745,7 @@

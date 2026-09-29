@@ -976,7 +976,7 @@ index bcd79ec..9a10f0e 100644
  	</div>
  
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 0fb53a5..f01ba91 100644
+index 85bd5b8..2c8f2b9 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,19 @@ fn main() {

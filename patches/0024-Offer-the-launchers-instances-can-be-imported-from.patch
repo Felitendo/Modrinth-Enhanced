@@ -61,7 +61,7 @@ index 34cf250..bfc728e 100644
  /// null if it can't be found or doesn't exist
  /// eg: get_default_launcher_path("MultiMC")
 diff --git a/apps/app-frontend/src/providers/setup/creation-modal.ts b/apps/app-frontend/src/providers/setup/creation-modal.ts
-index 964b17c..53ba797 100644
+index 31ad5aa..f4a13ce 100644
 --- a/apps/app-frontend/src/providers/setup/creation-modal.ts
 +++ b/apps/app-frontend/src/providers/setup/creation-modal.ts
 @@ -113,7 +113,12 @@ export function setupCreationModal(
@@ -135,7 +135,7 @@ index 851e44d..752832c 100644
  			return (await get_importable_instances(launcherName, path)) ?? []
  		},
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 8cb21f2..8e8a0f8 100644
+index ac124d9..c9eebb7 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -108,6 +108,7 @@ fn main() {
@@ -173,7 +173,7 @@ index 773fcb2..cda652f 100644
  /// None if it can't be found or doesn't exist
  #[tauri::command]
 diff --git a/packages/app-lib/src/api/pack/import/mod.rs b/packages/app-lib/src/api/pack/import/mod.rs
-index 72f315d..15da6da 100644
+index 52707bc..62ee673 100644
 --- a/packages/app-lib/src/api/pack/import/mod.rs
 +++ b/packages/app-lib/src/api/pack/import/mod.rs
 @@ -247,36 +247,130 @@ async fn import_instance_inner(

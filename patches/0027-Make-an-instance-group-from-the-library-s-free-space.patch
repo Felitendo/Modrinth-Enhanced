@@ -34,7 +34,7 @@ index 20000b6..1849835 100644
  
  <template>
 diff --git a/apps/app-frontend/src/pages/Index.vue b/apps/app-frontend/src/pages/Index.vue
-index 1c5fb5d..074e709 100644
+index cdad0e8..7aa6e89 100644
 --- a/apps/app-frontend/src/pages/Index.vue
 +++ b/apps/app-frontend/src/pages/Index.vue
 @@ -1,5 +1,5 @@
@@ -78,7 +78,7 @@ index 1c5fb5d..074e709 100644
  }
  </script>
 @@ -100,7 +112,7 @@ function openPageContextMenu(event: MouseEvent) {
- 			v-if="recentInstances?.length > 0 && appSettings.getFeatureFlag('worlds_in_home')"
+ 			v-if="recentInstances?.length > 0 && appSettings.showJumpIn"
  			:recent-instances="recentInstances"
  		/>
 -		<LibrarySection :instances="instances" />

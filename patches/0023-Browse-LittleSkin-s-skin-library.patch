@@ -417,7 +417,7 @@ index ea86e86..e3c4b21 100644
  	return await invoke('plugin:skin-browser|skin_browser_site_skin', { site, id })
  }
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 507ad2f..8cb21f2 100644
+index e33a52d..ac124d9 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -54,6 +54,8 @@ fn main() {

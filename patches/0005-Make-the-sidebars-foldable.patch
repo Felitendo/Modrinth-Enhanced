@@ -32,13 +32,13 @@ bar button - so nothing there promises anything.
 ---
  apps/app-frontend/src/App.vue                 | 180 ++++++++++++++++--
  .../ui/settings/display/BehaviorSettings.vue  |  18 --
- .../ui/settings/display/FeaturesSettings.vue  |  28 +++
+ .../ui/settings/display/FeaturesSettings.vue  |  38 +++-
  .../src/composables/use-app-settings.ts       |   4 +
  packages/app-lib/src/state/settings.rs        |   4 +
- 5 files changed, 201 insertions(+), 33 deletions(-)
+ 5 files changed, 210 insertions(+), 34 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index d750a5f..76da736 100644
+index c5d4703..f9dd80a 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -10,6 +10,8 @@ import {
@@ -160,7 +160,7 @@ index d750a5f..76da736 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2252,6 +2320,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2271,6 +2339,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -168,7 +168,7 @@ index d750a5f..76da736 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2377,16 +2446,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2396,16 +2465,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<Breadcrumbs />
  			</div>
  			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
@@ -220,7 +220,7 @@ index d750a5f..76da736 100644
  				<div class="flex mr-3">
  					<Suspense>
  						<AppActionBar />
-@@ -2502,10 +2597,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2521,10 +2616,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
  					/>
  					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
@@ -242,7 +242,7 @@ index d750a5f..76da736 100644
  							<NewsArticleCard
  								v-for="(item, index) in news"
  								:key="`news-${index}`"
-@@ -2531,6 +2634,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2550,6 +2653,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
@@ -264,7 +264,7 @@ index d750a5f..76da736 100644
  	<ErrorModal ref="errorModal" />
  	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
  	<MinecraftRequiredModal ref="minecraftRequiredModal" />
-@@ -2743,6 +2861,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2762,6 +2880,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	display: contents;
  }
  
@@ -304,10 +304,10 @@ index d750a5f..76da736 100644
  	.nav-button-animated-enter-active {
  		transition: all 0.5s cubic-bezier(0.15, 1.4, 0.64, 0.96);
 diff --git a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
-index 55622d7..6c6ba20 100644
+index db502ad..c433de6 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
 +++ b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
-@@ -80,14 +80,6 @@ const messages = defineMessages({
+@@ -79,14 +79,6 @@ const messages = defineMessages({
  		id: 'app.appearance-settings.default-landing-page.library',
  		defaultMessage: 'Library',
  	},
@@ -322,9 +322,9 @@ index 55622d7..6c6ba20 100644
  	compactModeTitle: {
  		id: 'app.appearance-settings.compact-mode.title',
  		defaultMessage: 'Compact mode',
-@@ -288,16 +280,6 @@ onBeforeUnmount(() => {
- 				</div>
- 				<Toggle id="minimize-launcher" v-model="current.minimizeApp" />
+@@ -298,16 +290,6 @@ onBeforeUnmount(() => {
+ 					aria-describedby="refocus-on-game-close-description"
+ 				/>
  			</div>
 -
 -			<div class="flex items-center justify-between gap-4">
@@ -340,18 +340,32 @@ index 55622d7..6c6ba20 100644
  	</section>
  
 diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index 1d3e379..ae88550 100644
+index 6ba67a9..2edfeb8 100644
 --- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
 +++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-@@ -43,6 +43,7 @@ const quickInstances = useQuickInstanceLimit()
+@@ -12,7 +12,11 @@ import {
+ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+ import { inject, onBeforeUnmount, onMounted } from 'vue'
+ 
+-import { useAppSettings } from '@/composables/use-app-settings.ts'
++import {
++	DEFAULT_FEATURE_FLAGS,
++	type FeatureFlag,
++	useAppSettings,
++} from '@/composables/use-app-settings.ts'
+ import {
+ 	QUICK_INSTANCE_LIMIT_MAX,
+ 	useQuickInstanceLimit,
+@@ -38,6 +42,8 @@ const settingsModal = inject(appSettingsModalContextKey, null)
+ const quickInstances = useQuickInstanceLimit()
  const queryClient = useQueryClient()
  
- const showJumpInFlag: FeatureFlag = 'worlds_in_home'
 +const showHostingFlag: FeatureFlag = 'show_hosting_in_sidebar'
- 
++
  const messages = defineMessages({
  	syncAcrossDevicesTitle: {
-@@ -95,6 +96,15 @@ const messages = defineMessages({
+ 		id: 'app.features-settings.sync-across-devices.title',
+@@ -89,6 +95,15 @@ const messages = defineMessages({
  		id: 'app.features-settings.show-skin-selector.description',
  		defaultMessage: 'Show a button in the left sidebar to open the skin selector.',
  	},
@@ -367,7 +381,7 @@ index 1d3e379..ae88550 100644
  	quickInstancesTitle: {
  		id: 'app.features-settings.quick-instances.title',
  		defaultMessage: 'Quick instances in sidebar',
-@@ -125,6 +135,7 @@ type FeaturesSettingsState = {
+@@ -119,6 +134,7 @@ type FeaturesSettingsState = {
  	showScreenshotsTab: boolean
  	showAllScreenshots: boolean
  	showSkinSelector: boolean
@@ -375,31 +389,34 @@ index 1d3e379..ae88550 100644
  	quickInstanceCount: number
  	showJumpIn: boolean
  }
-@@ -144,6 +155,7 @@ function getFeaturesSettingsState(
+@@ -138,6 +154,7 @@ function getFeaturesSettingsState(
  		showScreenshotsTab: settings.show_screenshots_tab_in_instances,
  		showAllScreenshots: globalSyncedOptions.screenshots,
  		showSkinSelector: settings.show_skin_selector_in_sidebar,
 +		showHosting: settings.feature_flags[showHostingFlag] ?? DEFAULT_FEATURE_FLAGS[showHostingFlag],
  		quickInstanceCount: quickInstances.limit.value ?? QUICK_INSTANCE_LIMIT_MAX,
- 		showJumpIn: settings.feature_flags[showJumpInFlag] ?? DEFAULT_FEATURE_FLAGS[showJumpInFlag],
+ 		showJumpIn: settings.show_jump_in,
  	}
-@@ -184,6 +196,7 @@ const settingsMutation = useMutation({
- 			feature_flags: {
- 				...latestSettings.feature_flags,
- 				[showJumpInFlag]: value.showJumpIn,
+@@ -176,6 +193,10 @@ const settingsMutation = useMutation({
+ 			show_screenshots_tab_in_instances: value.showScreenshotsTab,
+ 			show_skin_selector_in_sidebar: value.showSkinSelector,
+ 			show_jump_in: value.showJumpIn,
++			feature_flags: {
++				...latestSettings.feature_flags,
 +				[showHostingFlag]: value.showHosting,
- 			},
++			},
  		}
  
-@@ -206,6 +219,7 @@ const settingsMutation = useMutation({
+ 		const screenshotsChanged =
+@@ -197,6 +218,7 @@ const settingsMutation = useMutation({
  		appSettings.showScreenshotsTabInInstances = value.showScreenshotsTab
  		appSettings.showSkinSelectorInSidebar = value.showSkinSelector
- 		appSettings.featureFlags[showJumpInFlag] = value.showJumpIn
+ 		appSettings.showJumpIn = value.showJumpIn
 +		appSettings.featureFlags[showHostingFlag] = value.showHosting
  
  		if (updateQuickInstanceCount) {
  			quickInstances.setLimit(value.quickInstanceCount)
-@@ -366,6 +380,20 @@ onBeforeUnmount(() => {
+@@ -357,6 +379,20 @@ onBeforeUnmount(() => {
  				/>
  			</div>
  
@@ -421,12 +438,12 @@ index 1d3e379..ae88550 100644
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index 0d58903..28c78c3 100644
+index dceec83..bce1f20 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -24,6 +24,10 @@ export const DEFAULT_FEATURE_FLAGS = {
- 	friends_pending_collapsed: true,
- 	dismissed_photosensitivity_filter_warning: false,
+@@ -11,6 +11,10 @@ export const DEFAULT_FEATURE_FLAGS = {
+ 	pride_fundraiser: true,
+ 	i18n_debug: false,
  	localhost_sign_in: false,
 +	show_hosting_in_sidebar: true,
 +	news_collapsed: false,
@@ -436,12 +453,12 @@ index 0d58903..28c78c3 100644
  
  export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 20601b8..b5f2ec6 100644
+index 47490ad..7797e78 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -88,6 +88,10 @@ pub enum FeatureFlag {
-     FriendsPendingCollapsed,
-     DismissedPhotosensitivityFilterWarning,
+@@ -104,6 +104,10 @@ pub enum FeatureFlag {
+     ServerProjectQa,
+     I18nDebug,
      LocalhostSignIn,
 +    ShowHostingInSidebar,
 +    NewsCollapsed,

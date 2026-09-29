@@ -206,10 +206,10 @@ index 977bf82..c390c4c 100644
 + */
 +process_uuid: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-index e763358..149f9ef 100644
+index 9fd4962..8f632c9 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-@@ -50,7 +50,7 @@ export type FriendPayload = { tag: "friend_request", value: { from: string } } |
+@@ -48,7 +48,7 @@ export type FriendPayload = { tag: "friend_request", value: { from: string } } |
  export type FriendStatusPayload = { user_id: string, profile_name: string | undefined, last_update: string }
  export type SharedInstanceUnavailableReason = { tag: "deleted" } | { tag: "access_revoked" } | { tag: "quarantined" }
  export type LogEvent = { tag: "log4j", value: Log4jEvent } | { tag: "legacy", value: { message: string } }
@@ -219,10 +219,10 @@ index e763358..149f9ef 100644
  export type Log4jEvent = { timestamp_millis: i64 | undefined, logger_name: string | undefined, level: string | undefined, thread_name: string | undefined, message: string | undefined, throwable: string | undefined }
  export type ModLoader = { tag: "vanilla" } | { tag: "forge" } | { tag: "fabric" } | { tag: "quilt" } | { tag: "neoforge" }
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.js b/apps/app-frontend/src/generated/app-events/postcard/index.js
-index 2407d7d..1b343a0 100644
+index 1393f04..e69e456 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.js
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.js
-@@ -475,6 +475,7 @@ function deserialize_LOG_EVENT(d) {
+@@ -434,6 +434,7 @@ function deserialize_LOG_EVENT(d) {
  function deserialize_LOG_PAYLOAD(d) {
      return {
          instance_id: d.deserialize_string(),
@@ -231,7 +231,7 @@ index 2407d7d..1b343a0 100644
      };
  }
 diff --git a/apps/app-frontend/src/helpers/instance.ts b/apps/app-frontend/src/helpers/instance.ts
-index a0c0b56..817a63c 100644
+index 46de853..c0162e2 100644
 --- a/apps/app-frontend/src/helpers/instance.ts
 +++ b/apps/app-frontend/src/helpers/instance.ts
 @@ -601,11 +601,13 @@ export async function get_pack_export_candidates(
@@ -311,7 +311,7 @@ index ce4b436..31a6ded 100644
  	settings: []
  	openFolder: []
 diff --git a/apps/app-frontend/src/pages/instance/layout.vue b/apps/app-frontend/src/pages/instance/layout.vue
-index 7ec73ca..fcd5802 100644
+index 441dafe..3f8af81 100644
 --- a/apps/app-frontend/src/pages/instance/layout.vue
 +++ b/apps/app-frontend/src/pages/instance/layout.vue
 @@ -46,6 +46,7 @@
@@ -322,7 +322,7 @@ index 7ec73ca..fcd5802 100644
  				@play-server="() => handlePlayServer()"
  				@settings="() => settingsModal?.show()"
  				@open-folder="() => instance && showInstanceInFolder(instance.id)"
-@@ -558,6 +559,30 @@ const launchInstance = async (context: string) => {
+@@ -595,6 +596,30 @@ const launchInstance = async (context: string) => {
  	})
  }
  
@@ -427,10 +427,10 @@ index 2aacfe0..e2a59fd 100644
  		liveConsole.clear()
  		invalidate()
 diff --git a/apps/app-frontend/src/providers/setup/app-event-codec.ts b/apps/app-frontend/src/providers/setup/app-event-codec.ts
-index 638386d..3cccc8a 100644
+index c0eb80e..b9d5eeb 100644
 --- a/apps/app-frontend/src/providers/setup/app-event-codec.ts
 +++ b/apps/app-frontend/src/providers/setup/app-event-codec.ts
-@@ -122,7 +122,7 @@ function normalizeLogPayload(value: unknown): WireObject {
+@@ -112,7 +112,7 @@ function normalizeLogPayload(value: unknown): WireObject {
  		event.timestamp_millis = number(event.timestamp_millis)
  	}
  
@@ -440,7 +440,7 @@ index 638386d..3cccc8a 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index f5af028..f98395e 100644
+index ab19b6c..8aff73d 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,7 +110,9 @@ fn main() {
@@ -454,10 +454,10 @@ index f5af028..f98395e 100644
                      .default_permission(
                          DefaultPermissionRule::AllowAllCommands,
 diff --git a/apps/app/src/api/instance.rs b/apps/app/src/api/instance.rs
-index 2861594..2a512dd 100644
+index e0ba5c2..09534e2 100644
 --- a/apps/app/src/api/instance.rs
 +++ b/apps/app/src/api/instance.rs
-@@ -1324,12 +1324,19 @@ pub async fn instance_get_pack_export_candidates(
+@@ -1323,12 +1323,19 @@ pub async fn instance_get_pack_export_candidates(
  pub async fn instance_run(
      instance_id: &str,
      server_address: Option<String>,
@@ -520,11 +520,11 @@ index e938efa..5150b00 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index 8a0040f..46cc47a 100644
+index 9f7b215..d750bdf 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
-@@ -59,7 +59,8 @@ pub use self::projects::{
-     update_managed_modrinth_version, update_project,
+@@ -58,7 +58,8 @@ pub use self::projects::{
+     toggle_disable_project, update_managed_modrinth_version, update_project,
  };
  pub use self::run::{
 -    QuickPlayType, kill, run, try_update_playtime_by_instance_id,
@@ -636,10 +636,10 @@ index 4ce0c57..3382b5b 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
-index 833349d..84b9a87 100644
+index 722d94f..d3a597a 100644
 --- a/packages/app-lib/src/event/mod.rs
 +++ b/packages/app-lib/src/event/mod.rs
-@@ -559,6 +559,8 @@ mod log_types {
+@@ -527,6 +527,8 @@ mod log_types {
      #[serde_binhum::serde_binhum]
      pub struct LogPayload {
          pub instance_id: String,
@@ -649,10 +649,10 @@ index 833349d..84b9a87 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 5378b99..4199bff 100644
+index ed4c789..3a81499 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -825,6 +825,9 @@ pub async fn launch_minecraft(
+@@ -886,6 +886,9 @@ pub async fn launch_minecraft(
      post_exit_hook: Option<String>,
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
@@ -662,7 +662,7 @@ index 5378b99..4199bff 100644
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -954,21 +957,27 @@ pub async fn launch_minecraft(
+@@ -1015,21 +1018,27 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
@@ -705,7 +705,7 @@ index 5378b99..4199bff 100644
      }
  
      if let Some(path) = download::missing_runtime_file(
-@@ -1178,7 +1187,10 @@ pub async fn launch_minecraft(
+@@ -1239,7 +1248,10 @@ pub async fn launch_minecraft(
      let _store_lease = state.content_store.lease().await;
      state.content_store.recover(Some(&instance.id)).await?;
      // state.content_store.validate_instance(instance).await?;
@@ -717,7 +717,7 @@ index 5378b99..4199bff 100644
          return Err(crate::ErrorKind::LauncherError(format!(
              "Instance {} is already running",
              instance.id
-@@ -1225,6 +1237,8 @@ pub async fn launch_minecraft(
+@@ -1286,6 +1298,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,
@@ -727,7 +727,7 @@ index 5378b99..4199bff 100644
              post_exit_hook,
              env_args,
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index fb09842..e9aaa3a 100644
+index 45471b9..4c9ea57 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
 @@ -47,37 +47,74 @@ impl LogRingBuffer {
