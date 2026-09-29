@@ -52,7 +52,7 @@ jobs:
 
     steps:
       - name: Check out Modrinth Enhanced
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Everything below works on the patched tree in build/upstream, so this
       # has to come first: a patch that no longer applies fails the build here,
@@ -70,7 +70,7 @@ jobs:
           echo "upstream=$UPSTREAM_REF" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: build/upstream/.nvmrc
 
@@ -79,7 +79,7 @@ jobs:
         run: corepack enable
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -125,7 +125,7 @@ jobs:
         run: scripts/check.sh
 
       - name: Upload installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: modrinth-enhanced-${{ matrix.name }}
           path: build/artifacts/*

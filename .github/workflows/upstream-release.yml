@@ -36,7 +36,7 @@ jobs:
       revision: ${{ steps.check.outputs.revision }}
       proceed: ${{ steps.check.outputs.proceed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Decide what to release
         id: check
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # The whole history: the release notes are the commits since the last one.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -121,7 +121,7 @@ jobs:
           git push origin HEAD:${{ github.event.repository.default_branch }}
 
       - name: Download installers
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           merge-multiple: true

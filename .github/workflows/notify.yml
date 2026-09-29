@@ -1,0 +1,110 @@
+name: Notify
+
+# Opens an issue when a workflow fails on main, so it reaches GitHub's
+# notifications, the mobile app and email, and comments on it for every further
+# failure. Closes it again once that workflow passes.
+
+on:
+  workflow_run:
+    workflows: [Build, Upstream release]
+    types: [completed]
+
+permissions:
+  actions: read
+  issues: write
+
+concurrency:
+  group: notify-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    # A pull request shows its own checks.
+    if: >-
+      github.event.workflow_run.event != 'pull_request' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch
+    steps:
+      - name: Open, update or close the failure issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          EVENT: ${{ github.event.workflow_run.event }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          title="$WORKFLOW is failing"
+          label=ci-failure
+          issue="$(
+            gh issue list --state open --label "$label" --json number,title |
+              jq -r --arg title "$title" '.[] | select(.title == $title) | .number' |
+              head -1
+          )"
+
+          case "$CONCLUSION" in
+          success)
+            if [ -n "$issue" ]; then
+              gh issue close "$issue" --comment "Passing again: $RUN_URL"
+            fi
+            exit 0
+            ;;
+          failure | timed_out | startup_failure) ;;
+          *) exit 0 ;;
+          esac
+
+          failed="$(
+            gh api "repos/$GH_REPO/actions/runs/$RUN_ID/jobs?per_page=100" --jq '
+              .jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out")'
+          )"
+          jobs="$(
+            jq -r '"- [\(.name)](\(.html_url))" +
+              ([.steps[]? | select(.conclusion == "failure") | .name] |
+                if length > 0 then ": " + join(", ") else "" end)' <<<"$failed"
+          )"
+
+          # The lines leading up to the first error of the first failed job,
+          # enough to see what broke without opening the log.
+          excerpt=""
+          job_id="$(jq -r '.id' <<<"$failed" | head -1)"
+          if [ -n "$job_id" ]; then
+            excerpt="$(
+              curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
+                "$GITHUB_API_URL/repos/$GH_REPO/actions/jobs/$job_id/logs" |
+                sed -E 's/^[0-9TZ:.-]+ //; s/\x1b\[[0-9;]*m//g' |
+                awk '{ print } /^##\[error\]/ { exit }' |
+                tail -40 || true
+            )"
+          fi
+
+          body="$(cat <<EOF
+          [$WORKFLOW]($RUN_URL) failed ($CONCLUSION) on \`${SHA:0:7}\`, started by \`$EVENT\`.
+
+          ${jobs:-No failed job was reported.}
+          EOF
+          )"
+          if [ -n "$excerpt" ]; then
+            body="$body
+
+          <details>
+          <summary>Log</summary>
+
+          \`\`\`
+          $excerpt
+          \`\`\`
+
+          </details>"
+          fi
+
+          if [ -n "$issue" ]; then
+            gh issue comment "$issue" --body "$body"
+          else
+            gh label create "$label" --color d73a4a \
+              --description "A workflow is failing on main" --force
+            gh issue create --title "$title" --label "$label" --body "@$OWNER $body"
+          fi
