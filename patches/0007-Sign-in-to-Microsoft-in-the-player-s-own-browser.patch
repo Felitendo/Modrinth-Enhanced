@@ -420,7 +420,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 24db197..3dbf3dc 100644
+index 6f29181..dcd94b5 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {
@@ -563,10 +563,10 @@ index 2d18da3..fba473f 100644
  /// makes it the active account.
  ///
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 320112f..ba6c342 100644
+index 5fddc74..47d6f11 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
-@@ -28,12 +28,12 @@ pub mod data {
+@@ -29,12 +29,12 @@ pub mod data {
          InstanceInstallCandidate, InstanceInstallTarget,
          InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
          InstanceSyncedOption, InstanceSyncedOptions, InstanceTabVisibility,

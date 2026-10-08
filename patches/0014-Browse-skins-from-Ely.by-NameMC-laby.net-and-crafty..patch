@@ -757,7 +757,7 @@ index 0000000..ea86e86
 +	return listen<SitePage | null>('skin-browser-page', (event) => handler(event.payload))
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index bcd79ec..9a10f0e 100644
+index 3dfe5b1..7bdd7cd 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -5,6 +5,7 @@ import {
@@ -792,7 +792,7 @@ index bcd79ec..9a10f0e 100644
  import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
  import {
  	determineModelType,
-@@ -237,6 +241,18 @@ const messages = defineMessages({
+@@ -249,6 +253,18 @@ const messages = defineMessages({
  		id: 'app.skins.ely.failed.title',
  		defaultMessage: 'Ely.by did not take the change',
  	},
@@ -811,7 +811,7 @@ index bcd79ec..9a10f0e 100644
  })
  
  const editSkinModal = useTemplateRef('editSkinModal')
-@@ -1032,6 +1048,28 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+@@ -1050,6 +1066,28 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	}
  }
  
@@ -840,7 +840,7 @@ index bcd79ec..9a10f0e 100644
  /*
   * Ely.by accounts. Ely.by keeps an account's skins in its public catalogue and
   * has no API to change one, so the grid shows that catalogue, and changes are
-@@ -1459,16 +1497,16 @@ await loadAccountSkins()
+@@ -1477,16 +1515,16 @@ await loadAccountSkins()
  				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
  			>
  				<SkinPreviewRenderer
@@ -862,7 +862,7 @@ index bcd79ec..9a10f0e 100644
  						<div
  							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
  						>
-@@ -1482,7 +1520,26 @@ await loadAccountSkins()
+@@ -1500,7 +1538,26 @@ await loadAccountSkins()
  							:class="{ 'has-ears-features': selectedSkinHasEarsFeatures }"
  						>
  							<div
@@ -890,7 +890,7 @@ index bcd79ec..9a10f0e 100644
  								class="skin-preview-actions flex w-full items-center justify-center gap-1.5"
  								:class="selectedSkinHasEarsFeatures ? 'flex-nowrap' : 'flex-wrap'"
  							>
-@@ -1607,7 +1664,15 @@ await loadAccountSkins()
+@@ -1625,7 +1682,15 @@ await loadAccountSkins()
  		</div>
  
  		<div class="pt-2">
@@ -906,7 +906,7 @@ index bcd79ec..9a10f0e 100644
  				ref="skinSectionList"
  				:saved-skins="savedSkins"
  				:default-skin-sections="defaultSkinSections"
-@@ -1638,13 +1703,13 @@ await loadAccountSkins()
+@@ -1656,13 +1721,13 @@ await loadAccountSkins()
  				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
  			>
  				<SkinPreviewRenderer
@@ -924,7 +924,7 @@ index bcd79ec..9a10f0e 100644
  						<div
  							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
  						>
-@@ -1654,7 +1719,26 @@ await loadAccountSkins()
+@@ -1672,7 +1737,26 @@ await loadAccountSkins()
  					</template>
  					<template #subtitle>
  						<div
@@ -952,7 +952,7 @@ index bcd79ec..9a10f0e 100644
  							class="flex w-full flex-wrap items-center justify-center gap-1.5"
  						>
  							<Button type="base" size="lg" :disabled="elyBusy" @click="elyPending = null">
-@@ -1679,6 +1763,14 @@ await loadAccountSkins()
+@@ -1697,6 +1781,14 @@ await loadAccountSkins()
  		</div>
  
  		<div class="pt-2">
@@ -967,7 +967,7 @@ index bcd79ec..9a10f0e 100644
  			<p v-if="!elyLoading && !elyCatalogue.length" class="m-0 mb-4 text-secondary">
  				{{ formatMessage(messages.elySkinsEmpty) }}
  			</p>
-@@ -1700,6 +1792,7 @@ await loadAccountSkins()
+@@ -1718,6 +1810,7 @@ await loadAccountSkins()
  				@add-skin-dragleave="onAddSkinDragLeave"
  				@add-skin-drop="onAddSkinDrop"
  			/>
@@ -976,7 +976,7 @@ index bcd79ec..9a10f0e 100644
  	</div>
  
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 85bd5b8..2c8f2b9 100644
+index e690c51..12d08ab 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,19 @@ fn main() {
@@ -1153,10 +1153,10 @@ index 0000000..cfd0d8c
 +        .into()
 +}
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 8429e4c..04eedbd 100644
+index 8231367..96cc15a 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -252,6 +252,7 @@ fn main() {
+@@ -308,6 +308,7 @@ fn main() {
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())
          .plugin(api::crash_analysis::init())
@@ -1165,10 +1165,10 @@ index 8429e4c..04eedbd 100644
          .plugin(api::onboarding_checklist::init())
          .plugin(api::import::init())
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 4daf723..e64a606 100644
+index fd1c47f..de1f927 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
-@@ -17,6 +17,7 @@ pub mod process;
+@@ -18,6 +18,7 @@ pub mod process;
  pub mod reports;
  pub mod server_address;
  pub mod settings;

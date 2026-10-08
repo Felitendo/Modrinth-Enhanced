@@ -880,7 +880,7 @@ index e2a59fd..4fcddea 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 8aff73d..85bd5b8 100644
+index 7246c65..e690c51 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {
@@ -970,10 +970,10 @@ index 15a5c1e..565a39f 100644
  pub mod import;
  pub mod install;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 5e582b5..8429e4c 100644
+index 04be546..8231367 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -251,6 +251,7 @@ fn main() {
+@@ -307,6 +307,7 @@ fn main() {
      builder = builder
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())
@@ -2075,13 +2075,13 @@ index 0000000..9a6f7e8
 +    }
 +}
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index a175675..4daf723 100644
+index d9cb8d8..fd1c47f 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
 @@ -1,5 +1,6 @@
  //! API for interacting with Theseus
  pub mod cache;
 +pub mod crash_analysis;
+ pub mod debug_info;
  pub mod ely_skins;
  pub mod friends;
- pub mod handler;

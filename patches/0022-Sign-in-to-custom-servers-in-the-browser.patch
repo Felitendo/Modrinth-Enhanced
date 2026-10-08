@@ -334,7 +334,7 @@ index f4d24a1..f93f4e9 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 3726ef5..e33a52d 100644
+index 31f5716..634448f 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -20,6 +20,8 @@ fn main() {

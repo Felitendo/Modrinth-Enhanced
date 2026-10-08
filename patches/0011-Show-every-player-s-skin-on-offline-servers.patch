@@ -214,31 +214,31 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index c1f27a4..ab19b6c 100644
+index 2d18e0a..e4b2f6b 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -400,6 +400,7 @@ fn main() {
-                         "open_path",
-                         "show_launcher_logs_folder",
+@@ -403,6 +403,7 @@ fn main() {
                          "show_app_db_backups_folder",
+                         "export_debug_info",
+                         "cancel_debug_info_export",
 +                        "show_player_skins_folder",
                          "progress_bars_list",
                          "get_opening_command",
                          "get_image_thumbnail",
 diff --git a/apps/app/src/api/utils.rs b/apps/app/src/api/utils.rs
-index dce771b..4396696 100644
+index 071f98c..120d8e2 100644
 --- a/apps/app/src/api/utils.rs
 +++ b/apps/app/src/api/utils.rs
-@@ -22,6 +22,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
-             open_path,
-             show_launcher_logs_folder,
+@@ -49,6 +49,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
              show_app_db_backups_folder,
+             export_debug_info,
+             cancel_debug_info_export,
 +            show_player_skins_folder,
              progress_bars_list,
              get_opening_command,
              super::thumbnails::get_image_thumbnail,
-@@ -131,6 +132,19 @@ pub async fn show_app_db_backups_folder<R: Runtime>(
-     Ok(())
+@@ -201,6 +202,19 @@ pub fn cancel_debug_info_export<R: Runtime>(
+     }
  }
  
 +/// Opens the folder skins can be put in by hand, making it first if need be.
@@ -2493,10 +2493,10 @@ index a482f66..76bedc7 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index fd11a46..ed4c789 100644
+index 90a9b9f..4038e7f 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1092,6 +1092,28 @@ pub async fn launch_minecraft(
+@@ -1100,6 +1100,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2525,7 +2525,7 @@ index fd11a46..ed4c789 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1118,6 +1140,7 @@ pub async fn launch_minecraft(
+@@ -1126,6 +1148,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),

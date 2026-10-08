@@ -50,10 +50,10 @@ which offered Microsoft and nothing else:
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index a3ffa8f..e17ace5 100644
+index 5f4b5ef..44a7d6c 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -12376,6 +12376,7 @@ dependencies = [
+@@ -12469,6 +12469,7 @@ dependencies = [
   "indicatif",
   "itertools 0.14.0",
   "json5",
@@ -426,7 +426,7 @@ index 94bd13e..cb7319a 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 653f423..7806b4b 100644
+index ee79209..c8ac37a 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,7 @@ fn main() {

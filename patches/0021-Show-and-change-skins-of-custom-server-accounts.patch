@@ -159,10 +159,10 @@ index ee32e2e..7d9b78d 100644
  	await loadPreviewSkin()
  
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 9a10f0e..3b58ea9 100644
+index 7bdd7cd..d12d3f3 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
-@@ -1448,6 +1448,7 @@ await loadAccountSkins()
+@@ -1466,6 +1466,7 @@ await loadAccountSkins()
  	<EditSkinModal
  		ref="editSkinModal"
  		:capes="capes"

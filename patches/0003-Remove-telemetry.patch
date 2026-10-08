@@ -302,10 +302,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 721dd32..6c48b86 100644
+index 62c49c2..4b645ad 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2745,7 +2745,7 @@
+@@ -2757,7 +2757,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {
@@ -454,10 +454,10 @@ index 415af27..4e46190 100644
          Ok(())
      };
 diff --git a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-index 9ccd656..065aad6 100644
+index d96c14d..b69ee85 100644
 --- a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
 +++ b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-@@ -906,11 +906,9 @@ function showSurvey() {
+@@ -965,11 +965,9 @@ function showSurvey() {
  }
  
  function loadTallyScript() {

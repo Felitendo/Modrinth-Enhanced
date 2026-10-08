@@ -15,7 +15,7 @@ who set it, or WEBKIT_DISABLE_DMABUF_RENDERER, keeps their value.
  1 file changed, 14 insertions(+)
 
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 4c269a3..5cdab91 100644
+index 6ca3c2b..e4e9ae9 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -125,6 +125,20 @@ fn main() {
@@ -36,6 +36,6 @@ index 4c269a3..5cdab91 100644
 +        unsafe { std::env::set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1") };
 +    }
 +
-     #[cfg(feature = "export-app-events")]
-     theseus::export_app_event_bindings(
-         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+     let runtime = tokio::runtime::Builder::new_multi_thread()
+         .enable_all()
+         .build()

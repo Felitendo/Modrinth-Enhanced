@@ -268,7 +268,7 @@ index 843e572..44d07d5 100644
 +	return await invoke('plugin:logs|logs_clear_live_log_buffer_for_process', { processUuid })
 +}
 diff --git a/apps/app-frontend/src/pages/instance/components/page-header/index.vue b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
-index ce4b436..31a6ded 100644
+index 1aa3ec9..5390355 100644
 --- a/apps/app-frontend/src/pages/instance/components/page-header/index.vue
 +++ b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
 @@ -144,6 +144,19 @@
@@ -440,15 +440,16 @@ index c0eb80e..b9d5eeb 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index ab19b6c..8aff73d 100644
+index e4b2f6b..7246c65 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -110,7 +110,9 @@ fn main() {
+@@ -110,8 +110,10 @@ fn main() {
                          "logs_delete_logs_by_filename",
                          "logs_get_latest_log_cursor",
                          "logs_get_live_log_buffer",
 +                        "logs_get_live_log_buffer_for_process",
                          "logs_clear_live_log_buffer",
+                         "logs_log_webview",
 +                        "logs_clear_live_log_buffer_for_process",
                      ])
                      .default_permission(
@@ -479,20 +480,21 @@ index e0ba5c2..09534e2 100644
  
  #[tauri::command]
 diff --git a/apps/app/src/api/logs.rs b/apps/app/src/api/logs.rs
-index e938efa..5150b00 100644
+index 8104b3e..a956d17 100644
 --- a/apps/app/src/api/logs.rs
 +++ b/apps/app/src/api/logs.rs
-@@ -22,7 +22,9 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
+@@ -23,8 +23,10 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
              logs_delete_logs_by_filename,
              logs_get_latest_log_cursor,
              logs_get_live_log_buffer,
 +            logs_get_live_log_buffer_for_process,
              logs_clear_live_log_buffer,
+             logs_log_webview,
 +            logs_clear_live_log_buffer_for_process,
          ])
          .build()
  }
-@@ -91,9 +93,26 @@ pub async fn logs_get_live_log_buffer(
+@@ -117,9 +119,26 @@ pub async fn logs_get_live_log_buffer(
      Ok(logs::get_live_log_buffer(instance_id).await?)
  }
  
@@ -636,10 +638,10 @@ index 4ce0c57..3382b5b 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
-index 722d94f..d3a597a 100644
+index 04fadf0..b6afa3a 100644
 --- a/packages/app-lib/src/event/mod.rs
 +++ b/packages/app-lib/src/event/mod.rs
-@@ -527,6 +527,8 @@ mod log_types {
+@@ -532,6 +532,8 @@ mod log_types {
      #[serde_binhum::serde_binhum]
      pub struct LogPayload {
          pub instance_id: String,
@@ -649,7 +651,7 @@ index 722d94f..d3a597a 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index ed4c789..3a81499 100644
+index 4038e7f..a11ee2d 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -886,6 +886,9 @@ pub async fn launch_minecraft(
@@ -705,7 +707,7 @@ index ed4c789..3a81499 100644
      }
  
      if let Some(path) = download::missing_runtime_file(
-@@ -1239,7 +1248,10 @@ pub async fn launch_minecraft(
+@@ -1265,7 +1274,10 @@ pub async fn launch_minecraft(
      let _store_lease = state.content_store.lease().await;
      state.content_store.recover(Some(&instance.id)).await?;
      // state.content_store.validate_instance(instance).await?;
@@ -717,7 +719,7 @@ index ed4c789..3a81499 100644
          return Err(crate::ErrorKind::LauncherError(format!(
              "Instance {} is already running",
              instance.id
-@@ -1286,6 +1298,8 @@ pub async fn launch_minecraft(
+@@ -1312,6 +1324,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,

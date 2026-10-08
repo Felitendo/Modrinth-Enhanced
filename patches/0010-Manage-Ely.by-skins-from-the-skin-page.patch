@@ -291,7 +291,7 @@ index 0000000..a0eb40d
 +	return await invoke('plugin:ely-skins|ely_remove_skin', { skinId })
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 8240b8b..bcd79ec 100644
+index 783eff6..3dfe5b1 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -4,6 +4,7 @@ import {
@@ -333,7 +333,7 @@ index 8240b8b..bcd79ec 100644
  	equip_skin,
  	filterDefaultSkins,
  	filterSavedSkins,
-@@ -200,6 +216,27 @@ const messages = defineMessages({
+@@ -212,6 +228,27 @@ const messages = defineMessages({
  		id: 'app.skins.sign-in.button',
  		defaultMessage: 'Sign in to Microsoft',
  	},
@@ -361,7 +361,7 @@ index 8240b8b..bcd79ec 100644
  })
  
  const editSkinModal = useTemplateRef('editSkinModal')
-@@ -335,10 +372,12 @@ const skinTexture = computedAsync(async () => {
+@@ -347,10 +384,12 @@ const skinTexture = computedAsync(async () => {
  const capeTexture = computed(() => currentCape.value?.texture)
  const skinVariant = computed(() => selectedSkin.value?.variant)
  const skinNametag = computed(() => (appSettings.hideNametagSkinsPage ? undefined : username.value))
@@ -378,7 +378,7 @@ index 8240b8b..bcd79ec 100644
  )
  const hasPendingSkinChange = computed(
  	() => !skinsMatch(selectedSkin.value, originalSelectedSkin.value),
-@@ -861,7 +900,8 @@ function isSkinFileDrag(event: DragEvent) {
+@@ -879,7 +918,8 @@ function isSkinFileDrag(event: DragEvent) {
  }
  
  function isPositionOverAddSkinButton(position: { x: number; y: number }) {
@@ -388,7 +388,7 @@ index 8240b8b..bcd79ec 100644
  
  	if (!element) {
  		return false
-@@ -973,6 +1013,11 @@ async function setupAddSkinDragDropListener() {
+@@ -991,6 +1031,11 @@ async function setupAddSkinDragDropListener() {
  async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	if (isSkinManagementReadOnly.value) return
  
@@ -400,7 +400,7 @@ index 8240b8b..bcd79ec 100644
  	const fakeEvent = new MouseEvent('click')
  	const originalSkinTexUrl = `data:image/png;base64,` + arrayBufferToBase64(buffer)
  	try {
-@@ -987,6 +1032,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+@@ -1005,6 +1050,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	}
  }
  
@@ -709,7 +709,7 @@ index 8240b8b..bcd79ec 100644
  watch(
  	() => selectedSkin.value?.cape_id,
  	() => {},
-@@ -1045,8 +1392,8 @@ async function checkUserChanges() {
+@@ -1063,8 +1410,8 @@ async function checkUserChanges() {
  		if (defaultId !== currentUserId.value) {
  			await accountsCard.value?.refreshValues()
  			await loadCurrentUser()
@@ -720,7 +720,7 @@ index 8240b8b..bcd79ec 100644
  		}
  	} catch (error) {
  		if (currentUser.value && error instanceof Error) {
-@@ -1055,8 +1402,8 @@ async function checkUserChanges() {
+@@ -1073,8 +1420,8 @@ async function checkUserChanges() {
  	}
  }
  
@@ -731,7 +731,7 @@ index 8240b8b..bcd79ec 100644
  </script>
  
  <template>
-@@ -1081,8 +1428,29 @@ await loadSkins()
+@@ -1099,8 +1446,29 @@ await loadSkins()
  		:proceed-label="formatMessage(commonMessages.deleteLabel)"
  		@proceed="deleteSkin"
  	/>
@@ -762,7 +762,7 @@ index 8240b8b..bcd79ec 100644
  		<div class="sticky top-6 self-start p-2 pt-0">
  			<h1 class="m-0 text-2xl font-bold flex items-center gap-2">
  				{{ formatMessage(appMessages.skinSelectorLabel) }}
-@@ -1260,6 +1628,80 @@ await loadSkins()
+@@ -1278,6 +1646,80 @@ await loadSkins()
  			/>
  		</div>
  	</div>
@@ -844,7 +844,7 @@ index 8240b8b..bcd79ec 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 3dbf3dc..c1f27a4 100644
+index dcd94b5..2d18e0a 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -1271,10 +1271,10 @@ index 693bc86..15a5c1e 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 352b181..5e582b5 100644
+index 8500c92..04be546 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -250,6 +250,7 @@ fn main() {
+@@ -306,6 +306,7 @@ fn main() {
  
      builder = builder
          .plugin(api::auth::init())
@@ -1416,12 +1416,13 @@ index 0000000..574183b
 +    Ok(bytes.to_vec())
 +}
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index ba6c342..a175675 100644
+index 47d6f11..d9cb8d8 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
-@@ -1,5 +1,6 @@
+@@ -1,6 +1,7 @@
  //! API for interacting with Theseus
  pub mod cache;
+ pub mod debug_info;
 +pub mod ely_skins;
  pub mod friends;
  pub mod handler;

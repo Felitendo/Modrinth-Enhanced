@@ -49,10 +49,10 @@ index 5f863d5..32a86a3 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 8f3a5d0..721dd32 100644
+index 3a6f744..62c49c2 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -1626,7 +1626,7 @@
+@@ -1638,7 +1638,7 @@
      "message": "Oldest"
    },
    "app.settings.app-version": {

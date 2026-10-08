@@ -105,7 +105,7 @@ index 0a55cb4..9679884 100644
  	} catch (e) {
  		console.error('Failed to check for updates:', e)
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 5cdab91..1deb12f 100644
+index e4e9ae9..3ad2f7b 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -77,6 +77,25 @@ fn is_dev() -> bool {
@@ -134,7 +134,7 @@ index 5cdab91..1deb12f 100644
  }
  
  #[cfg(feature = "updater")]
-@@ -187,6 +206,17 @@ fn main() {
+@@ -193,6 +212,17 @@ fn main() {
                      HeaderValue::from_str(&launcher_user_agent()).unwrap(),
                  )
                  .unwrap()
@@ -152,7 +152,7 @@ index 5cdab91..1deb12f 100644
                  .build(),
          );
      }
-@@ -303,6 +333,8 @@ fn main() {
+@@ -359,6 +389,8 @@ fn main() {
              initialize_state,
              is_dev,
              are_updates_enabled,

@@ -847,7 +847,7 @@ index 9b2408e..f4d24a1 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 2c8f2b9..3726ef5 100644
+index 12d08ab..31f5716 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -18,6 +18,8 @@ fn main() {
@@ -1014,10 +1014,10 @@ index fba473f..fe95027 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 3a81499..9b40d34 100644
+index a11ee2d..ee01ef5 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1165,10 +1165,11 @@ pub async fn launch_minecraft(
+@@ -1173,10 +1173,11 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -1033,7 +1033,7 @@ index 3a81499..9b40d34 100644
          let injector = crate::util::authlib_injector::get_authlib_injector(
              &state.directories,
          )
-@@ -1177,7 +1178,7 @@ pub async fn launch_minecraft(
+@@ -1185,7 +1186,7 @@ pub async fn launch_minecraft(
          command.arg(format!(
              "-javaagent:{}={}",
              injector.to_string_lossy(),
