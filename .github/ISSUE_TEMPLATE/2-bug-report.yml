@@ -1,36 +1,35 @@
 name: 🐛 Bug report
-description: Something in Modrinth Enhanced does not work
+description: Report something that doesn't work in Modrinth Enhanced
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Modrinth Enhanced is the Modrinth App with a series of patches applied. If the same thing
-        happens in the official Modrinth App, it belongs
+        If the official Modrinth App has the same problem, please report it
         [upstream](https://github.com/modrinth/code/issues/new/choose) instead.
 
   - type: checkboxes
     attributes:
-      label: Please confirm the following.
+      label: Checklist
       options:
-        - label: I checked the [existing issues](https://github.com/Felitendo/Modrinth-Enhanced/issues?q=is%3Aissue) for the same problem
+        - label: I searched the [existing issues](https://github.com/Felitendo/Modrinth-Enhanced/issues?q=is%3Aissue) and this hasn't been reported yet
           required: true
-        - label: I am on the [latest release](https://github.com/Felitendo/Modrinth-Enhanced/releases/latest)
+        - label: I'm using the [latest release](https://github.com/Felitendo/Modrinth-Enhanced/releases/latest)
           required: true
 
   - type: input
     id: version
     attributes:
-      label: Which version are you on?
-      description: Settings, bottom left, next to the Modrinth logo.
-      placeholder: Modrinth Enhanced 0.21.4
+      label: Version
+      description: Shown in Settings, bottom left.
+      placeholder: 0.21.9
     validations:
       required: true
 
   - type: dropdown
     id: install
     attributes:
-      label: How did you install it?
+      label: Installation method
       options:
         - AppImage
         - Windows installer
@@ -38,14 +37,14 @@ body:
         - Debian or Ubuntu package
         - Fedora package
         - Arch Linux (modrinth-enhanced-bin)
-        - Built it myself
+        - Built from source
     validations:
       required: true
 
   - type: dropdown
     id: os
     attributes:
-      label: Which operating system?
+      label: Operating system
       multiple: true
       options:
         - Windows
@@ -57,7 +56,7 @@ body:
   - type: dropdown
     id: area
     attributes:
-      label: What is it about?
+      label: Area
       options:
         - Accounts (offline, Ely.by, custom servers)
         - Skins
@@ -71,26 +70,26 @@ body:
   - type: dropdown
     id: upstream
     attributes:
-      label: Does the official Modrinth App do it too?
+      label: Does it happen in the official Modrinth App too?
       options:
-        - I have not tried it
-        - 'No: only Modrinth Enhanced'
-        - 'Yes: the official app as well'
+        - No, only in Modrinth Enhanced
+        - Yes, in the official app too
+        - Not tested
     validations:
       required: true
 
   - type: textarea
     id: description
     attributes:
-      label: What happens?
-      description: What goes wrong, and what you expected instead. Screenshots help.
+      label: Description
+      description: What happened, and what did you expect to happen? Screenshots help.
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: How can it be reproduced?
+      label: Steps to reproduce
       placeholder: |
         1. Open ...
         2. Click ...
@@ -103,9 +102,12 @@ body:
     attributes:
       label: Launcher log
       description: |
-        The newest file in `launcher_logs`, in the app's folder:
-        `%APPDATA%\ModrinthApp` on Windows, `~/Library/Application Support/ModrinthApp` on macOS,
-        `~/.local/share/ModrinthApp` on Linux. Remove anything you would rather not share.
+        The newest file in the `launcher_logs` folder:
+        - Windows: `%APPDATA%\ModrinthApp`
+        - macOS: `~/Library/Application Support/ModrinthApp`
+        - Linux: `~/.local/share/ModrinthApp`
+
+        Remove anything private before posting.
       render: shell
     validations:
       required: false
@@ -113,7 +115,7 @@ body:
   - type: textarea
     id: context
     attributes:
-      label: Anything else?
-      description: Whatever else may matter, such as the account server or the instance it happens with.
+      label: Additional context
+      description: For example the account server or the instance it happens with.
     validations:
       required: false

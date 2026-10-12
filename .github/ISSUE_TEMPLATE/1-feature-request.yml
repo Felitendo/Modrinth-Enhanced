@@ -1,0 +1,63 @@
+name: 💡 Feature request
+description: Suggest an idea for Modrinth Enhanced
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Modrinth Enhanced is a set of patches on top of the Modrinth App. Ideas that would help
+        everyone using the Modrinth App are better suggested
+        [upstream](https://github.com/modrinth/code/issues/new/choose).
+
+  - type: checkboxes
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the [existing issues](https://github.com/Felitendo/Modrinth-Enhanced/issues?q=is%3Aissue) and this hasn't been suggested yet
+          required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Accounts (offline, Ely.by, custom servers)
+        - Skins
+        - Instances, launching or logs
+        - Sidebar, title bar or window
+        - Updates or installation
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do, and what's stopping you?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How should it work? Screenshots or mockups are welcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use today, or other launchers or mods that already do this.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, references or anything else that helps.
+    validations:
+      required: false
