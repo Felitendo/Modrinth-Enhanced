@@ -7,13 +7,14 @@ The sidebar ad slot, the ad cookie consent prompt and both "Upgrade to
 Modrinth+" prompts are gone:
 
 * `showAd` and `adConsentAvailable` are pinned to false, which takes the
-  ad slot and the consent prompt out of the layout.
-* The upgrade link above the ad slot and the entry in the account menu
-  are removed outright rather than left behind a false condition.
-* The sidebar keeps upstream's `has-plus` class unconditionally, which
-  is what stops space being reserved at the bottom for an ad.
+  ad slot, the upgrade link above it and the consent prompt out of the
+  layout.
+* The upgrade entry in the account menu is removed outright rather than
+  left behind a false condition.
+* The sidebar is told the account has Modrinth+.
 * With no upsell left to decide about, the request that asked Modrinth
   whether this account has Modrinth+ goes too.
+* The troubleshooting settings lose "Report an ad": there is none.
 
 The helpers in `helpers/ads.js` are additionally stubbed out, which
 stops the Tauri `ads` plugin from ever being asked to spawn the ad
@@ -22,31 +23,24 @@ webview, no matter which call site reaches for it.
 Nothing else in the app is gated behind Modrinth+: it decided whether
 ads and these prompts were shown, and nothing more.
 ---
- apps/app-frontend/src/App.vue        | 55 ++++-------------------
- apps/app-frontend/src/helpers/ads.js | 65 +++++++++-------------------
- 2 files changed, 29 insertions(+), 91 deletions(-)
+ apps/app-frontend/src/App.vue                 | 38 ++---------
+ .../system/troubleshooting-settings.vue       | 33 ---------
+ apps/app-frontend/src/helpers/ads.js          | 67 ++++++-------------
+ 3 files changed, 27 insertions(+), 111 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 564be92..4cd09f9 100644
+index e9b449e..325a26c 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -9,7 +9,6 @@ import {
- 	VerboseLoggingFeature,
- } from '@modrinth/api-client'
+@@ -1,7 +1,6 @@
+ <script setup>
+ import { ModrinthApiError } from '@modrinth/api-client'
  import {
 -	ArrowBigUpDashIcon,
  	ArrowLeftRightIcon,
- 	ChevronLeftIcon,
- 	ChevronRightIcon,
-@@ -94,7 +93,6 @@ import UpdateToPlayModal from '@/components/ui/modal/UpdateToPlayModal.vue'
- import NavButton from '@/components/ui/NavButton.vue'
- import OnboardingChecklist from '@/components/ui/onboarding-checklist/index.vue'
- import PrideFundraiserBanner from '@/components/ui/PrideFundraiserBanner.vue'
--import PromotionWrapper from '@/components/ui/PromotionWrapper.vue'
- import QuickInstanceSwitcher from '@/components/ui/QuickInstanceSwitcher.vue'
- import SharedInstanceInviteHandler from '@/components/ui/shared-instances/shared-instance-invite-handler/index.vue'
- import SplashScreen from '@/components/ui/SplashScreen.vue'
-@@ -159,7 +157,6 @@ import {
+ 	CompassIcon,
+ 	ImageIcon,
+@@ -138,7 +137,6 @@ import {
  	syncedServersQueryOptions,
  } from '@/helpers/synced-options'
  import { syncedPackQueryOptions } from '@/helpers/synced-packs'
@@ -54,9 +48,9 @@ index 564be92..4cd09f9 100644
  import { get_user_preferences } from '@/helpers/user-preferences.ts'
  import { parse_modrinth_user_link } from '@/helpers/users'
  import {
-@@ -344,12 +341,6 @@ const tauriApiClient = new TauriModrinthClient({
- 	],
- })
+@@ -283,12 +281,6 @@ useAppEvent('ads_consent_required', handleAdsConsentRequired, appEvents)
+ 
+ const tauriApiClient = createAppClient()
  provideModrinthClient(tauriApiClient)
 -const { data: authenticatedModrinthUser } = useQuery({
 -	queryKey: computed(() => ['authenticated-user', 'campaigns', credentials.value?.user?.id]),
@@ -67,7 +61,7 @@ index 564be92..4cd09f9 100644
  useQuery({
  	queryKey: computed(() => instanceKeys.sharedEligibility(credentials.value?.user?.id)),
  	queryFn: can_current_user_use_shared_instances,
-@@ -360,16 +351,13 @@ useQuery({
+@@ -299,16 +291,10 @@ useQuery({
  	refetchOnWindowFocus: false,
  	refetchOnReconnect: false,
  })
@@ -83,15 +77,12 @@ index 564be92..4cd09f9 100644
 -const adConsentAvailable = computed(() => credentials.value !== undefined && !hasPlus.value)
 +// Modrinth Enhanced ships without advertising, so the sidebar ad slot and the
 +// ad cookie consent flow that only exists to serve it are both switched off.
-+// The sidebar keeps upstream's `has-plus` class unconditionally for the same
-+// reason: that class is what stops space being reserved at the bottom for an
-+// ad and the gradient being drawn above it.
 +const showAd = computed(() => false)
 +const adConsentAvailable = computed(() => false)
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -694,10 +682,6 @@ const messages = defineMessages({
+@@ -610,10 +596,6 @@ const messages = defineMessages({
  		id: 'app.restarting',
  		defaultMessage: 'Restarting...',
  	},
@@ -99,10 +90,10 @@ index 564be92..4cd09f9 100644
 -		id: 'app.nav.upgrade-to-modrinth-plus',
 -		defaultMessage: 'Upgrade to Modrinth+',
 -	},
- 	news: {
- 		id: 'app.news.title',
- 		defaultMessage: 'News',
-@@ -1548,16 +1532,6 @@ const modrinthAccountMenuOptions = computed(() => [
+ })
+ 
+ function handleAdsConsentRequired(required) {
+@@ -1302,16 +1284,6 @@ const modrinthAccountMenuOptions = computed(() => [
  		icon: UserIcon,
  		action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
  	},
@@ -119,44 +110,64 @@ index 564be92..4cd09f9 100644
  	{
  		id: 'add-friend',
  		label: formatMessage(messages.addFriend),
-@@ -2503,13 +2477,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 			</RouterView>
+@@ -2215,7 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 		<AppSidebar
+ 			ref="sidebar"
+ 			:credentials="credentials"
+-			:has-plus="hasPlus"
++			has-plus
+ 			:show-ad="showAd"
+ 			:visible="sidebarVisible"
+ 			:request-sign-in="() => requestSignIn()"
+diff --git a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
+index 6591516..ea109e5 100644
+--- a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
++++ b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
+@@ -276,39 +276,6 @@ async function handleCopyAdDetails() {
+ 				{{ formatMessage(messages.debugInfoDescription) }}
+ 			</p>
  		</div>
- 		<div
--			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid"
--			:class="{ 'has-plus': hasPlus }"
-+			class="app-sidebar mt-px shrink-0 flex flex-col border-0 border-l-[1px] border-[--brand-gradient-border] border-solid has-plus"
- 		>
- 			<div
- 				v-overlay-scrollbars="sidebarOverlayScrollbarsOptions"
- 				class="app-sidebar-scrollable flex-grow shrink relative"
--				:class="{ 'pb-12': !hasPlus }"
- 				data-overlayscrollbars-initialize
- 			>
- 				<OnboardingChecklist
-@@ -2571,17 +2543,6 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 					</div>
- 				</div>
- 			</div>
--			<template v-if="showAd">
--				<a
--					href="https://modrinth.plus?app"
--					class="absolute bottom-[250px] w-full flex justify-center items-center gap-1 px-4 py-3 text-purple font-medium hover:underline z-10"
--					target="_blank"
--				>
--					<ArrowBigUpDashIcon class="text-2xl" />
--					{{ formatMessage(messages.upgradeToModrinthPlus) }}
--				</a>
--				<PromotionWrapper />
--			</template>
- 		</div>
- 	</div>
- 	<I18nDebugPanel />
+-		<div class="flex flex-col gap-2.5">
+-			<h2 class="m-0 text-lg font-semibold text-contrast">
+-				{{ formatMessage(messages.reportAdTitle) }}
+-			</h2>
+-			<Button
+-				id="copy-ad-details"
+-				class="w-fit"
+-				:disabled="copyingAdDetails || copiedAdDetails"
+-				@click="handleCopyAdDetails"
+-			>
+-				<LoaderCircleIcon
+-					v-if="copyingAdDetails"
+-					class="motion-safe:animate-spin"
+-					aria-hidden="true"
+-				/>
+-				<CheckIcon v-else-if="copiedAdDetails" class="text-green" aria-hidden="true" />
+-				<CopyIcon v-else aria-hidden="true" />
+-				{{ formatMessage(copiedAdDetails ? messages.copiedAdDetails : messages.copyAdDetails) }}
+-			</Button>
+-			<p class="m-0 leading-tight text-secondary">
+-				<IntlFormatted :message-id="messages.reportAdDescription">
+-					<template #support="{ children }">
+-						<button
+-							type="button"
+-							class="inline cursor-pointer border-0 bg-transparent p-0 text-[length:inherit] leading-[inherit] text-blue hover:underline"
+-							@click="openSupport"
+-						>
+-							<component :is="() => children" />
+-						</button>
+-					</template>
+-				</IntlFormatted>
+-			</p>
+-		</div>
+ 		<div class="flex items-center justify-between gap-4">
+ 			<div>
+ 				<h2 class="m-0 text-lg font-semibold text-contrast">
 diff --git a/apps/app-frontend/src/helpers/ads.js b/apps/app-frontend/src/helpers/ads.js
-index 8c85970..96005e6 100644
+index 59ac0e9..48c2335 100644
 --- a/apps/app-frontend/src/helpers/ads.js
 +++ b/apps/app-frontend/src/helpers/ads.js
-@@ -1,55 +1,32 @@
+@@ -1,59 +1,36 @@
 -import { invoke } from '@tauri-apps/api/core'
 +/**
 + * Modrinth Enhanced does not show advertising.
@@ -233,3 +244,8 @@ index 8c85970..96005e6 100644
 -	return await invoke('plugin:ads|open_link', { path, origin })
 -}
 +export async function open_ads_link() {}
+ 
+ export async function get_ads_debug_state() {
+-	return await invoke('plugin:ads|get_ads_debug_state')
++	return null
+ }

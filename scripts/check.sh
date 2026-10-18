@@ -91,7 +91,7 @@ check "the browser flow is registered" \
 check "the browser sign-in comes back without pasting" \
 	contains "$WORKTREE/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue" 'login_device_poll('
 check "the sign-in button opens it" \
-	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'microsoftLoginModal.value?.show'
+	contains "$WORKTREE/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue" 'microsoftLoginModal.value?.show'
 
 log "Ely.by accounts"
 check "app-lib can sign in to Ely.by" \
@@ -111,7 +111,7 @@ check "the server is found from its website" \
 check "the game is pointed at the account's server" \
 	contains "$WORKTREE/packages/app-lib/src/launcher/mod.rs" 'server.api_root()'
 check "the account card offers it" \
-	contains "$WORKTREE/apps/app-frontend/src/components/ui/AccountsCard.vue" 'authlibAccountModal?.show'
+	contains "$WORKTREE/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue" 'authlibAccountModal?.show'
 check "their skins are uploaded to the server" \
 	contains "$WORKTREE/packages/app-lib/src/state/minecraft_skins/mojang_api.rs" 'change_texture(credentials, "skin"'
 check "their profile comes from the server" \
@@ -173,7 +173,7 @@ log "Sidebar and news"
 check "the sidebar buttons follow the saved order" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'sidebarLayout.order.value'
 check "they can be arranged in the settings" \
-	contains "$WORKTREE/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue" 'content: SidebarSettings'
+	contains "$WORKTREE/apps/app-frontend/src/features/settings/app-settings-modal/index.vue" 'content: SidebarSettings'
 check "right-clicking one hides it" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'openSidebarMenu'
 check "an instance can be deleted from the sidebar" \
@@ -181,13 +181,13 @@ check "an instance can be deleted from the sidebar" \
 check "the library's free space offers a new group" \
 	contains "$WORKTREE/apps/app-frontend/src/pages/Index.vue" 'openNewGroupModal()'
 check "the news section can be collapsed" \
-	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setNewsCollapsed'
+	contains "$WORKTREE/apps/app-frontend/src/features/news/news-sidebar.vue" 'setNewsCollapsed'
 check "the right sidebar has a fold button" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'setSidebarCollapsed(sidebarToggled)'
 check "folding the sidebar is explained once" \
 	contains "$WORKTREE/apps/app-frontend/src/App.vue" 'sidebarRememberedModal.value?.show()'
 check "the account stays reachable with the sidebar folded" \
-	contains "$WORKTREE/apps/app-frontend/src/App.vue" '<TitleBarAccountSwitcher'
+	contains "$WORKTREE/apps/app-frontend/src/app/shell/title-bar/index.vue" '<TitleBarAccountSwitcher'
 
 # tauri.linux.conf.json replaces the whole window list, so an upstream change to
 # the main window would otherwise silently not reach Linux.
@@ -212,7 +212,7 @@ check "the middle button autoscrolls" \
 check "file pickers use the desktop portal on Linux" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("GTK_USE_PORTAL", "1")'
 check "the settings tabs scroll instead of covering the version" \
-	contains "$WORKTREE/packages/ui/src/components/modal/TabbedModal.vue" 'class="absolute inset-0 flex flex-col gap-1 overflow-y-auto"'
+	contains "$WORKTREE/packages/ui/src/components/modal/TabbedModal.vue" 'tabbed-modal-scrollbar absolute inset-0'
 check "NVIDIA under Wayland does not crash the webview" \
 	contains "$WORKTREE/apps/app/src/main.rs" 'set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1")'
 

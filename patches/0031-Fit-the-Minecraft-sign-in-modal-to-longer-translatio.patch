@@ -8,7 +8,7 @@ Subject: [PATCH] Fit the Minecraft sign-in modal to longer translations
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 99695db..2cb2e5d 100644
+index fc2cbf5..0bdf61c 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -1,6 +1,6 @@

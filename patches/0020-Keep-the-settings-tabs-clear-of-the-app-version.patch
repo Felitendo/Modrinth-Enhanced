@@ -13,15 +13,15 @@ the content beside it already does.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/packages/ui/src/components/modal/TabbedModal.vue b/packages/ui/src/components/modal/TabbedModal.vue
-index 4715916..1b1d69a 100644
+index 8787104..8aa5111 100644
 --- a/packages/ui/src/components/modal/TabbedModal.vue
 +++ b/packages/ui/src/components/modal/TabbedModal.vue
-@@ -158,7 +158,7 @@ defineExpose({ show, hide, selectedTab, setTab })
+@@ -170,7 +170,7 @@ defineExpose({ show, hide, selectedTab, setTab })
  
  					<div
  						ref="sidebarScrollContainer"
--						class="flex h-full flex-col gap-1 overflow-y-auto"
-+						class="absolute inset-0 flex flex-col gap-1 overflow-y-auto"
+-						class="tabbed-modal-scrollbar -mr-3 flex h-full flex-col gap-1 overflow-y-auto overscroll-contain pr-3"
++						class="tabbed-modal-scrollbar absolute inset-0 -mr-3 flex flex-col gap-1 overflow-y-auto overscroll-contain pr-3"
  						@scroll="checkSidebarScrollState"
  					>
  						<template v-for="(tab, index) in visibleTabs" :key="index">

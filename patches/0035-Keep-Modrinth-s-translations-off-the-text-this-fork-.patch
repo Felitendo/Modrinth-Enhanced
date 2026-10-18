@@ -5,8 +5,8 @@ Subject: [PATCH] Keep Modrinth's translations off the text this fork rewrote
 
 ---
  .../minecraft-required-modal/MinecraftRequiredModal.vue  | 4 ++--
- .../src/components/ui/modal/AppSettingsModal.vue         | 2 +-
- .../components/ui/settings/account/PrivacySettings.vue   | 2 +-
+ .../src/features/settings/account/privacy-settings.vue   | 2 +-
+ .../src/features/settings/app-settings-modal/index.vue   | 2 +-
  apps/app-frontend/src/locales/de-CH/index.json           | 9 +++++++++
  apps/app-frontend/src/locales/de-DE/index.json           | 9 +++++++++
  apps/app-frontend/src/locales/es-419/index.json          | 9 +++++++++
@@ -27,10 +27,10 @@ Subject: [PATCH] Keep Modrinth's translations off the text this fork rewrote
  20 files changed, 157 insertions(+), 4 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 2cb2e5d..4c5e246 100644
+index 0bdf61c..846ffbc 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-@@ -87,7 +87,7 @@ const accountsCard = inject('accountsCard') as Ref<InstanceType<typeof AccountsC
+@@ -87,7 +87,7 @@ const minecraftAccounts = injectMinecraftAccounts()
  
  const messages = defineMessages({
  	header: {
@@ -48,23 +48,10 @@ index 2cb2e5d..4c5e246 100644
  		defaultMessage:
  			'A Microsoft account that owns Minecraft is what lets you play online and keep your skin.',
  	},
-diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-index e409510..77d3a15 100644
---- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-+++ b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-@@ -331,7 +331,7 @@ const messages = defineMessages({
- 		defaultMessage: 'Downloading v{version}',
- 	},
- 	appVersion: {
--		id: 'app.settings.app-version',
-+		id: 'app.settings.enhanced-version',
- 		defaultMessage: 'Modrinth Enhanced {version}',
- 	},
- 	macos: {
-diff --git a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+diff --git a/apps/app-frontend/src/features/settings/account/privacy-settings.vue b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 index d31e8c5..5061572 100644
---- a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+--- a/apps/app-frontend/src/features/settings/account/privacy-settings.vue
++++ b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 @@ -38,7 +38,7 @@ const messages = defineMessages({
  		defaultMessage: 'Telemetry',
  	},
@@ -74,11 +61,24 @@ index d31e8c5..5061572 100644
  		defaultMessage:
  			'Modrinth Enhanced collects no analytics or usage data and sends no crash reports, so there is nothing here to turn off.',
  	},
+diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+index 675de85..0b94016 100644
+--- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
++++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+@@ -387,7 +387,7 @@ const messages = defineMessages({
+ 		defaultMessage: 'Downloading v{version}',
+ 	},
+ 	appVersion: {
+-		id: 'app.settings.app-version',
++		id: 'app.settings.enhanced-version',
+ 		defaultMessage: 'Modrinth Enhanced {version}',
+ 	},
+ 	macos: {
 diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
-index 3a179d4..967bb9d 100644
+index df67709..db5b80d 100644
 --- a/apps/app-frontend/src/locales/de-CH/index.json
 +++ b/apps/app-frontend/src/locales/de-CH/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth sammelt anonymisierte Analyse- und Nutzungsdaten, um unsere Nutzererfahrung zu verbessern und deine Erfahrung anzupassen. Wenn du diese Option deaktivierst, entscheidest du dich dagegen und deine Daten werden nicht mehr gesammelt."
    },
@@ -88,7 +88,7 @@ index 3a179d4..967bb9d 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -102,10 +102,10 @@ index 3a179d4..967bb9d 100644
      "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
    },
 diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
-index 71b941e..52d8e11 100644
+index c03cdd0..5ee3208 100644
 --- a/apps/app-frontend/src/locales/de-DE/index.json
 +++ b/apps/app-frontend/src/locales/de-DE/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth sammelt anonymisierte Analyse- und Nutzungsdaten, um unsere Nutzererfahrung zu verbessern und deine Erfahrung anzupassen. Wenn du diese Option deaktivierst, entscheidest du dich dagegen und deine Daten werden nicht mehr gesammelt."
    },
@@ -115,7 +115,7 @@ index 71b941e..52d8e11 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -129,10 +129,10 @@ index 71b941e..52d8e11 100644
      "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
    },
 diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
-index d014ad1..cc48a45 100644
+index 4fd3eb6..17896d9 100644
 --- a/apps/app-frontend/src/locales/es-419/index.json
 +++ b/apps/app-frontend/src/locales/es-419/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth recolecta datos analíticos anónimos y datos de uso para mejorar la experiencia de nuestros usuarios y para personalizar tu experiencia. Al desactivar esta opción, tus datos dejarán de ser recolectados."
    },
@@ -142,7 +142,7 @@ index d014ad1..cc48a45 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetría"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -156,10 +156,10 @@ index d014ad1..cc48a45 100644
      "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
    },
 diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
-index 3209ce8..003f966 100644
+index aaa2750..5631276 100644
 --- a/apps/app-frontend/src/locales/es-ES/index.json
 +++ b/apps/app-frontend/src/locales/es-ES/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3245,6 +3245,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth recopila análisis y datos de uso anónimos para mejorar la experiencia de usuario y personalizar tu experiencia. Deshabilitando esta opción sus datos dejarán de ser recopilados."
    },
@@ -169,7 +169,7 @@ index 3209ce8..003f966 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetría"
    },
-@@ -5186,6 +5189,12 @@
+@@ -5138,6 +5141,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -183,10 +183,10 @@ index 3209ce8..003f966 100644
      "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
    },
 diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
-index 57a64c5..c6c2c7a 100644
+index e1f4eed..c710dc9 100644
 --- a/apps/app-frontend/src/locales/fr-FR/index.json
 +++ b/apps/app-frontend/src/locales/fr-FR/index.json
-@@ -3251,6 +3251,9 @@
+@@ -3254,6 +3254,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth collecte des données d'analyse et d'utilisation anonymes afin d'améliorer l'expérience utilisateur et de personnaliser votre expérience. En désactivant cette option, vous choisissez de ne plus participer et vos données ne seront plus collectées."
    },
@@ -196,7 +196,7 @@ index 57a64c5..c6c2c7a 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Télémétrie"
    },
-@@ -4934,6 +4937,12 @@
+@@ -5102,6 +5105,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requis"
    },
@@ -210,10 +210,10 @@ index 57a64c5..c6c2c7a 100644
      "message": "Ou connectez-vous avec Ely.by ou un serveur personnalisé, ou jouez en solo et sur des serveurs en mode hors ligne sans aucun compte."
    },
 diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
-index 03a20d4..19c557f 100644
+index d6bc920..c53718e 100644
 --- a/apps/app-frontend/src/locales/hu-HU/index.json
 +++ b/apps/app-frontend/src/locales/hu-HU/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3245,6 +3245,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "A Modrinth névtelen használati és telemetriai adatokat gyűjt a felhasználói élmény javítása és személyre szabása érdekében. Ha kikapcsolod ezt a beállítást, leiratkozol erről, és a rendszer többé nem gyűjti az adataidat."
    },
@@ -223,7 +223,7 @@ index 03a20d4..19c557f 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5147,6 +5150,12 @@
    "minecraft-required.header": {
      "message": "Minecraft szükséges"
    },
@@ -237,10 +237,10 @@ index 03a20d4..19c557f 100644
      "message": "Vagy jelentkezz be Ely.byjal vagy saját szerverrel, vagy játssz egyjátékos módban és offline szervereken bármilyen fiók nélkül."
    },
 diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
-index 2d0334c..9c425cc 100644
+index db2f3a4..073ec1e 100644
 --- a/apps/app-frontend/src/locales/it-IT/index.json
 +++ b/apps/app-frontend/src/locales/it-IT/index.json
-@@ -3248,6 +3248,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth raccoglie dati anonimizzati di analisi e utilizzo per migliorare l'esperienza utente e personalizzarla. Disabilitando questa opzione neghi il consenso e i tuoi dati non saranno più raccolti."
    },
@@ -250,7 +250,7 @@ index 2d0334c..9c425cc 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5189,6 +5192,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "Minecraft richiesto"
    },
@@ -264,10 +264,10 @@ index 2d0334c..9c425cc 100644
      "message": "Oppure accedi con Ely.by o con un server personalizzato, o gioca in singolo e sui server in modalità offline senza alcun account."
    },
 diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
-index 57e636c..8b50e58 100644
+index 16987fa..1f4f74c 100644
 --- a/apps/app-frontend/src/locales/ja-JP/index.json
 +++ b/apps/app-frontend/src/locales/ja-JP/index.json
-@@ -2654,6 +2654,9 @@
+@@ -2750,6 +2750,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinthはユーザー体験の向上および最適化のために、匿名化されたアナリティクスと利用データを収集しています。このオプションをオフにすることで無効化（オプトアウト）され、以降データの収集は行われません。"
    },
@@ -277,7 +277,7 @@ index 57e636c..8b50e58 100644
    "app.settings.privacy.telemetry.title": {
      "message": "テレメトリ"
    },
-@@ -4199,6 +4202,12 @@
+@@ -4259,6 +4262,12 @@
    "minecraft-required.header": {
      "message": "Minecraftが必要です"
    },
@@ -291,10 +291,10 @@ index 57e636c..8b50e58 100644
      "message": "Ely.by やカスタムサーバーでサインインすることも、アカウントなしでシングルプレイやオフラインモードのサーバーで遊ぶこともできます。"
    },
 diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
-index a1c1091..b8772f1 100644
+index fa9b884..f545996 100644
 --- a/apps/app-frontend/src/locales/nl-NL/index.json
 +++ b/apps/app-frontend/src/locales/nl-NL/index.json
-@@ -3188,6 +3188,9 @@
+@@ -3185,6 +3185,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth verzamelt geanonimiseerde analyse- en gebruiksgegevens om de gebruikerservaring te verbeteren en uw ervaring te personaliseren. Door deze optie uit te schakelen, meldt u zich af en worden uw gegevens niet langer verzameld."
    },
@@ -304,7 +304,7 @@ index a1c1091..b8772f1 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -4787,6 +4790,12 @@
+@@ -4751,6 +4754,12 @@
    "minecraft-required.header": {
      "message": "Minecraft vereist"
    },
@@ -318,10 +318,10 @@ index a1c1091..b8772f1 100644
      "message": "Of log in met Ely.by of een eigen server, of speel singleplayer en servers in offlinemodus zonder enig account."
    },
 diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
-index b7f9f77..372a805 100644
+index fb3d7e1..e596e93 100644
 --- a/apps/app-frontend/src/locales/pl-PL/index.json
 +++ b/apps/app-frontend/src/locales/pl-PL/index.json
-@@ -3242,6 +3242,9 @@
+@@ -3245,6 +3245,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth zbiera anonimowe dane analityczne i użytkowania, aby poprawić komfort naszych użytkowników i dostosować Twoje doświadczenia. Wyłączając tę opcję, rezygnujesz i Twoje dane nie będą już gromadzone."
    },
@@ -331,7 +331,7 @@ index b7f9f77..372a805 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5183,6 +5186,12 @@
+@@ -5156,6 +5159,12 @@
    "minecraft-required.header": {
      "message": "Minecraft wymagany"
    },
@@ -345,10 +345,10 @@ index b7f9f77..372a805 100644
      "message": "Albo zaloguj się przez Ely.by lub własny serwer, albo graj w trybie jednoosobowym i na serwerach offline zupełnie bez konta."
    },
 diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
-index 94d74f2..cc78407 100644
+index 8d6d82f..6d248a0 100644
 --- a/apps/app-frontend/src/locales/pt-BR/index.json
 +++ b/apps/app-frontend/src/locales/pt-BR/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "O Modrinth coleta analíticas anonimizadas e uso de dados para aprimorar nossa experiência de usuário e personalizar sua experiência. Ao desativar esta opção, você negará e seus dados não serão mais coletados."
    },
@@ -358,7 +358,7 @@ index 94d74f2..cc78407 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "Minecraft necessário"
    },
@@ -372,10 +372,10 @@ index 94d74f2..cc78407 100644
      "message": "Ou entre com o Ely.by ou com um servidor personalizado, ou jogue sozinho e em servidores offline sem conta nenhuma."
    },
 diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
-index 2556c98..126b5a5 100644
+index f2b17b6..aae96be 100644
 --- a/apps/app-frontend/src/locales/ru-RU/index.json
 +++ b/apps/app-frontend/src/locales/ru-RU/index.json
-@@ -3233,6 +3233,9 @@
+@@ -3236,6 +3236,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth собирает анонимные данные об использовании для персонализации и улучшения сервиса. Отключите этот параметр, чтобы отказаться от сбора данных."
    },
@@ -385,7 +385,7 @@ index 2556c98..126b5a5 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Телеметрия"
    },
-@@ -5171,6 +5174,12 @@
+@@ -5144,6 +5147,12 @@
    "minecraft-required.header": {
      "message": "Требуется Minecraft"
    },
@@ -399,10 +399,10 @@ index 2556c98..126b5a5 100644
      "message": "Или войдите через Ely.by либо свой сервер — или играйте в одиночной игре и на офлайн-серверах вообще без учётной записи."
    },
 diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
-index 702d30d..1090e0c 100644
+index 4f4f292..ff78d1d 100644
 --- a/apps/app-frontend/src/locales/sv-SE/index.json
 +++ b/apps/app-frontend/src/locales/sv-SE/index.json
-@@ -2954,6 +2954,9 @@
+@@ -2957,6 +2957,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth samlar in anonymiserad statistik och användningsdata för att förbättra vår användarupplevelse och anpassa din upplevelse. Genom att inaktivera det här alternativet avanmäler du dig och din data kommer inte längre samlas in."
    },
@@ -412,7 +412,7 @@ index 702d30d..1090e0c 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetri"
    },
-@@ -4652,6 +4655,12 @@
+@@ -4625,6 +4628,12 @@
    "minecraft-required.header": {
      "message": "Minecraft krävs"
    },
@@ -426,10 +426,10 @@ index 702d30d..1090e0c 100644
      "message": "Eller logga in med Ely.by eller en egen server, eller spela ensamspelarvärldar och servrar i offlineläge helt utan konto."
    },
 diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
-index ae12426..65fb343 100644
+index 850e51b..a80efa6 100644
 --- a/apps/app-frontend/src/locales/tr-TR/index.json
 +++ b/apps/app-frontend/src/locales/tr-TR/index.json
-@@ -2963,6 +2963,9 @@
+@@ -2975,6 +2975,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth kullanıcı deneyimimizi geliştirmek için ve deneyiminizi kişiselleştirmek için anonimleştirilmiş analiz ve kullanım verilerini toplar. Bu seçeneği devre dışı bırakarak, bundan vazgeçmiş olursunuz ve verileriniz artık toplanmayacaktır."
    },
@@ -439,7 +439,7 @@ index ae12426..65fb343 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetri"
    },
-@@ -4472,6 +4475,12 @@
+@@ -4448,6 +4451,12 @@
    "minecraft-required.header": {
      "message": "Minecraft gereklidir"
    },
@@ -453,10 +453,10 @@ index ae12426..65fb343 100644
      "message": "Ya da Ely.by veya özel bir sunucuyla oturum açın; ya da hiçbir hesap olmadan tek oyunculu ve çevrimdışı sunucularda oynayın."
    },
 diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
-index a3eeb2a..fab8b16 100644
+index 00e7e88..65a5456 100644
 --- a/apps/app-frontend/src/locales/uk-UA/index.json
 +++ b/apps/app-frontend/src/locales/uk-UA/index.json
-@@ -3245,6 +3245,9 @@
+@@ -3248,6 +3248,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth збирає анонімізовану аналітику та дані про використання для покращення зручності та адаптації сервісу. Вимкнувши цю опцію, ви відмовляєтеся від збору, і ваші дані більше не збиратимуться."
    },
@@ -466,7 +466,7 @@ index a3eeb2a..fab8b16 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Телеметрія"
    },
-@@ -5186,6 +5189,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Потрібний Minecraft"
    },
@@ -480,10 +480,10 @@ index a3eeb2a..fab8b16 100644
      "message": "Або увійдіть через Ely.by чи власний сервер — або грайте в одиночній грі та на офлайн-серверах узагалі без облікового запису."
    },
 diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
-index b759fb8..901e2f0 100644
+index 41692bd..9d31218 100644
 --- a/apps/app-frontend/src/locales/zh-CN/index.json
 +++ b/apps/app-frontend/src/locales/zh-CN/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth 收集匿名分析和使用数据，以提升用户体验并为您提供个性化服务。若禁用此选项，即表示您选择退出，您的数据将不再被收集。"
    },
@@ -493,7 +493,7 @@ index b759fb8..901e2f0 100644
    "app.settings.privacy.telemetry.title": {
      "message": "遥测"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -507,10 +507,10 @@ index b759fb8..901e2f0 100644
      "message": "也可以使用 Ely.by 或自定义服务器登录，或者不用任何账户，直接玩单人游戏和离线模式服务器。"
    },
 diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
-index 5d789fe..36d5997 100644
+index c50d3f9..2310408 100644
 --- a/apps/app-frontend/src/locales/zh-TW/index.json
 +++ b/apps/app-frontend/src/locales/zh-TW/index.json
-@@ -3254,6 +3254,9 @@
+@@ -3257,6 +3257,9 @@
    "app.settings.privacy.telemetry.description": {
      "message": "Modrinth 會收集匿名化的分析與使用資料，以提升使用者體驗並提供客製化服務。若停用此選項，即表示你選擇退出，你的資料將不再被收集。"
    },
@@ -520,7 +520,7 @@ index 5d789fe..36d5997 100644
    "app.settings.privacy.telemetry.title": {
      "message": "遙測"
    },
-@@ -5195,6 +5198,12 @@
+@@ -5168,6 +5171,12 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },

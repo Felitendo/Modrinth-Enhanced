@@ -18,83 +18,19 @@ Every entry point goes through it, since they all end up at
 `AccountsCard.login()`. The webview is still one click away in that
 modal for anyone the browser does not work out for.
 ---
- .../src/components/ui/AccountsCard.vue        |  21 +-
  .../src/components/ui/MicrosoftLoginModal.vue | 219 ++++++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 +--
+ .../minecraft-accounts/accounts-card.vue      |  21 +-
+ .../features/minecraft-accounts/context.ts    |   2 +-
  apps/app-frontend/src/helpers/auth.js         |  23 ++
  apps/app/build.rs                             |   2 +
  apps/app/src/api/auth.rs                      |  64 +++++
  packages/app-lib/src/api/minecraft_auth.rs    |  30 +++
  packages/app-lib/src/api/mod.rs               |  12 +-
  packages/app-lib/src/state/minecraft_auth.rs  | 145 +++++++++++-
- 9 files changed, 499 insertions(+), 46 deletions(-)
+ 10 files changed, 500 insertions(+), 47 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 
-diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index 35c21fa..224d776 100644
---- a/apps/app-frontend/src/components/ui/AccountsCard.vue
-+++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
-@@ -105,6 +105,7 @@
- 			</div>
- 		</div>
- 	</Accordion>
-+	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
- 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
- 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
- </template>
-@@ -133,13 +134,12 @@ import type { Ref } from 'vue'
- import { computed, onUnmounted, ref } from 'vue'
- 
- import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
-+import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
- import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
- import { useAppEvent } from '@/composables/use-app-event'
--import { handleSevereError } from '@/composables/use-error.js'
- import { trackEvent } from '@/helpers/analytics'
- import {
- 	get_default_user,
--	login as login_flow,
- 	remove_user,
- 	set_default_user,
- 	users,
-@@ -165,6 +165,7 @@ type MinecraftCredential = {
- const accounts: Ref<MinecraftCredential[]> = ref([])
- const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
- const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
-+const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
- const loginDisabled = ref(false)
- const defaultUser = ref<string | undefined>()
- const equippedSkin = ref<Skin | null>(null)
-@@ -275,16 +276,8 @@ async function setAccount(account: MinecraftCredential) {
- 	emit('change')
- }
- 
--async function login() {
--	loginDisabled.value = true
--	const loggedIn = await login_flow().catch(handleSevereError)
--
--	if (loggedIn) {
--		await setAccount(loggedIn)
--	}
--
--	trackEvent('AccountLogIn')
--	loginDisabled.value = false
-+function login(event?: MouseEvent) {
-+	microsoftLoginModal.value?.show(event)
- }
- 
- async function accountAdded() {
-@@ -316,8 +309,8 @@ const messages = defineMessages({
- 		defaultMessage: 'Not signed in',
- 	},
- 	addAccount: {
--		id: 'minecraft-account.add-account',
--		defaultMessage: 'Add account',
-+		id: 'minecraft-account.add-microsoft-account',
-+		defaultMessage: 'Add Microsoft account',
- 	},
- 	addOfflineAccount: {
- 		id: 'minecraft-account.add-offline-account',
 diff --git a/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 new file mode 100644
 index 0000000..d587736
@@ -321,7 +257,7 @@ index 0000000..d587736
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 7781cee..341ccdc 100644
+index cf7c3ba..262311e 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -25,10 +25,8 @@
@@ -343,16 +279,16 @@ index 7781cee..341ccdc 100644
 -import { KeyIcon, MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
 +import { KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
  import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
- import { inject, type Ref, ref } from 'vue'
+ import { ref } from 'vue'
  
  import steveImage from '@/assets/steve-look-up-left.webp'
- import type AccountsCard from '@/components/ui/AccountsCard.vue'
 -import { handleSevereError } from '@/composables/use-error.js'
+ import { injectMinecraftAccounts } from '@/features/minecraft-accounts/context'
 -import { trackEvent } from '@/helpers/analytics'
 -import { login as loginFlow, set_default_user } from '@/helpers/auth.js'
  
  const { formatMessage } = useVIntl()
- const accountsCard = inject('accountsCard') as Ref<InstanceType<typeof AccountsCard> | null>
+ const minecraftAccounts = injectMinecraftAccounts()
 @@ -132,28 +127,14 @@ const messages = defineMessages({
  })
  
@@ -371,7 +307,7 @@ index 7781cee..341ccdc 100644
 -		if (!loggedIn) return
 -
 -		await set_default_user(loggedIn.profile.id)
--		await accountsCard.value?.refreshValues()
+-		await minecraftAccounts.value?.refreshValues()
 -		await trackEvent('AccountLogIn', { source: 'MinecraftRequiredModal' })
 -		modal.value?.hide()
 -	} catch (error) {
@@ -381,10 +317,88 @@ index 7781cee..341ccdc 100644
 -	}
 +function signIn(event: MouseEvent) {
 +	modal.value?.hide()
-+	accountsCard.value?.login(event)
++	minecraftAccounts.value?.login(event)
  }
  
  function addOfflineAccount(event: MouseEvent) {
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+index 35c21fa..224d776 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
++++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+@@ -105,6 +105,7 @@
+ 			</div>
+ 		</div>
+ 	</Accordion>
++	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
+ 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
+ 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
+ </template>
+@@ -133,13 +134,12 @@ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
+ import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
++import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+-import { handleSevereError } from '@/composables/use-error.js'
+ import { trackEvent } from '@/helpers/analytics'
+ import {
+ 	get_default_user,
+-	login as login_flow,
+ 	remove_user,
+ 	set_default_user,
+ 	users,
+@@ -165,6 +165,7 @@ type MinecraftCredential = {
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
++const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+@@ -275,16 +276,8 @@ async function setAccount(account: MinecraftCredential) {
+ 	emit('change')
+ }
+ 
+-async function login() {
+-	loginDisabled.value = true
+-	const loggedIn = await login_flow().catch(handleSevereError)
+-
+-	if (loggedIn) {
+-		await setAccount(loggedIn)
+-	}
+-
+-	trackEvent('AccountLogIn')
+-	loginDisabled.value = false
++function login(event?: MouseEvent) {
++	microsoftLoginModal.value?.show(event)
+ }
+ 
+ async function accountAdded() {
+@@ -316,8 +309,8 @@ const messages = defineMessages({
+ 		defaultMessage: 'Not signed in',
+ 	},
+ 	addAccount: {
+-		id: 'minecraft-account.add-account',
+-		defaultMessage: 'Add account',
++		id: 'minecraft-account.add-microsoft-account',
++		defaultMessage: 'Add Microsoft account',
+ 	},
+ 	addOfflineAccount: {
+ 		id: 'minecraft-account.add-offline-account',
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+index 0d147e7..fa9623e 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
++++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+@@ -10,7 +10,7 @@ export interface MinecraftAccountsActions {
+ 	refreshValues: () => Promise<void>
+ 	setEquippedSkin: (skin: Skin) => Promise<void>
+ 	setLoginDisabled: (disabled: boolean) => void
+-	login: () => Promise<void>
++	login: (event?: MouseEvent) => void
+ }
+ 
+ export const [injectMinecraftAccounts, provideMinecraftAccounts] = createContext<
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
 index 57580ff..9b2408e 100644
 --- a/apps/app-frontend/src/helpers/auth.js
@@ -420,7 +434,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 6f29181..dcd94b5 100644
+index 9298918..8d3000f 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {

@@ -35,7 +35,7 @@ for them.
 ---
  apps/app-frontend/index.html                  |  1 -
  .../src/components/ui/SurveyPopup.vue         | 12 ++-
- .../ui/settings/account/PrivacySettings.vue   |  3 +-
+ .../settings/account/privacy-settings.vue     |  3 +-
  apps/app-frontend/src/helpers/analytics.ts    | 89 ++++---------------
  .../src/helpers/error-reporting.ts            | 72 +++------------
  .../app-frontend/src/locales/en-US/index.json |  2 +-
@@ -86,10 +86,10 @@ index 7c2f406..6d63e0a 100644
  
  	const surveyToShow = surveys.find(
  		(survey) =>
-diff --git a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+diff --git a/apps/app-frontend/src/features/settings/account/privacy-settings.vue b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 index 8773f8f..d31e8c5 100644
---- a/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/account/PrivacySettings.vue
+--- a/apps/app-frontend/src/features/settings/account/privacy-settings.vue
++++ b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 @@ -40,7 +40,7 @@ const messages = defineMessages({
  	telemetryDescription: {
  		id: 'app.settings.privacy.telemetry.description',
@@ -302,10 +302,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 62c49c2..4b645ad 100644
+index e410089..c82d230 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2757,7 +2757,7 @@
+@@ -2763,7 +2763,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {

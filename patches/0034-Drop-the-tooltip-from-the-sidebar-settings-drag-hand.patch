@@ -4,13 +4,13 @@ Date: Sat, 19 Sep 2026 02:22:32 +0200
 Subject: [PATCH] Drop the tooltip from the sidebar settings' drag handles
 
 ---
- .../src/components/ui/settings/display/SidebarSettings.vue     | 3 ++-
+ .../src/features/settings/display/sidebar-settings.vue         | 3 ++-
  1 file changed, 2 insertions(+), 1 deletion(-)
 
-diff --git a/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
+diff --git a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 index dc0cd1f..8f2ea3a 100644
---- a/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
+--- a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
++++ b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 @@ -15,8 +15,9 @@
  			<div
  				class="flex cursor-grab items-center gap-3 rounded-2xl border border-solid border-surface-4 bg-surface-2 p-3 active:cursor-grabbing"

@@ -15,7 +15,7 @@ Modrinth Enhanced keeps using the same data directory as the official
 app and stays a drop-in replacement for it.
 ---
  apps/app-frontend/index.html                                | 2 +-
- .../src/components/ui/modal/AppSettingsModal.vue            | 2 +-
+ .../src/features/settings/app-settings-modal/index.vue      | 2 +-
  apps/app-frontend/src/locales/en-US/index.json              | 2 +-
  apps/app/tauri.conf.json                                    | 6 +++---
  apps/app/tauri.linux.conf.json                              | 2 +-
@@ -35,11 +35,11 @@ index 50867a4..6367788 100644
  
  		<link rel="stylesheet" href="/src/assets/stylesheets/global.scss" />
  	</head>
-diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-index 5f863d5..32a86a3 100644
---- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-+++ b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-@@ -312,7 +312,7 @@ const messages = defineMessages({
+diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+index 76249d9..e588fa9 100644
+--- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
++++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+@@ -361,7 +361,7 @@ const messages = defineMessages({
  	},
  	appVersion: {
  		id: 'app.settings.app-version',
@@ -49,10 +49,10 @@ index 5f863d5..32a86a3 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 3a6f744..62c49c2 100644
+index b2f15f6..e410089 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -1638,7 +1638,7 @@
+@@ -1653,7 +1653,7 @@
      "message": "Oldest"
    },
    "app.settings.app-version": {

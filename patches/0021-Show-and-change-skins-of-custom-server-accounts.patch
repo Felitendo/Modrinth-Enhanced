@@ -21,18 +21,65 @@ these servers send no CORS headers for them.
 Ely.by accounts get their heads the same way; their skin page stays the
 Ely.by one.
 ---
- .../src/components/ui/AccountsCard.vue        |  31 ++-
  .../src/components/ui/skin/EditSkinModal.vue  |  15 +-
+ .../minecraft-accounts/accounts-card.vue      |  31 ++-
  apps/app-frontend/src/pages/Skins.vue         |   1 +
  packages/app-lib/src/api/minecraft_skins.rs   |   4 +-
  packages/app-lib/src/state/minecraft_auth.rs  | 242 +++++++++++++++++-
  .../src/state/minecraft_skins/mojang_api.rs   |  64 +++--
  6 files changed, 326 insertions(+), 31 deletions(-)
 
-diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
+diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
+index ee32e2e..7d9b78d 100644
+--- a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
++++ b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
+@@ -47,7 +47,11 @@
+ 					</RadioButtons>
+ 				</section>
+ 
+-				<section>
++				<section v-if="capesLocked">
++					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
++					<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.capesOnServer) }}</p>
++				</section>
++				<section v-else>
+ 					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
+ 					<div class="relative w-fit max-w-full">
+ 						<Transition
+@@ -194,6 +198,10 @@ const messages = defineMessages({
+ 		id: 'app.skins.modal.cape-section',
+ 		defaultMessage: 'Cape',
+ 	},
++	capesOnServer: {
++		id: 'app.skins.modal.capes-on-server',
++		defaultMessage: "Capes are changed on your account server's website.",
++	},
+ 	noCapeTooltip: {
+ 		id: 'app.skins.modal.no-cape-tooltip',
+ 		defaultMessage: 'No cape',
+@@ -248,7 +256,8 @@ const previewSkin = ref<string>('')
+ 
+ const variant = ref<SkinModel>('CLASSIC')
+ const selectedCape = ref<Cape | undefined>(undefined)
+-const props = defineProps<{ capes?: Cape[]; demo?: boolean }>()
++// An account on another server keeps the cape uploaded there.
++const props = defineProps<{ capes?: Cape[]; demo?: boolean; capesLocked?: boolean }>()
+ 
+ const selectedCapeTexture = computed(() => selectedCape.value?.texture)
+ const canEditTextureAndModel = computed(() => currentSkin.value?.source !== 'default')
+@@ -379,7 +388,7 @@ async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
+ 	currentSkin.value = null
+ 	uploadedTextureUrl.value = skinTextureUrl
+ 	variant.value = await determineModelType(skinTextureUrl.original)
+-	selectedCape.value = undefined
++	selectedCape.value = props.capesLocked ? props.capes?.find((c) => c.is_equipped) : undefined
+ 
+ 	await loadPreviewSkin()
+ 
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 index 03a61f2..364aef0 100644
---- a/apps/app-frontend/src/components/ui/AccountsCard.vue
-+++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
+--- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
++++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -185,11 +185,14 @@ type MinecraftCredential = {
  	profile: {
  		id: string
@@ -111,58 +158,11 @@ index 03a61f2..364aef0 100644
  }
  
  async function setAccount(account: MinecraftCredential) {
-diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-index ee32e2e..7d9b78d 100644
---- a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-+++ b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-@@ -47,7 +47,11 @@
- 					</RadioButtons>
- 				</section>
- 
--				<section>
-+				<section v-if="capesLocked">
-+					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
-+					<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.capesOnServer) }}</p>
-+				</section>
-+				<section v-else>
- 					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
- 					<div class="relative w-fit max-w-full">
- 						<Transition
-@@ -194,6 +198,10 @@ const messages = defineMessages({
- 		id: 'app.skins.modal.cape-section',
- 		defaultMessage: 'Cape',
- 	},
-+	capesOnServer: {
-+		id: 'app.skins.modal.capes-on-server',
-+		defaultMessage: "Capes are changed on your account server's website.",
-+	},
- 	noCapeTooltip: {
- 		id: 'app.skins.modal.no-cape-tooltip',
- 		defaultMessage: 'No cape',
-@@ -248,7 +256,8 @@ const previewSkin = ref<string>('')
- 
- const variant = ref<SkinModel>('CLASSIC')
- const selectedCape = ref<Cape | undefined>(undefined)
--const props = defineProps<{ capes?: Cape[]; demo?: boolean }>()
-+// An account on another server keeps the cape uploaded there.
-+const props = defineProps<{ capes?: Cape[]; demo?: boolean; capesLocked?: boolean }>()
- 
- const selectedCapeTexture = computed(() => selectedCape.value?.texture)
- const canEditTextureAndModel = computed(() => currentSkin.value?.source !== 'default')
-@@ -379,7 +388,7 @@ async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
- 	currentSkin.value = null
- 	uploadedTextureUrl.value = skinTextureUrl
- 	variant.value = await determineModelType(skinTextureUrl.original)
--	selectedCape.value = undefined
-+	selectedCape.value = props.capesLocked ? props.capes?.find((c) => c.is_equipped) : undefined
- 
- 	await loadPreviewSkin()
- 
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 7bdd7cd..d12d3f3 100644
+index 38fdcac..761bd83 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
-@@ -1466,6 +1466,7 @@ await loadAccountSkins()
+@@ -1465,6 +1465,7 @@ await loadAccountSkins()
  	<EditSkinModal
  		ref="editSkinModal"
  		:capes="capes"

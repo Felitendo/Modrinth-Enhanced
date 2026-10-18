@@ -15,93 +15,46 @@ selection, the avatar and the sign-in dialogs are the card's own and
 stay in step with it, and a dialog opened from the menu outlives the
 menu closing.
 ---
- apps/app-frontend/src/App.vue                 |   8 +
- .../src/components/ui/AccountsCard.vue        |  32 ++--
- .../components/ui/TitleBarAccountSwitcher.vue | 163 ++++++++++++++++++
- 3 files changed, 191 insertions(+), 12 deletions(-)
- create mode 100644 apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+ apps/app-frontend/src/App.vue                 |   1 +
+ .../src/app/shell/sidebar/index.vue           |   4 +-
+ .../app/shell/title-bar/account-switcher.vue  | 163 ++++++++++++++++++
+ .../src/app/shell/title-bar/index.vue         |  11 ++
+ .../minecraft-accounts/accounts-card.vue      |  32 ++--
+ 5 files changed, 198 insertions(+), 13 deletions(-)
+ create mode 100644 apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 4283ebd..0a55cb4 100644
+index 4fb63b1..10335e0 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -79,6 +79,7 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from
- import { RouterView, useRoute, useRouter } from 'vue-router'
- 
- import AccountsCard from '@/components/ui/AccountsCard.vue'
-+import TitleBarAccountSwitcher from '@/components/ui/TitleBarAccountSwitcher.vue'
- import AppActionBar from '@/components/ui/AppActionBar.vue'
- import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
- import ErrorModal from '@/components/ui/ErrorModal.vue'
-@@ -2524,6 +2525,13 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 						<AppActionBar />
- 					</Suspense>
- 				</div>
-+				<!--
-+					The account lives in the right sidebar. While that is folded away, it
-+					is here instead, next to the window buttons, so it can still be seen
-+					and switched.
-+				-->
-+				<!-- Flush against the window buttons, so no draggable gap is left between them. -->
-+				<TitleBarAccountSwitcher v-if="!sidebarVisible" :card="accounts" />
- 				<WindowControls />
- 			</section>
- 		</div>
-diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index 224d776..632483e 100644
---- a/apps/app-frontend/src/components/ui/AccountsCard.vue
-+++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
-@@ -226,18 +226,6 @@ function showElyAccountModal(event?: MouseEvent) {
- 	elyAccountModal.value?.show(event)
+@@ -2187,6 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 			:sidebar-toggled="sidebarToggled"
+ 			:sidebar-visible="sidebarVisible"
+ 			:sidebar-saved="sidebarSaved"
++			:account-card="sidebar?.accountsCard ?? null"
+ 			@toggle-sidebar="setSidebarCollapsed(sidebarToggled)"
+ 		/>
+ 	</div>
+diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
+index c7ceaaa..1f45546 100644
+--- a/apps/app-frontend/src/app/shell/sidebar/index.vue
++++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
+@@ -70,7 +70,9 @@ function showAddFriendModal() {
+ 	friends.value?.showAddFriendModal()
  }
  
--defineExpose({
--	refreshValues,
--	showOfflineAccountModal,
--	showElyAccountModal,
--	setEquippedSkin,
--	setLoginDisabled,
--	login,
--	loginDisabled,
--})
--
--await refreshValues()
--
- const selectedAccount = computed(() =>
- 	accounts.value.find((account) => account.profile.id === defaultUser.value),
- )
-@@ -256,6 +244,26 @@ const avatarUrl = computed(() => {
- 	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
- })
+-defineExpose({ minecraftAccounts, showAddFriendModal })
++// The card itself goes to the title bar's account switcher, which stands in for it
++// while the sidebar is folded away.
++defineExpose({ minecraftAccounts, accountsCard: accounts, showAddFriendModal })
  
-+defineExpose({
-+	refreshValues,
-+	showOfflineAccountModal,
-+	showElyAccountModal,
-+	setEquippedSkin,
-+	setLoginDisabled,
-+	login,
-+	loginDisabled,
-+	// For the title bar's account switcher, which stands in for this card while
-+	// the sidebar is folded away.
-+	accounts,
-+	selectedAccount,
-+	avatarUrl,
-+	getAccountAvatarUrl,
-+	setAccount,
-+	logout,
-+})
-+
-+await refreshValues()
-+
- function getAccountAvatarUrl(account: MinecraftCredential) {
- 	if (
- 		account.profile.id === selectedAccount.value?.profile?.id &&
-diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+ const scrollbarOptions = Object.freeze({
+ 	overflow: {
+diff --git a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 new file mode 100644
-index 0000000..70ab9e9
+index 0000000..4eea008
 --- /dev/null
-+++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 @@ -0,0 +1,163 @@
 +<!--
 +	The Minecraft account, in the title bar while the right sidebar is folded away:
@@ -210,7 +163,7 @@ index 0000000..70ab9e9
 +} from '@modrinth/ui'
 +import type { PropType } from 'vue'
 +
-+import type AccountsCard from '@/components/ui/AccountsCard.vue'
++import type AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
 +
 +type Card = InstanceType<typeof AccountsCard>
 +type Account = Card['accounts'][number]
@@ -266,3 +219,89 @@ index 0000000..70ab9e9
 +	open()
 +}
 +</script>
+diff --git a/apps/app-frontend/src/app/shell/title-bar/index.vue b/apps/app-frontend/src/app/shell/title-bar/index.vue
+index e6a645d..ef33bc3 100644
+--- a/apps/app-frontend/src/app/shell/title-bar/index.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/index.vue
+@@ -3,6 +3,9 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@m
+ import { defineMessages, IconButton, TextLogo, useVIntl } from '@modrinth/ui'
+ import { useRouter } from 'vue-router'
+ 
++import type AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
++
++import TitleBarAccountSwitcher from './account-switcher.vue'
+ import AppActionBar from './action-bar.vue'
+ import Breadcrumbs from './breadcrumbs.vue'
+ import WindowControls from './window-controls.vue'
+@@ -14,6 +17,7 @@ defineProps<{
+ 	sidebarToggled: boolean
+ 	sidebarVisible: boolean
+ 	sidebarSaved: boolean
++	accountCard: InstanceType<typeof AccountsCard> | null
+ }>()
+ 
+ const emit = defineEmits<{
+@@ -111,6 +115,13 @@ const messages = defineMessages({
+ 					<AppActionBar />
+ 				</Suspense>
+ 			</div>
++			<!--
++				The account lives in the right sidebar. While that is folded away, it
++				is here instead, next to the window buttons, so it can still be seen
++				and switched.
++			-->
++			<!-- Flush against the window buttons, so no draggable gap is left between them. -->
++			<TitleBarAccountSwitcher v-if="!sidebarVisible" :card="accountCard" />
+ 			<WindowControls />
+ 		</section>
+ 	</div>
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+index 224d776..632483e 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
++++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+@@ -226,18 +226,6 @@ function showElyAccountModal(event?: MouseEvent) {
+ 	elyAccountModal.value?.show(event)
+ }
+ 
+-defineExpose({
+-	refreshValues,
+-	showOfflineAccountModal,
+-	showElyAccountModal,
+-	setEquippedSkin,
+-	setLoginDisabled,
+-	login,
+-	loginDisabled,
+-})
+-
+-await refreshValues()
+-
+ const selectedAccount = computed(() =>
+ 	accounts.value.find((account) => account.profile.id === defaultUser.value),
+ )
+@@ -256,6 +244,26 @@ const avatarUrl = computed(() => {
+ 	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
+ })
+ 
++defineExpose({
++	refreshValues,
++	showOfflineAccountModal,
++	showElyAccountModal,
++	setEquippedSkin,
++	setLoginDisabled,
++	login,
++	loginDisabled,
++	// For the title bar's account switcher, which stands in for this card while
++	// the sidebar is folded away.
++	accounts,
++	selectedAccount,
++	avatarUrl,
++	getAccountAvatarUrl,
++	setAccount,
++	logout,
++})
++
++await refreshValues()
++
+ function getAccountAvatarUrl(account: MinecraftCredential) {
+ 	if (
+ 		account.profile.id === selectedAccount.value?.profile?.id &&

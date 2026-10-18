@@ -311,7 +311,7 @@ index 1aa3ec9..5390355 100644
  	settings: []
  	openFolder: []
 diff --git a/apps/app-frontend/src/pages/instance/layout.vue b/apps/app-frontend/src/pages/instance/layout.vue
-index 441dafe..3f8af81 100644
+index f28f8ce..55b1719 100644
 --- a/apps/app-frontend/src/pages/instance/layout.vue
 +++ b/apps/app-frontend/src/pages/instance/layout.vue
 @@ -46,6 +46,7 @@
@@ -440,7 +440,7 @@ index c0eb80e..b9d5eeb 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index e4b2f6b..7246c65 100644
+index 8697599..ccd7abd 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,8 +110,10 @@ fn main() {

@@ -291,7 +291,7 @@ index 0000000..a0eb40d
 +	return await invoke('plugin:ely-skins|ely_remove_skin', { skinId })
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 783eff6..3dfe5b1 100644
+index 30ec659..50cc531 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -4,6 +4,7 @@ import {
@@ -302,14 +302,15 @@ index 783eff6..3dfe5b1 100644
  	RotateCounterClockwiseIcon,
  	ShirtIcon,
  	SpinnerIcon,
-@@ -31,14 +32,29 @@ import { computed, inject, onMounted, onUnmounted, ref, useTemplateRef, watch }
+@@ -29,6 +30,7 @@ import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vu
+ 
  import EarsModIcon from '@/assets/skins/ears-mod.png'
- import type AccountsCard from '@/components/ui/AccountsCard.vue'
  import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
 +import ElySkinModal from '@/components/ui/skin/ElySkinModal.vue'
  import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
  import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { handleSevereError } from '@/composables/use-error.js'
+@@ -36,8 +38,22 @@ import { injectMinecraftAccounts } from '@/features/minecraft-accounts/context'
  import { trackEvent } from '@/helpers/analytics'
  import { check_reachable, get_default_user, login as login_flow, users } from '@/helpers/auth'
  import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
@@ -333,7 +334,7 @@ index 783eff6..3dfe5b1 100644
  	equip_skin,
  	filterDefaultSkins,
  	filterSavedSkins,
-@@ -212,6 +228,27 @@ const messages = defineMessages({
+@@ -211,6 +227,27 @@ const messages = defineMessages({
  		id: 'app.skins.sign-in.button',
  		defaultMessage: 'Sign in to Microsoft',
  	},
@@ -361,7 +362,7 @@ index 783eff6..3dfe5b1 100644
  })
  
  const editSkinModal = useTemplateRef('editSkinModal')
-@@ -347,10 +384,12 @@ const skinTexture = computedAsync(async () => {
+@@ -346,10 +383,12 @@ const skinTexture = computedAsync(async () => {
  const capeTexture = computed(() => currentCape.value?.texture)
  const skinVariant = computed(() => selectedSkin.value?.variant)
  const skinNametag = computed(() => (appSettings.hideNametagSkinsPage ? undefined : username.value))
@@ -378,7 +379,7 @@ index 783eff6..3dfe5b1 100644
  )
  const hasPendingSkinChange = computed(
  	() => !skinsMatch(selectedSkin.value, originalSelectedSkin.value),
-@@ -879,7 +918,8 @@ function isSkinFileDrag(event: DragEvent) {
+@@ -878,7 +917,8 @@ function isSkinFileDrag(event: DragEvent) {
  }
  
  function isPositionOverAddSkinButton(position: { x: number; y: number }) {
@@ -388,7 +389,7 @@ index 783eff6..3dfe5b1 100644
  
  	if (!element) {
  		return false
-@@ -991,6 +1031,11 @@ async function setupAddSkinDragDropListener() {
+@@ -990,6 +1030,11 @@ async function setupAddSkinDragDropListener() {
  async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	if (isSkinManagementReadOnly.value) return
  
@@ -400,7 +401,7 @@ index 783eff6..3dfe5b1 100644
  	const fakeEvent = new MouseEvent('click')
  	const originalSkinTexUrl = `data:image/png;base64,` + arrayBufferToBase64(buffer)
  	try {
-@@ -1005,6 +1050,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+@@ -1004,6 +1049,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	}
  }
  
@@ -709,9 +710,9 @@ index 783eff6..3dfe5b1 100644
  watch(
  	() => selectedSkin.value?.cape_id,
  	() => {},
-@@ -1063,8 +1410,8 @@ async function checkUserChanges() {
+@@ -1062,8 +1409,8 @@ async function checkUserChanges() {
  		if (defaultId !== currentUserId.value) {
- 			await accountsCard.value?.refreshValues()
+ 			await minecraftAccounts.value?.refreshValues()
  			await loadCurrentUser()
 -			await loadCapes()
 -			await loadSkins()
@@ -720,7 +721,7 @@ index 783eff6..3dfe5b1 100644
  		}
  	} catch (error) {
  		if (currentUser.value && error instanceof Error) {
-@@ -1073,8 +1420,8 @@ async function checkUserChanges() {
+@@ -1072,8 +1419,8 @@ async function checkUserChanges() {
  	}
  }
  
@@ -731,7 +732,7 @@ index 783eff6..3dfe5b1 100644
  </script>
  
  <template>
-@@ -1099,8 +1446,29 @@ await loadSkins()
+@@ -1098,8 +1445,29 @@ await loadSkins()
  		:proceed-label="formatMessage(commonMessages.deleteLabel)"
  		@proceed="deleteSkin"
  	/>
@@ -762,7 +763,7 @@ index 783eff6..3dfe5b1 100644
  		<div class="sticky top-6 self-start p-2 pt-0">
  			<h1 class="m-0 text-2xl font-bold flex items-center gap-2">
  				{{ formatMessage(appMessages.skinSelectorLabel) }}
-@@ -1278,6 +1646,80 @@ await loadSkins()
+@@ -1277,6 +1645,80 @@ await loadSkins()
  			/>
  		</div>
  	</div>
@@ -844,7 +845,7 @@ index 783eff6..3dfe5b1 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index dcd94b5..2d18e0a 100644
+index 8d3000f..14d4b3c 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {

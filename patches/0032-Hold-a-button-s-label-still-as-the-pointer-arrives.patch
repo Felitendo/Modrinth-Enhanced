@@ -4,14 +4,14 @@ Date: Sat, 19 Sep 2026 02:22:32 +0200
 Subject: [PATCH] Hold a button's label still as the pointer arrives
 
 ---
- .../src/components/ui/TitleBarAccountSwitcher.vue           | 4 +++-
+ .../src/app/shell/title-bar/account-switcher.vue            | 4 +++-
  packages/ui/src/components/base/buttons/ButtonFrame.vue     | 6 +++++-
  2 files changed, 8 insertions(+), 2 deletions(-)
 
-diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
-index b21fae7..f9be6c5 100644
---- a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
-+++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
+diff --git a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
+index 3d5d173..e461725 100644
+--- a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 @@ -28,8 +28,10 @@
  					:key="account.profile.id"
  					class="flex min-w-0 items-center gap-1"

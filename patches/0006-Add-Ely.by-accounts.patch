@@ -26,9 +26,11 @@ Signing in on Ely.by's own page would be better than a password form,
 and needs an OAuth application registered with Ely.by; there is none for
 Modrinth Enhanced yet.
 ---
- .../src/components/ui/AccountsCard.vue        |  30 ++-
+ .../src/app/shell/sidebar/index.vue           |   1 +
  .../src/components/ui/ElyAccountModal.vue     | 168 ++++++++++++++
  .../MinecraftRequiredModal.vue                |  29 ++-
+ .../minecraft-accounts/accounts-card.vue      |  30 ++-
+ .../features/minecraft-accounts/context.ts    |   1 +
  apps/app-frontend/src/helpers/auth.js         |  15 ++
  apps/app/build.rs                             |   1 +
  apps/app/src/api/auth.rs                      |  10 +
@@ -37,107 +39,22 @@ Modrinth Enhanced yet.
  packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
  packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
  packages/app-lib/src/util/mod.rs              |   1 +
- 11 files changed, 581 insertions(+), 13 deletions(-)
+ 13 files changed, 583 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
-diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index ebc92c1..35c21fa 100644
---- a/apps/app-frontend/src/components/ui/AccountsCard.vue
-+++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
-@@ -9,6 +9,10 @@
- 			<SpinnerIcon v-else class="animate-spin" />
- 			{{ formatMessage(messages.signInToMinecraft) }}
- 		</Button>
-+		<Button @click="elyAccountModal?.show($event)">
-+			<KeyIcon />
-+			{{ formatMessage(messages.addElyAccount) }}
-+		</Button>
- 		<Button @click="offlineAccountModal?.show($event)">
- 			<UserIcon />
- 			{{ formatMessage(messages.addOfflineAccount) }}
-@@ -84,6 +88,13 @@
- 					<PlusIcon />
- 					{{ formatMessage(messages.addAccount) }}
- 				</Button>
-+				<Button
-+					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
-+					@click="elyAccountModal?.show($event)"
-+				>
-+					<KeyIcon />
-+					{{ formatMessage(messages.addElyAccount) }}
-+				</Button>
- 				<Button
- 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
- 					@click="offlineAccountModal?.show($event)"
-@@ -94,11 +105,13 @@
- 			</div>
- 		</div>
- 	</Accordion>
--	<OfflineAccountModal ref="offlineAccountModal" @created="offlineAccountCreated" />
-+	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
-+	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
- </template>
- 
- <script setup lang="ts">
- import {
-+	KeyIcon,
- 	LogInIcon,
- 	PlusIcon,
- 	RadioButtonCheckedIcon,
-@@ -119,6 +132,7 @@ import {
- import type { Ref } from 'vue'
- import { computed, onUnmounted, ref } from 'vue'
- 
-+import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
- import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
- import { useAppEvent } from '@/composables/use-app-event'
- import { handleSevereError } from '@/composables/use-error.js'
-@@ -150,6 +164,7 @@ type MinecraftCredential = {
- 
- const accounts: Ref<MinecraftCredential[]> = ref([])
- const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
-+const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
- const loginDisabled = ref(false)
- const defaultUser = ref<string | undefined>()
- const equippedSkin = ref<Skin | null>(null)
-@@ -206,9 +221,14 @@ function showOfflineAccountModal(event?: MouseEvent) {
- 	offlineAccountModal.value?.show(event)
- }
- 
-+function showElyAccountModal(event?: MouseEvent) {
-+	elyAccountModal.value?.show(event)
-+}
-+
- defineExpose({
- 	refreshValues,
- 	showOfflineAccountModal,
-+	showElyAccountModal,
- 	setEquippedSkin,
- 	setLoginDisabled,
- 	login,
-@@ -267,8 +287,8 @@ async function login() {
- 	loginDisabled.value = false
- }
- 
--async function offlineAccountCreated() {
--	// `login_offline` already marks the new account as the active one.
-+async function accountAdded() {
-+	// Both sign-in paths already mark the new account as the active one.
- 	await refreshValues()
- 	emit('change')
- }
-@@ -303,6 +323,10 @@ const messages = defineMessages({
- 		id: 'minecraft-account.add-offline-account',
- 		defaultMessage: 'Add offline account',
- 	},
-+	addElyAccount: {
-+		id: 'minecraft-account.add-ely-account',
-+		defaultMessage: 'Add Ely.by account',
-+	},
- 	removeAccount: {
- 		id: 'minecraft-account.remove-account',
- 		defaultMessage: 'Remove account',
+diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
+index c202e3b..c7ceaaa 100644
+--- a/apps/app-frontend/src/app/shell/sidebar/index.vue
++++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
+@@ -58,6 +58,7 @@ const minecraftAccounts = computed<MinecraftAccountsActions | null>(() => {
+ 	return {
+ 		loginDisabled: card.loginDisabled,
+ 		showOfflineAccountModal: card.showOfflineAccountModal,
++		showElyAccountModal: card.showElyAccountModal,
+ 		refreshValues: card.refreshValues,
+ 		setEquippedSkin: card.setEquippedSkin,
+ 		setLoginDisabled: card.setLoginDisabled,
 diff --git a/apps/app-frontend/src/components/ui/ElyAccountModal.vue b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 new file mode 100644
 index 0000000..c589375
@@ -313,7 +230,7 @@ index 0000000..c589375
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 8e6b275..7781cee 100644
+index bfbb1b2..cf7c3ba 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -47,10 +47,16 @@
@@ -344,7 +261,7 @@ index 8e6b275..7781cee 100644
 -import { MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
 +import { KeyIcon, MessagesSquareIcon, SpinnerIcon, UserIcon } from '@modrinth/assets'
  import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
- import { inject, type Ref, ref } from 'vue'
+ import { ref } from 'vue'
  
 @@ -113,11 +119,15 @@ const messages = defineMessages({
  	offlineHint: {
@@ -365,17 +282,126 @@ index 8e6b275..7781cee 100644
  })
  
 @@ -151,6 +161,11 @@ function addOfflineAccount(event: MouseEvent) {
- 	accountsCard.value?.showOfflineAccountModal(event)
+ 	minecraftAccounts.value?.showOfflineAccountModal(event)
  }
  
 +function addElyAccount(event: MouseEvent) {
 +	modal.value?.hide()
-+	accountsCard.value?.showElyAccountModal(event)
++	minecraftAccounts.value?.showElyAccountModal(event)
 +}
 +
  defineExpose({
  	show,
  })
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+index ebc92c1..35c21fa 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
++++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+@@ -9,6 +9,10 @@
+ 			<SpinnerIcon v-else class="animate-spin" />
+ 			{{ formatMessage(messages.signInToMinecraft) }}
+ 		</Button>
++		<Button @click="elyAccountModal?.show($event)">
++			<KeyIcon />
++			{{ formatMessage(messages.addElyAccount) }}
++		</Button>
+ 		<Button @click="offlineAccountModal?.show($event)">
+ 			<UserIcon />
+ 			{{ formatMessage(messages.addOfflineAccount) }}
+@@ -84,6 +88,13 @@
+ 					<PlusIcon />
+ 					{{ formatMessage(messages.addAccount) }}
+ 				</Button>
++				<Button
++					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
++					@click="elyAccountModal?.show($event)"
++				>
++					<KeyIcon />
++					{{ formatMessage(messages.addElyAccount) }}
++				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="offlineAccountModal?.show($event)"
+@@ -94,11 +105,13 @@
+ 			</div>
+ 		</div>
+ 	</Accordion>
+-	<OfflineAccountModal ref="offlineAccountModal" @created="offlineAccountCreated" />
++	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
++	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
+ </template>
+ 
+ <script setup lang="ts">
+ import {
++	KeyIcon,
+ 	LogInIcon,
+ 	PlusIcon,
+ 	RadioButtonCheckedIcon,
+@@ -119,6 +132,7 @@ import {
+ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
++import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { handleSevereError } from '@/composables/use-error.js'
+@@ -150,6 +164,7 @@ type MinecraftCredential = {
+ 
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
++const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+ const equippedSkin = ref<Skin | null>(null)
+@@ -206,9 +221,14 @@ function showOfflineAccountModal(event?: MouseEvent) {
+ 	offlineAccountModal.value?.show(event)
+ }
+ 
++function showElyAccountModal(event?: MouseEvent) {
++	elyAccountModal.value?.show(event)
++}
++
+ defineExpose({
+ 	refreshValues,
+ 	showOfflineAccountModal,
++	showElyAccountModal,
+ 	setEquippedSkin,
+ 	setLoginDisabled,
+ 	login,
+@@ -267,8 +287,8 @@ async function login() {
+ 	loginDisabled.value = false
+ }
+ 
+-async function offlineAccountCreated() {
+-	// `login_offline` already marks the new account as the active one.
++async function accountAdded() {
++	// Both sign-in paths already mark the new account as the active one.
+ 	await refreshValues()
+ 	emit('change')
+ }
+@@ -303,6 +323,10 @@ const messages = defineMessages({
+ 		id: 'minecraft-account.add-offline-account',
+ 		defaultMessage: 'Add offline account',
+ 	},
++	addElyAccount: {
++		id: 'minecraft-account.add-ely-account',
++		defaultMessage: 'Add Ely.by account',
++	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+ 		defaultMessage: 'Remove account',
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+index 22abc8d..0d147e7 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
++++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+@@ -6,6 +6,7 @@ import type { Skin } from '@/helpers/skins'
+ export interface MinecraftAccountsActions {
+ 	readonly loginDisabled: boolean
+ 	showOfflineAccountModal: (event?: MouseEvent) => void
++	showElyAccountModal: (event?: MouseEvent) => void
+ 	refreshValues: () => Promise<void>
+ 	setEquippedSkin: (skin: Skin) => Promise<void>
+ 	setLoginDisabled: (disabled: boolean) => void
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
 index cb7319a..57580ff 100644
 --- a/apps/app-frontend/src/helpers/auth.js
@@ -403,7 +429,7 @@ index cb7319a..57580ff 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index c8ac37a..6f29181 100644
+index e3ccc66..9298918 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {

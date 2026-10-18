@@ -16,28 +16,28 @@ preferences: it is how the app looks here.
 The three switches move out of the feature settings, since the tab is
 where they belong; only the number of instances stays there.
 ---
- apps/app-frontend/src/App.vue                 | 138 ++++++++++++------
- .../components/ui/modal/AppSettingsModal.vue  |  22 ++-
- .../ui/settings/display/FeaturesSettings.vue  |  70 ---------
- .../ui/settings/display/SidebarSettings.vue   | 125 ++++++++++++++++
- .../src/composables/use-sidebar-layout.ts     |  72 +++++++++
- 5 files changed, 310 insertions(+), 117 deletions(-)
- create mode 100644 apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
+ apps/app-frontend/src/App.vue                 | 136 ++++++++++++------
+ .../src/composables/use-sidebar-layout.ts     |  72 ++++++++++
+ .../settings/app-settings-modal/index.vue     |  29 +++-
+ .../settings/display/features-settings.vue    |  70 ---------
+ .../settings/display/sidebar-settings.vue     | 125 ++++++++++++++++
+ 5 files changed, 316 insertions(+), 116 deletions(-)
  create mode 100644 apps/app-frontend/src/composables/use-sidebar-layout.ts
+ create mode 100644 apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 9679884..cb688fc 100644
+index 2e38416..95e003d 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -15,6 +15,7 @@ import {
- 	ChevronLeftIcon,
- 	ChevronRightIcon,
+@@ -4,6 +4,7 @@ import {
+ 	ArrowLeftRightIcon,
+ 	CheckIcon,
  	CompassIcon,
 +	EyeOffIcon,
  	ImageIcon,
  	LogInIcon,
  	LogOutIcon,
-@@ -42,6 +43,7 @@ import {
+@@ -28,6 +29,7 @@ import {
  	commonSettingsMessages,
  	ContentInstallModal,
  	ContentUpdaterModal,
@@ -45,31 +45,15 @@ index 9679884..cb688fc 100644
  	CreationFlowModal,
  	defineMessages,
  	I18nDebugPanel,
-@@ -79,7 +81,6 @@ import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from
- import { RouterView, useRoute, useRouter } from 'vue-router'
- 
- import AccountsCard from '@/components/ui/AccountsCard.vue'
--import TitleBarAccountSwitcher from '@/components/ui/TitleBarAccountSwitcher.vue'
- import AppActionBar from '@/components/ui/AppActionBar.vue'
- import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
- import ErrorModal from '@/components/ui/ErrorModal.vue'
-@@ -107,6 +108,7 @@ import {
- 	markSyncInstancesUpdateNotificationShown,
- 	shouldShowSyncInstancesUpdateNotification,
- } from '@/components/ui/sync-instances-update-modal/show-notification'
-+import TitleBarAccountSwitcher from '@/components/ui/TitleBarAccountSwitcher.vue'
- import WindowControls from '@/components/ui/WindowControls.vue'
- import { useCheckDisableMouseover } from '@/composables/macCssFix.js'
- import { useAppEvent } from '@/composables/use-app-event'
-@@ -114,6 +116,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
+@@ -88,6 +90,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { useError } from '@/composables/use-error.js'
  import { useInstanceMetadataRefresh } from '@/composables/use-instance-metadata-refresh'
  import { useQuickInstanceLimit } from '@/composables/use-quick-instance-limit.ts'
 +import { useSidebarLayout } from '@/composables/use-sidebar-layout'
  import { isDarkTheme, useTheme } from '@/composables/use-theme.ts'
  import { config } from '@/config'
- import { getAccountAppearance, rememberAccountAppearance } from '@/helpers/account-appearance.ts'
-@@ -259,6 +262,73 @@ const PRIDE_FUNDRAISER_END_DATE = new Date('2026-07-01T00:00:00Z').getTime()
+ import { provideMinecraftAccounts } from '@/features/minecraft-accounts/context'
+@@ -221,6 +224,73 @@ const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
  const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
@@ -142,8 +126,8 @@ index 9679884..cb688fc 100644
 +
  const sidebarToggled = ref(true)
  // Whether the right sidebar is folded away, remembered across restarts in the
- // feature flags. The title bar button below is the only thing that sets it:
-@@ -729,6 +799,18 @@ const messages = defineMessages({
+ // feature flags. The title bar's fold button is the only thing that sets it:
+@@ -620,6 +690,18 @@ const messages = defineMessages({
  		id: 'app.nav.screenshots',
  		defaultMessage: 'Screenshots',
  	},
@@ -162,7 +146,7 @@ index 9679884..cb688fc 100644
  	createNewInstance: {
  		id: 'app.nav.create-new-instance',
  		defaultMessage: 'Create new instance',
-@@ -2346,52 +2428,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2074,52 +2156,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
  		>
  			<NavButton
@@ -223,35 +207,113 @@ index 9679884..cb688fc 100644
  			</NavButton>
  			<suspense>
  				<QuickInstanceSwitcher>
-@@ -2475,6 +2520,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2203,6 +2248,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<LogInIcon class="text-brand" />
  			</NavButton>
  		</div>
 +		<ContextMenu ref="sidebarMenu" :label="formatMessage(messages.sidebarActions)" />
- 		<div data-tauri-drag-region class="app-grid-statusbar bg-bg-raised h-[--top-bar-height] flex">
- 			<div data-tauri-drag-region class="flex min-w-0 flex-1 items-center overflow-hidden p-2">
- 				<TextLogo class="h-7 w-auto shrink-0 text-contrast pointer-events-none" />
-diff --git a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-index 32a86a3..e409510 100644
---- a/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-+++ b/apps/app-frontend/src/components/ui/modal/AppSettingsModal.vue
-@@ -3,6 +3,7 @@ import {
- 	CoffeeIcon,
+ 		<AppTitleBar
+ 			:can-navigate-back="canNavigateBack"
+ 			:can-navigate-forward="canNavigateForward"
+diff --git a/apps/app-frontend/src/composables/use-sidebar-layout.ts b/apps/app-frontend/src/composables/use-sidebar-layout.ts
+new file mode 100644
+index 0000000..7225c21
+--- /dev/null
++++ b/apps/app-frontend/src/composables/use-sidebar-layout.ts
+@@ -0,0 +1,72 @@
++/**
++ * The order of the buttons above the instances in the left sidebar, and which
++ * of them are shown.
++ *
++ * This is about how the app looks on this machine, so it stays here rather than
++ * going to Modrinth with the synced preferences.
++ */
++import { useStorage } from '@vueuse/core'
++import { computed } from 'vue'
++
++/** The buttons, in the order upstream has them. */
++export const SIDEBAR_ITEMS = ['home', 'discover', 'skins', 'screenshots', 'hosting'] as const
++
++export type SidebarItemId = (typeof SIDEBAR_ITEMS)[number]
++
++type SidebarLayout = {
++	order: SidebarItemId[]
++	hidden: SidebarItemId[]
++}
++
++const layout = useStorage<SidebarLayout>('modrinth-enhanced:sidebar-layout', {
++	order: [...SIDEBAR_ITEMS],
++	hidden: [],
++})
++
++/** The stored order, with anything unknown dropped and anything new appended. */
++const order = computed<SidebarItemId[]>(() => {
++	const stored = (layout.value.order ?? []).filter((id) => SIDEBAR_ITEMS.includes(id))
++	return [...stored, ...SIDEBAR_ITEMS.filter((id) => !stored.includes(id))]
++})
++
++const hidden = computed<SidebarItemId[]>(() =>
++	(layout.value.hidden ?? []).filter((id) => SIDEBAR_ITEMS.includes(id)),
++)
++
++export function useSidebarLayout() {
++	function isHidden(id: SidebarItemId): boolean {
++		return hidden.value.includes(id)
++	}
++
++	function setHidden(id: SidebarItemId, hide: boolean) {
++		layout.value = {
++			order: order.value,
++			hidden: hide ? [...hidden.value, id] : hidden.value.filter((other) => other !== id),
++		}
++	}
++
++	/** Moves a button by `by` places, as far as there is room. */
++	function move(id: SidebarItemId, by: number) {
++		const ids = [...order.value]
++		const from = ids.indexOf(id)
++		const to = from + by
++		if (from < 0 || to < 0 || to >= ids.length) return
++
++		ids.splice(to, 0, ...ids.splice(from, 1))
++		layout.value = { order: ids, hidden: hidden.value }
++	}
++
++	/** The order the buttons were dragged into, anything unknown dropped. */
++	function setOrder(ids: SidebarItemId[]) {
++		layout.value = {
++			order: ids.filter((id) => SIDEBAR_ITEMS.includes(id)),
++			hidden: hidden.value,
++		}
++	}
++
++	function reset() {
++		layout.value = { order: [...SIDEBAR_ITEMS], hidden: [] }
++	}
++
++	return { order, hidden, isHidden, setHidden, move, setOrder, reset }
++}
+diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+index e588fa9..675de85 100644
+--- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
++++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
+@@ -6,6 +6,7 @@ import {
+ 	GaugeIcon,
  	HeartHandshakeIcon,
  	LanguagesIcon,
 +	LayoutTemplateIcon,
  	LightBulbIcon,
- 	MicrochipIcon,
  	ModrinthIcon,
-@@ -36,6 +37,7 @@ import AppearanceSettings from '@/components/ui/settings/display/AppearanceSetti
- import BehaviorSettings from '@/components/ui/settings/display/BehaviorSettings.vue'
- import FeatureFlagSettings from '@/components/ui/settings/display/FeatureFlagSettings.vue'
- import FeaturesSettings from '@/components/ui/settings/display/FeaturesSettings.vue'
-+import SidebarSettings from '@/components/ui/settings/display/SidebarSettings.vue'
- import LanguageSettings from '@/components/ui/settings/display/LanguageSettings.vue'
- import InstancesSyncedSettings from '@/components/ui/settings/instances/instances-synced-settings/index.vue'
- import JavaSettings from '@/components/ui/settings/instances/JavaSettings.vue'
-@@ -96,6 +98,15 @@ const tabs = [
+ 	PaintbrushIcon,
+@@ -41,6 +42,7 @@ import BehaviorSettings from '@/features/settings/display/behavior-settings.vue'
+ import FeatureFlagSettings from '@/features/settings/display/feature-flag-settings.vue'
+ import FeaturesSettings from '@/features/settings/display/features-settings.vue'
+ import LanguageSettings from '@/features/settings/display/language-settings.vue'
++import SidebarSettings from '@/features/settings/display/sidebar-settings.vue'
+ import JavaAndMemorySettings from '@/features/settings/instance-defaults/java-and-memory-settings/index.vue'
+ import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-hooks-settings.vue'
+ import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
+@@ -105,6 +107,15 @@ const tabs = [
  		icon: LightBulbIcon,
  		content: FeaturesSettings,
  	},
@@ -267,7 +329,7 @@ index 32a86a3..e409510 100644
  	{
  		name: defineMessage({
  			id: 'app.settings.tabs.behavior',
-@@ -247,6 +258,15 @@ function showFeatureFlags(): void {
+@@ -283,6 +294,15 @@ function showFeatureFlags(): void {
  	modal.value?.show()
  }
  
@@ -282,20 +344,27 @@ index 32a86a3..e409510 100644
 +
  function showSyncedOptions(): void {
  	const syncedOptionsTabIndex = availableTabs.value.findIndex(
- 		(tab) => tab.content === InstancesSyncedSettings,
-@@ -257,7 +277,7 @@ function showSyncedOptions(): void {
+ 		(tab) => tab.content === SyncingSettings,
+@@ -306,7 +326,14 @@ function showInstanceDefaults(tab: InstanceDefaultsTab): void {
  	modal.value?.show()
  }
  
--defineExpose({ show, showProfile, showFeatureFlags, showSyncedOptions })
-+defineExpose({ show, showProfile, showFeatureFlags, showSidebar, showSyncedOptions })
+-defineExpose({ show, showProfile, showFeatureFlags, showSyncedOptions, showInstanceDefaults })
++defineExpose({
++	show,
++	showProfile,
++	showFeatureFlags,
++	showSidebar,
++	showSyncedOptions,
++	showInstanceDefaults,
++})
  
  const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
  
-diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index 4e55cdd..9bc7ce3 100644
---- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+diff --git a/apps/app-frontend/src/features/settings/display/features-settings.vue b/apps/app-frontend/src/features/settings/display/features-settings.vue
+index 85e32a8..72c63aa 100644
+--- a/apps/app-frontend/src/features/settings/display/features-settings.vue
++++ b/apps/app-frontend/src/features/settings/display/features-settings.vue
 @@ -82,32 +82,6 @@ const messages = defineMessages({
  		id: 'app.features-settings.sidebar.title',
  		defaultMessage: 'Sidebar',
@@ -380,11 +449,11 @@ index 4e55cdd..9bc7ce3 100644
  			<div class="flex flex-col gap-2.5">
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
-diff --git a/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
+diff --git a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 new file mode 100644
 index 0000000..dc0cd1f
 --- /dev/null
-+++ b/apps/app-frontend/src/components/ui/settings/display/SidebarSettings.vue
++++ b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 @@ -0,0 +1,125 @@
 +<template>
 +	<h2 class="m-0 text-xl font-semibold text-contrast">{{ formatMessage(messages.title) }}</h2>
@@ -511,81 +580,3 @@ index 0000000..dc0cd1f
 +	opacity: 0.4;
 +}
 +</style>
-diff --git a/apps/app-frontend/src/composables/use-sidebar-layout.ts b/apps/app-frontend/src/composables/use-sidebar-layout.ts
-new file mode 100644
-index 0000000..7225c21
---- /dev/null
-+++ b/apps/app-frontend/src/composables/use-sidebar-layout.ts
-@@ -0,0 +1,72 @@
-+/**
-+ * The order of the buttons above the instances in the left sidebar, and which
-+ * of them are shown.
-+ *
-+ * This is about how the app looks on this machine, so it stays here rather than
-+ * going to Modrinth with the synced preferences.
-+ */
-+import { useStorage } from '@vueuse/core'
-+import { computed } from 'vue'
-+
-+/** The buttons, in the order upstream has them. */
-+export const SIDEBAR_ITEMS = ['home', 'discover', 'skins', 'screenshots', 'hosting'] as const
-+
-+export type SidebarItemId = (typeof SIDEBAR_ITEMS)[number]
-+
-+type SidebarLayout = {
-+	order: SidebarItemId[]
-+	hidden: SidebarItemId[]
-+}
-+
-+const layout = useStorage<SidebarLayout>('modrinth-enhanced:sidebar-layout', {
-+	order: [...SIDEBAR_ITEMS],
-+	hidden: [],
-+})
-+
-+/** The stored order, with anything unknown dropped and anything new appended. */
-+const order = computed<SidebarItemId[]>(() => {
-+	const stored = (layout.value.order ?? []).filter((id) => SIDEBAR_ITEMS.includes(id))
-+	return [...stored, ...SIDEBAR_ITEMS.filter((id) => !stored.includes(id))]
-+})
-+
-+const hidden = computed<SidebarItemId[]>(() =>
-+	(layout.value.hidden ?? []).filter((id) => SIDEBAR_ITEMS.includes(id)),
-+)
-+
-+export function useSidebarLayout() {
-+	function isHidden(id: SidebarItemId): boolean {
-+		return hidden.value.includes(id)
-+	}
-+
-+	function setHidden(id: SidebarItemId, hide: boolean) {
-+		layout.value = {
-+			order: order.value,
-+			hidden: hide ? [...hidden.value, id] : hidden.value.filter((other) => other !== id),
-+		}
-+	}
-+
-+	/** Moves a button by `by` places, as far as there is room. */
-+	function move(id: SidebarItemId, by: number) {
-+		const ids = [...order.value]
-+		const from = ids.indexOf(id)
-+		const to = from + by
-+		if (from < 0 || to < 0 || to >= ids.length) return
-+
-+		ids.splice(to, 0, ...ids.splice(from, 1))
-+		layout.value = { order: ids, hidden: hidden.value }
-+	}
-+
-+	/** The order the buttons were dragged into, anything unknown dropped. */
-+	function setOrder(ids: SidebarItemId[]) {
-+		layout.value = {
-+			order: ids.filter((id) => SIDEBAR_ITEMS.includes(id)),
-+			hidden: hidden.value,
-+		}
-+	}
-+
-+	function reset() {
-+		layout.value = { order: [...SIDEBAR_ITEMS], hidden: [] }
-+	}
-+
-+	return { order, hidden, isHidden, setHidden, move, setOrder, reset }
-+}

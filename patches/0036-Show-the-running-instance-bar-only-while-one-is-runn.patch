@@ -4,13 +4,13 @@ Date: Sat, 19 Sep 2026 02:42:55 +0200
 Subject: [PATCH] Show the running instance bar only while one is running
 
 ---
- .../src/components/ui/AppActionBar.vue        | 189 +++++++++---------
+ .../src/app/shell/title-bar/action-bar.vue    | 189 +++++++++---------
  1 file changed, 91 insertions(+), 98 deletions(-)
 
-diff --git a/apps/app-frontend/src/components/ui/AppActionBar.vue b/apps/app-frontend/src/components/ui/AppActionBar.vue
+diff --git a/apps/app-frontend/src/app/shell/title-bar/action-bar.vue b/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
 index eff399e..d4648a5 100644
---- a/apps/app-frontend/src/components/ui/AppActionBar.vue
-+++ b/apps/app-frontend/src/components/ui/AppActionBar.vue
+--- a/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
 @@ -17,106 +17,103 @@
  			<span class="text-sm text-contrast"> {{ formatMessage(messages.offline) }} </span>
  		</div>

@@ -24,11 +24,13 @@ An account is still a row in `minecraft_users`: the server's API root
 sits in the refresh token column in front of the client token, and the
 account list shows which server an account is on.
 ---
- .../src/components/ui/AccountsCard.vue        | 112 +++--
+ .../src/app/shell/sidebar/index.vue           |   1 +
+ .../app/shell/title-bar/account-switcher.vue  |  63 ++-
  .../src/components/ui/AuthlibAccountModal.vue | 334 ++++++++++++++
  .../src/components/ui/MicrosoftLogo.vue       |   8 +
- .../components/ui/TitleBarAccountSwitcher.vue |  63 ++-
  .../MinecraftRequiredModal.vue                |  23 +-
+ .../minecraft-accounts/accounts-card.vue      | 112 +++--
+ .../features/minecraft-accounts/context.ts    |   1 +
  apps/app-frontend/src/helpers/auth.js         |  26 ++
  apps/app/build.rs                             |   2 +
  apps/app/src/api/auth.rs                      |  27 ++
@@ -36,90 +38,69 @@ account list shows which server an account is on.
  packages/app-lib/src/launcher/mod.rs          |  11 +-
  packages/app-lib/src/state/minecraft_auth.rs  | 422 ++++++++++++------
  packages/app-lib/src/util/authlib_injector.rs | 138 +++++-
- 12 files changed, 1032 insertions(+), 211 deletions(-)
+ 14 files changed, 1034 insertions(+), 211 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 
-diff --git a/apps/app-frontend/src/components/ui/AccountsCard.vue b/apps/app-frontend/src/components/ui/AccountsCard.vue
-index 632483e..03a61f2 100644
---- a/apps/app-frontend/src/components/ui/AccountsCard.vue
-+++ b/apps/app-frontend/src/components/ui/AccountsCard.vue
-@@ -9,14 +9,23 @@
- 			<SpinnerIcon v-else class="animate-spin" />
- 			{{ formatMessage(messages.signInToMinecraft) }}
- 		</Button>
--		<Button @click="elyAccountModal?.show($event)">
--			<KeyIcon />
--			{{ formatMessage(messages.addElyAccount) }}
--		</Button>
--		<Button @click="offlineAccountModal?.show($event)">
--			<UserIcon />
--			{{ formatMessage(messages.addOfflineAccount) }}
--		</Button>
-+		<div class="flex flex-col gap-2">
-+			<span class="text-xs font-semibold text-secondary">
-+				{{ formatMessage(messages.otherAccounts) }}
-+			</span>
-+			<Button @click="elyAccountModal?.show($event)">
-+				<KeyIcon />
-+				{{ formatMessage(messages.ely) }}
-+			</Button>
-+			<Button @click="authlibAccountModal?.show($event)">
-+				<GlobeIcon />
-+				{{ formatMessage(messages.customServer) }}
-+			</Button>
-+			<Button @click="offlineAccountModal?.show($event)">
-+				<UserIcon />
-+				{{ formatMessage(messages.offline) }}
-+			</Button>
-+		</div>
- 	</div>
- 	<Accordion
- 		v-else
-@@ -55,16 +64,21 @@
- 						/>
- 						<RadioButtonIcon v-else class="w-5 h-5 text-secondary shrink-0" />
- 						<Avatar :src="getAccountAvatarUrl(account)" size="24px" />
--						<p
--							class="m-0 truncate min-w-0"
--							:class="
--								selectedAccount && selectedAccount.profile.id === account.profile.id
--									? 'text-contrast font-semibold'
--									: 'text-primary'
--							"
+diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
+index 1f45546..a5ac154 100644
+--- a/apps/app-frontend/src/app/shell/sidebar/index.vue
++++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
+@@ -59,6 +59,7 @@ const minecraftAccounts = computed<MinecraftAccountsActions | null>(() => {
+ 		loginDisabled: card.loginDisabled,
+ 		showOfflineAccountModal: card.showOfflineAccountModal,
+ 		showElyAccountModal: card.showElyAccountModal,
++		showAuthlibAccountModal: card.showAuthlibAccountModal,
+ 		refreshValues: card.refreshValues,
+ 		setEquippedSkin: card.setEquippedSkin,
+ 		setLoginDisabled: card.setLoginDisabled,
+diff --git a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
+index 4eea008..3d5d173 100644
+--- a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
+@@ -22,7 +22,7 @@
+ 			<DropdownIcon class="size-4 text-secondary" />
+ 		</template>
+ 		<template #panel="{ close }">
+-			<div class="flex w-64 flex-col gap-1 p-2">
++			<div class="flex w-56 flex-col gap-1 p-2">
+ 				<div
+ 					v-for="account in card.accounts"
+ 					:key="account.profile.id"
+@@ -35,11 +35,16 @@
+ 						<RadioButtonCheckedIcon v-if="isSelected(account)" class="size-5 shrink-0 text-brand" />
+ 						<RadioButtonIcon v-else class="size-5 shrink-0 text-secondary" />
+ 						<Avatar :src="card.getAccountAvatarUrl(account)" size="24px" />
+-						<span
+-							class="min-w-0 truncate"
+-							:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
 -						>
 -							{{ account.profile.name }}
--						</p>
-+						<div class="flex flex-col items-start min-w-0">
-+							<p
-+								class="m-0 truncate max-w-full"
-+								:class="
-+									selectedAccount && selectedAccount.profile.id === account.profile.id
-+										? 'text-contrast font-semibold'
-+										: 'text-primary'
-+								"
++						<span class="flex min-w-0 flex-col">
++							<span
++								class="truncate"
++								:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
 +							>
 +								{{ account.profile.name }}
-+							</p>
-+							<span v-if="account.auth_server" class="truncate max-w-full text-secondary text-xs">
++							</span>
++							<span v-if="account.auth_server" class="truncate text-xs text-secondary">
 +								{{ account.auth_server }}
 +							</span>
-+						</div>
+ 						</span>
  					</button>
- 					<IconButton
- 						v-tooltip="formatMessage(messages.removeAccount)"
-@@ -79,28 +93,37 @@
+ 					<!-- The menu stays open, so what is left is on show. -->
+@@ -55,14 +60,17 @@
+ 					</IconButton>
  				</div>
- 			</template>
- 			<div class="flex flex-col gap-2 px-2 pt-2">
-+				<span class="px-1 text-xs font-semibold text-secondary">
+ 				<div v-if="card.accounts.length" class="my-1 h-px bg-surface-5" />
++				<span class="px-2 pb-0.5 pt-1 text-xs font-semibold text-secondary">
 +					{{ formatMessage(messages.addAccount) }}
 +				</span>
  				<Button
--					v-if="accounts.length > 0"
- 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
- 					:disabled="loginDisabled"
- 					@click="login()"
+ 					type="quiet"
+ 					class="!justify-start"
+ 					:disabled="card.loginDisabled"
+ 					@click="(event: MouseEvent) => add(close, () => card?.login(event))"
  				>
 -					<PlusIcon />
 -					{{ formatMessage(messages.addAccount) }}
@@ -127,112 +108,59 @@ index 632483e..03a61f2 100644
 +					{{ formatMessage(messages.microsoft) }}
  				</Button>
  				<Button
- 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
- 					@click="elyAccountModal?.show($event)"
+ 					type="quiet"
+@@ -70,7 +78,15 @@
+ 					@click="(event: MouseEvent) => add(close, () => card?.showElyAccountModal(event))"
  				>
  					<KeyIcon />
 -					{{ formatMessage(messages.addElyAccount) }}
 +					{{ formatMessage(messages.ely) }}
 +				</Button>
 +				<Button
-+					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
-+					@click="authlibAccountModal?.show($event)"
++					type="quiet"
++					class="!justify-start"
++					@click="(event: MouseEvent) => add(close, () => card?.showAuthlibAccountModal(event))"
 +				>
 +					<GlobeIcon />
 +					{{ formatMessage(messages.customServer) }}
  				</Button>
  				<Button
- 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
- 					@click="offlineAccountModal?.show($event)"
+ 					type="quiet"
+@@ -78,7 +94,7 @@
+ 					@click="(event: MouseEvent) => add(close, () => card?.showOfflineAccountModal(event))"
  				>
  					<UserIcon />
 -					{{ formatMessage(messages.addOfflineAccount) }}
 +					{{ formatMessage(messages.offline) }}
  				</Button>
  			</div>
- 		</div>
-@@ -108,13 +131,14 @@
- 	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
- 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
- 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
-+	<AuthlibAccountModal ref="authlibAccountModal" @created="accountAdded" />
- </template>
- 
+ 		</template>
+@@ -88,8 +104,8 @@
  <script setup lang="ts">
  import {
+ 	DropdownIcon,
 +	GlobeIcon,
  	KeyIcon,
- 	LogInIcon,
 -	PlusIcon,
  	RadioButtonCheckedIcon,
  	RadioButtonIcon,
- 	SpinnerIcon,
-@@ -133,8 +157,10 @@ import {
- import type { Ref } from 'vue'
- import { computed, onUnmounted, ref } from 'vue'
+ 	TrashIcon,
+@@ -106,6 +122,7 @@ import {
+ import type { PropType } from 'vue'
  
-+import AuthlibAccountModal from '@/components/ui/AuthlibAccountModal.vue'
- import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
- import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
+ import type AccountsCard from '@/features/minecraft-accounts/accounts-card.vue'
 +import MicrosoftLogo from '@/components/ui/MicrosoftLogo.vue'
- import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
- import { useAppEvent } from '@/composables/use-app-event'
- import { trackEvent } from '@/helpers/analytics'
-@@ -160,11 +186,14 @@ type MinecraftCredential = {
- 		id: string
- 		name: string
- 	}
-+	/** The Yggdrasil server a non-Microsoft account is on, such as Ely.by. */
-+	auth_server?: string | null
- }
  
- const accounts: Ref<MinecraftCredential[]> = ref([])
- const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
- const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
-+const authlibAccountModal = ref<InstanceType<typeof AuthlibAccountModal>>()
- const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
- const loginDisabled = ref(false)
- const defaultUser = ref<string | undefined>()
-@@ -226,6 +255,10 @@ function showElyAccountModal(event?: MouseEvent) {
- 	elyAccountModal.value?.show(event)
- }
- 
-+function showAuthlibAccountModal(event?: MouseEvent) {
-+	authlibAccountModal.value?.show(event)
-+}
-+
- const selectedAccount = computed(() =>
- 	accounts.value.find((account) => account.profile.id === defaultUser.value),
- )
-@@ -248,6 +281,7 @@ defineExpose({
- 	refreshValues,
- 	showOfflineAccountModal,
- 	showElyAccountModal,
-+	showAuthlibAccountModal,
- 	setEquippedSkin,
- 	setLoginDisabled,
- 	login,
-@@ -289,7 +323,7 @@ function login(event?: MouseEvent) {
- }
- 
- async function accountAdded() {
--	// Both sign-in paths already mark the new account as the active one.
-+	// Every sign-in path already marks the new account as the active one.
- 	await refreshValues()
- 	emit('change')
- }
-@@ -317,16 +351,28 @@ const messages = defineMessages({
- 		defaultMessage: 'Not signed in',
+ type Card = InstanceType<typeof AccountsCard>
+ type Account = Card['accounts'][number]
+@@ -129,16 +146,24 @@ const messages = defineMessages({
+ 		defaultMessage: 'Select account',
  	},
  	addAccount: {
 -		id: 'minecraft-account.add-microsoft-account',
 -		defaultMessage: 'Add Microsoft account',
 +		id: 'minecraft-account.add-account',
 +		defaultMessage: 'Add account',
-+	},
-+	otherAccounts: {
-+		id: 'minecraft-account.other-accounts',
-+		defaultMessage: 'Other accounts',
 +	},
 +	microsoft: {
 +		id: 'minecraft-account.kind.microsoft',
@@ -242,16 +170,16 @@ index 632483e..03a61f2 100644
 +		id: 'minecraft-account.kind.ely',
 +		defaultMessage: 'Ely.by',
  	},
--	addOfflineAccount: {
--		id: 'minecraft-account.add-offline-account',
--		defaultMessage: 'Add offline account',
+-	addElyAccount: {
+-		id: 'minecraft-account.add-ely-account',
+-		defaultMessage: 'Add Ely.by account',
 +	customServer: {
 +		id: 'minecraft-account.kind.custom-server',
 +		defaultMessage: 'Custom server',
  	},
--	addElyAccount: {
--		id: 'minecraft-account.add-ely-account',
--		defaultMessage: 'Add Ely.by account',
+-	addOfflineAccount: {
+-		id: 'minecraft-account.add-offline-account',
+-		defaultMessage: 'Add offline account',
 +	offline: {
 +		id: 'minecraft-account.kind.offline',
 +		defaultMessage: 'Offline',
@@ -612,140 +540,8 @@ index 0000000..6d1fd75
 +		<rect x="10.75" y="10.75" width="9.25" height="9.25" />
 +	</svg>
 +</template>
-diff --git a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
-index 70ab9e9..b21fae7 100644
---- a/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
-+++ b/apps/app-frontend/src/components/ui/TitleBarAccountSwitcher.vue
-@@ -22,7 +22,7 @@
- 			<DropdownIcon class="size-4 text-secondary" />
- 		</template>
- 		<template #panel="{ close }">
--			<div class="flex w-64 flex-col gap-1 p-2">
-+			<div class="flex w-56 flex-col gap-1 p-2">
- 				<div
- 					v-for="account in card.accounts"
- 					:key="account.profile.id"
-@@ -35,11 +35,16 @@
- 						<RadioButtonCheckedIcon v-if="isSelected(account)" class="size-5 shrink-0 text-brand" />
- 						<RadioButtonIcon v-else class="size-5 shrink-0 text-secondary" />
- 						<Avatar :src="card.getAccountAvatarUrl(account)" size="24px" />
--						<span
--							class="min-w-0 truncate"
--							:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
--						>
--							{{ account.profile.name }}
-+						<span class="flex min-w-0 flex-col">
-+							<span
-+								class="truncate"
-+								:class="isSelected(account) ? 'font-semibold text-contrast' : 'text-primary'"
-+							>
-+								{{ account.profile.name }}
-+							</span>
-+							<span v-if="account.auth_server" class="truncate text-xs text-secondary">
-+								{{ account.auth_server }}
-+							</span>
- 						</span>
- 					</button>
- 					<!-- The menu stays open, so what is left is on show. -->
-@@ -55,14 +60,17 @@
- 					</IconButton>
- 				</div>
- 				<div v-if="card.accounts.length" class="my-1 h-px bg-surface-5" />
-+				<span class="px-2 pb-0.5 pt-1 text-xs font-semibold text-secondary">
-+					{{ formatMessage(messages.addAccount) }}
-+				</span>
- 				<Button
- 					type="quiet"
- 					class="!justify-start"
- 					:disabled="card.loginDisabled"
- 					@click="(event: MouseEvent) => add(close, () => card?.login(event))"
- 				>
--					<PlusIcon />
--					{{ formatMessage(messages.addAccount) }}
-+					<MicrosoftLogo />
-+					{{ formatMessage(messages.microsoft) }}
- 				</Button>
- 				<Button
- 					type="quiet"
-@@ -70,7 +78,15 @@
- 					@click="(event: MouseEvent) => add(close, () => card?.showElyAccountModal(event))"
- 				>
- 					<KeyIcon />
--					{{ formatMessage(messages.addElyAccount) }}
-+					{{ formatMessage(messages.ely) }}
-+				</Button>
-+				<Button
-+					type="quiet"
-+					class="!justify-start"
-+					@click="(event: MouseEvent) => add(close, () => card?.showAuthlibAccountModal(event))"
-+				>
-+					<GlobeIcon />
-+					{{ formatMessage(messages.customServer) }}
- 				</Button>
- 				<Button
- 					type="quiet"
-@@ -78,7 +94,7 @@
- 					@click="(event: MouseEvent) => add(close, () => card?.showOfflineAccountModal(event))"
- 				>
- 					<UserIcon />
--					{{ formatMessage(messages.addOfflineAccount) }}
-+					{{ formatMessage(messages.offline) }}
- 				</Button>
- 			</div>
- 		</template>
-@@ -88,8 +104,8 @@
- <script setup lang="ts">
- import {
- 	DropdownIcon,
-+	GlobeIcon,
- 	KeyIcon,
--	PlusIcon,
- 	RadioButtonCheckedIcon,
- 	RadioButtonIcon,
- 	TrashIcon,
-@@ -106,6 +122,7 @@ import {
- import type { PropType } from 'vue'
- 
- import type AccountsCard from '@/components/ui/AccountsCard.vue'
-+import MicrosoftLogo from '@/components/ui/MicrosoftLogo.vue'
- 
- type Card = InstanceType<typeof AccountsCard>
- type Account = Card['accounts'][number]
-@@ -129,16 +146,24 @@ const messages = defineMessages({
- 		defaultMessage: 'Select account',
- 	},
- 	addAccount: {
--		id: 'minecraft-account.add-microsoft-account',
--		defaultMessage: 'Add Microsoft account',
-+		id: 'minecraft-account.add-account',
-+		defaultMessage: 'Add account',
-+	},
-+	microsoft: {
-+		id: 'minecraft-account.kind.microsoft',
-+		defaultMessage: 'Microsoft',
-+	},
-+	ely: {
-+		id: 'minecraft-account.kind.ely',
-+		defaultMessage: 'Ely.by',
- 	},
--	addElyAccount: {
--		id: 'minecraft-account.add-ely-account',
--		defaultMessage: 'Add Ely.by account',
-+	customServer: {
-+		id: 'minecraft-account.kind.custom-server',
-+		defaultMessage: 'Custom server',
- 	},
--	addOfflineAccount: {
--		id: 'minecraft-account.add-offline-account',
--		defaultMessage: 'Add offline account',
-+	offline: {
-+		id: 'minecraft-account.kind.offline',
-+		defaultMessage: 'Offline',
- 	},
- 	removeAccount: {
- 		id: 'minecraft-account.remove-account',
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 341ccdc..99695db 100644
+index 262311e..fc2cbf5 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -45,11 +45,15 @@
@@ -772,7 +568,7 @@ index 341ccdc..99695db 100644
 -import { KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
 +import { GlobeIcon, KeyIcon, MessagesSquareIcon, UserIcon } from '@modrinth/assets'
  import { Button, ButtonLink, defineMessages, NewModal, useVIntl } from '@modrinth/ui'
- import { inject, type Ref, ref } from 'vue'
+ import { ref } from 'vue'
  
 @@ -114,15 +118,19 @@ const messages = defineMessages({
  	offlineHint: {
@@ -798,17 +594,247 @@ index 341ccdc..99695db 100644
  })
  
 @@ -147,6 +155,11 @@ function addElyAccount(event: MouseEvent) {
- 	accountsCard.value?.showElyAccountModal(event)
+ 	minecraftAccounts.value?.showElyAccountModal(event)
  }
  
 +function addAuthlibAccount(event: MouseEvent) {
 +	modal.value?.hide()
-+	accountsCard.value?.showAuthlibAccountModal(event)
++	minecraftAccounts.value?.showAuthlibAccountModal(event)
 +}
 +
  defineExpose({
  	show,
  })
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+index 632483e..03a61f2 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
++++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
+@@ -9,14 +9,23 @@
+ 			<SpinnerIcon v-else class="animate-spin" />
+ 			{{ formatMessage(messages.signInToMinecraft) }}
+ 		</Button>
+-		<Button @click="elyAccountModal?.show($event)">
+-			<KeyIcon />
+-			{{ formatMessage(messages.addElyAccount) }}
+-		</Button>
+-		<Button @click="offlineAccountModal?.show($event)">
+-			<UserIcon />
+-			{{ formatMessage(messages.addOfflineAccount) }}
+-		</Button>
++		<div class="flex flex-col gap-2">
++			<span class="text-xs font-semibold text-secondary">
++				{{ formatMessage(messages.otherAccounts) }}
++			</span>
++			<Button @click="elyAccountModal?.show($event)">
++				<KeyIcon />
++				{{ formatMessage(messages.ely) }}
++			</Button>
++			<Button @click="authlibAccountModal?.show($event)">
++				<GlobeIcon />
++				{{ formatMessage(messages.customServer) }}
++			</Button>
++			<Button @click="offlineAccountModal?.show($event)">
++				<UserIcon />
++				{{ formatMessage(messages.offline) }}
++			</Button>
++		</div>
+ 	</div>
+ 	<Accordion
+ 		v-else
+@@ -55,16 +64,21 @@
+ 						/>
+ 						<RadioButtonIcon v-else class="w-5 h-5 text-secondary shrink-0" />
+ 						<Avatar :src="getAccountAvatarUrl(account)" size="24px" />
+-						<p
+-							class="m-0 truncate min-w-0"
+-							:class="
+-								selectedAccount && selectedAccount.profile.id === account.profile.id
+-									? 'text-contrast font-semibold'
+-									: 'text-primary'
+-							"
+-						>
+-							{{ account.profile.name }}
+-						</p>
++						<div class="flex flex-col items-start min-w-0">
++							<p
++								class="m-0 truncate max-w-full"
++								:class="
++									selectedAccount && selectedAccount.profile.id === account.profile.id
++										? 'text-contrast font-semibold'
++										: 'text-primary'
++								"
++							>
++								{{ account.profile.name }}
++							</p>
++							<span v-if="account.auth_server" class="truncate max-w-full text-secondary text-xs">
++								{{ account.auth_server }}
++							</span>
++						</div>
+ 					</button>
+ 					<IconButton
+ 						v-tooltip="formatMessage(messages.removeAccount)"
+@@ -79,28 +93,37 @@
+ 				</div>
+ 			</template>
+ 			<div class="flex flex-col gap-2 px-2 pt-2">
++				<span class="px-1 text-xs font-semibold text-secondary">
++					{{ formatMessage(messages.addAccount) }}
++				</span>
+ 				<Button
+-					v-if="accounts.length > 0"
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					:disabled="loginDisabled"
+ 					@click="login()"
+ 				>
+-					<PlusIcon />
+-					{{ formatMessage(messages.addAccount) }}
++					<MicrosoftLogo />
++					{{ formatMessage(messages.microsoft) }}
+ 				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="elyAccountModal?.show($event)"
+ 				>
+ 					<KeyIcon />
+-					{{ formatMessage(messages.addElyAccount) }}
++					{{ formatMessage(messages.ely) }}
++				</Button>
++				<Button
++					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
++					@click="authlibAccountModal?.show($event)"
++				>
++					<GlobeIcon />
++					{{ formatMessage(messages.customServer) }}
+ 				</Button>
+ 				<Button
+ 					class="w-full !bg-button-bg !text-primary ![box-shadow:var(--shadow-button)]"
+ 					@click="offlineAccountModal?.show($event)"
+ 				>
+ 					<UserIcon />
+-					{{ formatMessage(messages.addOfflineAccount) }}
++					{{ formatMessage(messages.offline) }}
+ 				</Button>
+ 			</div>
+ 		</div>
+@@ -108,13 +131,14 @@
+ 	<MicrosoftLoginModal ref="microsoftLoginModal" @created="accountAdded" />
+ 	<OfflineAccountModal ref="offlineAccountModal" @created="accountAdded" />
+ 	<ElyAccountModal ref="elyAccountModal" @created="accountAdded" />
++	<AuthlibAccountModal ref="authlibAccountModal" @created="accountAdded" />
+ </template>
+ 
+ <script setup lang="ts">
+ import {
++	GlobeIcon,
+ 	KeyIcon,
+ 	LogInIcon,
+-	PlusIcon,
+ 	RadioButtonCheckedIcon,
+ 	RadioButtonIcon,
+ 	SpinnerIcon,
+@@ -133,8 +157,10 @@ import {
+ import type { Ref } from 'vue'
+ import { computed, onUnmounted, ref } from 'vue'
+ 
++import AuthlibAccountModal from '@/components/ui/AuthlibAccountModal.vue'
+ import ElyAccountModal from '@/components/ui/ElyAccountModal.vue'
+ import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal.vue'
++import MicrosoftLogo from '@/components/ui/MicrosoftLogo.vue'
+ import OfflineAccountModal from '@/components/ui/OfflineAccountModal.vue'
+ import { useAppEvent } from '@/composables/use-app-event'
+ import { trackEvent } from '@/helpers/analytics'
+@@ -160,11 +186,14 @@ type MinecraftCredential = {
+ 		id: string
+ 		name: string
+ 	}
++	/** The Yggdrasil server a non-Microsoft account is on, such as Ely.by. */
++	auth_server?: string | null
+ }
+ 
+ const accounts: Ref<MinecraftCredential[]> = ref([])
+ const offlineAccountModal = ref<InstanceType<typeof OfflineAccountModal>>()
+ const elyAccountModal = ref<InstanceType<typeof ElyAccountModal>>()
++const authlibAccountModal = ref<InstanceType<typeof AuthlibAccountModal>>()
+ const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
+ const loginDisabled = ref(false)
+ const defaultUser = ref<string | undefined>()
+@@ -226,6 +255,10 @@ function showElyAccountModal(event?: MouseEvent) {
+ 	elyAccountModal.value?.show(event)
+ }
+ 
++function showAuthlibAccountModal(event?: MouseEvent) {
++	authlibAccountModal.value?.show(event)
++}
++
+ const selectedAccount = computed(() =>
+ 	accounts.value.find((account) => account.profile.id === defaultUser.value),
+ )
+@@ -248,6 +281,7 @@ defineExpose({
+ 	refreshValues,
+ 	showOfflineAccountModal,
+ 	showElyAccountModal,
++	showAuthlibAccountModal,
+ 	setEquippedSkin,
+ 	setLoginDisabled,
+ 	login,
+@@ -289,7 +323,7 @@ function login(event?: MouseEvent) {
+ }
+ 
+ async function accountAdded() {
+-	// Both sign-in paths already mark the new account as the active one.
++	// Every sign-in path already marks the new account as the active one.
+ 	await refreshValues()
+ 	emit('change')
+ }
+@@ -317,16 +351,28 @@ const messages = defineMessages({
+ 		defaultMessage: 'Not signed in',
+ 	},
+ 	addAccount: {
+-		id: 'minecraft-account.add-microsoft-account',
+-		defaultMessage: 'Add Microsoft account',
++		id: 'minecraft-account.add-account',
++		defaultMessage: 'Add account',
++	},
++	otherAccounts: {
++		id: 'minecraft-account.other-accounts',
++		defaultMessage: 'Other accounts',
++	},
++	microsoft: {
++		id: 'minecraft-account.kind.microsoft',
++		defaultMessage: 'Microsoft',
++	},
++	ely: {
++		id: 'minecraft-account.kind.ely',
++		defaultMessage: 'Ely.by',
+ 	},
+-	addOfflineAccount: {
+-		id: 'minecraft-account.add-offline-account',
+-		defaultMessage: 'Add offline account',
++	customServer: {
++		id: 'minecraft-account.kind.custom-server',
++		defaultMessage: 'Custom server',
+ 	},
+-	addElyAccount: {
+-		id: 'minecraft-account.add-ely-account',
+-		defaultMessage: 'Add Ely.by account',
++	offline: {
++		id: 'minecraft-account.kind.offline',
++		defaultMessage: 'Offline',
+ 	},
+ 	removeAccount: {
+ 		id: 'minecraft-account.remove-account',
+diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+index fa9623e..5fa4bac 100644
+--- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
++++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
+@@ -7,6 +7,7 @@ export interface MinecraftAccountsActions {
+ 	readonly loginDisabled: boolean
+ 	showOfflineAccountModal: (event?: MouseEvent) => void
+ 	showElyAccountModal: (event?: MouseEvent) => void
++	showAuthlibAccountModal: (event?: MouseEvent) => void
+ 	refreshValues: () => Promise<void>
+ 	setEquippedSkin: (skin: Skin) => Promise<void>
+ 	setLoginDisabled: (disabled: boolean) => void
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
 index 9b2408e..f4d24a1 100644
 --- a/apps/app-frontend/src/helpers/auth.js
@@ -847,7 +873,7 @@ index 9b2408e..f4d24a1 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 12d08ab..31f5716 100644
+index b89f379..70fb26b 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -18,6 +18,8 @@ fn main() {

@@ -757,7 +757,7 @@ index 0000000..ea86e86
 +	return listen<SitePage | null>('skin-browser-page', (event) => handler(event.payload))
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 3dfe5b1..7bdd7cd 100644
+index 50cc531..38fdcac 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -5,6 +5,7 @@ import {
@@ -776,15 +776,15 @@ index 3dfe5b1..7bdd7cd 100644
  	commonMessages,
  	ConfirmModal,
  	defineMessages,
-@@ -33,6 +35,7 @@ import EarsModIcon from '@/assets/skins/ears-mod.png'
- import type AccountsCard from '@/components/ui/AccountsCard.vue'
+@@ -31,6 +33,7 @@ import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vu
+ import EarsModIcon from '@/assets/skins/ears-mod.png'
  import EditSkinModal from '@/components/ui/skin/EditSkinModal.vue'
  import ElySkinModal from '@/components/ui/skin/ElySkinModal.vue'
 +import SkinBrowser from '@/components/ui/skin/SkinBrowser.vue'
  import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
  import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { handleSevereError } from '@/composables/use-error.js'
-@@ -52,6 +55,7 @@ import {
+@@ -51,6 +54,7 @@ import {
  	uploadElySkin,
  	wearElySkin,
  } from '@/helpers/ely_skins'
@@ -792,7 +792,7 @@ index 3dfe5b1..7bdd7cd 100644
  import type { Cape, Skin, SkinModel, SkinTextureUrl } from '@/helpers/skins.ts'
  import {
  	determineModelType,
-@@ -249,6 +253,18 @@ const messages = defineMessages({
+@@ -248,6 +252,18 @@ const messages = defineMessages({
  		id: 'app.skins.ely.failed.title',
  		defaultMessage: 'Ely.by did not take the change',
  	},
@@ -811,7 +811,7 @@ index 3dfe5b1..7bdd7cd 100644
  })
  
  const editSkinModal = useTemplateRef('editSkinModal')
-@@ -1050,6 +1066,28 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+@@ -1049,6 +1065,28 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	}
  }
  
@@ -840,7 +840,7 @@ index 3dfe5b1..7bdd7cd 100644
  /*
   * Ely.by accounts. Ely.by keeps an account's skins in its public catalogue and
   * has no API to change one, so the grid shows that catalogue, and changes are
-@@ -1477,16 +1515,16 @@ await loadAccountSkins()
+@@ -1476,16 +1514,16 @@ await loadAccountSkins()
  				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
  			>
  				<SkinPreviewRenderer
@@ -862,7 +862,7 @@ index 3dfe5b1..7bdd7cd 100644
  						<div
  							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
  						>
-@@ -1500,7 +1538,26 @@ await loadAccountSkins()
+@@ -1499,7 +1537,26 @@ await loadAccountSkins()
  							:class="{ 'has-ears-features': selectedSkinHasEarsFeatures }"
  						>
  							<div
@@ -890,7 +890,7 @@ index 3dfe5b1..7bdd7cd 100644
  								class="skin-preview-actions flex w-full items-center justify-center gap-1.5"
  								:class="selectedSkinHasEarsFeatures ? 'flex-nowrap' : 'flex-wrap'"
  							>
-@@ -1625,7 +1682,15 @@ await loadAccountSkins()
+@@ -1624,7 +1681,15 @@ await loadAccountSkins()
  		</div>
  
  		<div class="pt-2">
@@ -906,7 +906,7 @@ index 3dfe5b1..7bdd7cd 100644
  				ref="skinSectionList"
  				:saved-skins="savedSkins"
  				:default-skin-sections="defaultSkinSections"
-@@ -1656,13 +1721,13 @@ await loadAccountSkins()
+@@ -1655,13 +1720,13 @@ await loadAccountSkins()
  				class="ml-5 mt-4 flex h-[calc(80vh-1rem)] items-center justify-center max-[700px]:h-[calc(50vh-1rem)]"
  			>
  				<SkinPreviewRenderer
@@ -924,7 +924,7 @@ index 3dfe5b1..7bdd7cd 100644
  						<div
  							class="flex items-center justify-center gap-1.5 rounded-full border border-solid border-brand-blue bg-bg-blue px-3 py-1 text-base font-semibold leading-6 text-brand-blue"
  						>
-@@ -1672,7 +1737,26 @@ await loadAccountSkins()
+@@ -1671,7 +1736,26 @@ await loadAccountSkins()
  					</template>
  					<template #subtitle>
  						<div
@@ -952,7 +952,7 @@ index 3dfe5b1..7bdd7cd 100644
  							class="flex w-full flex-wrap items-center justify-center gap-1.5"
  						>
  							<Button type="base" size="lg" :disabled="elyBusy" @click="elyPending = null">
-@@ -1697,6 +1781,14 @@ await loadAccountSkins()
+@@ -1696,6 +1780,14 @@ await loadAccountSkins()
  		</div>
  
  		<div class="pt-2">
@@ -967,7 +967,7 @@ index 3dfe5b1..7bdd7cd 100644
  			<p v-if="!elyLoading && !elyCatalogue.length" class="m-0 mb-4 text-secondary">
  				{{ formatMessage(messages.elySkinsEmpty) }}
  			</p>
-@@ -1718,6 +1810,7 @@ await loadAccountSkins()
+@@ -1717,6 +1809,7 @@ await loadAccountSkins()
  				@add-skin-dragleave="onAddSkinDragLeave"
  				@add-skin-drop="onAddSkinDrop"
  			/>
@@ -976,7 +976,7 @@ index 3dfe5b1..7bdd7cd 100644
  	</div>
  
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index e690c51..12d08ab 100644
+index 27a637e..b89f379 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,19 @@ fn main() {

@@ -30,48 +30,49 @@ page headed "Sync features across devices" and would otherwise look like
 it syncs. The other two are not settings entries - a heading and a title
 bar button - so nothing there promises anything.
 ---
- apps/app-frontend/src/App.vue                 | 180 ++++++++++++++++--
- .../ui/settings/display/BehaviorSettings.vue  |  18 --
- .../ui/settings/display/FeaturesSettings.vue  |  38 +++-
- .../src/composables/use-app-settings.ts       |   4 +
- packages/app-lib/src/state/settings.rs        |   4 +
- 5 files changed, 210 insertions(+), 34 deletions(-)
+ apps/app-frontend/src/App.vue                 | 74 +++++++++++++--
+ .../src/app/shell/title-bar/index.vue         | 89 ++++++++++++++++---
+ .../src/composables/use-app-settings.ts       |  4 +
+ .../src/features/news/news-sidebar.vue        | 46 ++++++++--
+ .../settings/display/behavior-settings.vue    | 18 ----
+ .../settings/display/features-settings.vue    | 38 +++++++-
+ packages/app-lib/src/state/settings.rs        |  4 +
+ 7 files changed, 231 insertions(+), 42 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index c5d4703..f9dd80a 100644
+index 7d0ce4b..7a28771 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -10,6 +10,8 @@ import {
- } from '@modrinth/api-client'
+@@ -2,6 +2,7 @@
+ import { ModrinthApiError } from '@modrinth/api-client'
  import {
  	ArrowLeftRightIcon,
 +	CheckIcon,
-+	ChevronDownIcon,
- 	ChevronLeftIcon,
- 	ChevronRightIcon,
  	CompassIcon,
-@@ -34,6 +36,7 @@ import {
+ 	ImageIcon,
+ 	LogInIcon,
+@@ -22,6 +23,7 @@ import {
  	AccountSwitchOverlay,
  	Admonition,
  	Avatar,
 +	Button,
- 	ButtonLink,
  	commonMessages,
  	commonSettingsMessages,
-@@ -44,6 +47,7 @@ import {
+ 	ContentInstallModal,
+@@ -31,6 +33,7 @@ import {
  	I18nDebugPanel,
  	IconButton,
  	LoadingBar,
 +	NewModal,
- 	NewsArticleCard,
  	NotificationPanel,
  	PopupNotificationPanel,
-@@ -254,12 +258,42 @@ const credentials = ref()
+ 	provideLoadingState,
+@@ -218,12 +221,42 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
 +// Whether the right sidebar is folded away, remembered across restarts in the
-+// feature flags. The title bar button below is the only thing that sets it:
++// feature flags. The title bar's fold button is the only thing that sets it:
 +// upstream's "Hide right sidebar" setting, which used to be what showed that
 +// button, is gone.
  watch(
@@ -112,34 +113,10 @@ index c5d4703..f9dd80a 100644
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -358,6 +392,21 @@ useQuery({
- // ad and the gradient being drawn above it.
- const showAd = computed(() => false)
- const adConsentAvailable = computed(() => false)
-+
-+// Whether the news section in the right sidebar is folded away. Kept in the
-+// feature flags so it survives a restart, the same way the friends list
-+// remembers its collapsed sections.
-+const newsCollapsed = computed(() => appSettings.getFeatureFlag('news_collapsed'))
-+
-+function setNewsCollapsed(collapsed) {
-+	appSettings.featureFlags.news_collapsed = collapsed
-+	getSettings()
-+		.then((settings) => {
-+			settings.feature_flags.news_collapsed = collapsed
-+			return setSettings(settings)
-+		})
-+		.catch(handleError)
-+}
- providePageContext({
- 	hierarchicalSidebarAvailable: ref(true),
- 	showAds: showAd,
-@@ -588,6 +637,25 @@ const messages = defineMessages({
- 	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
- 	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
- 	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
-+	hideSidebar: { id: 'app.navigation.hide-sidebar', defaultMessage: 'Hide sidebar' },
-+	showSidebar: { id: 'app.navigation.show-sidebar', defaultMessage: 'Show sidebar' },
+@@ -502,6 +535,19 @@ const formatBytes = useFormatBytes()
+ 
+ const messages = defineMessages({
+ 	warning: { id: 'app.notification.warning', defaultMessage: 'Warning' },
 +	sidebarRememberedTitle: {
 +		id: 'app.navigation.sidebar-remembered.title',
 +		defaultMessage: 'The sidebar stays how you leave it',
@@ -153,14 +130,10 @@ index c5d4703..f9dd80a 100644
 +		id: 'app.navigation.sidebar-remembered.done',
 +		defaultMessage: 'Done',
 +	},
-+	sidebarRequired: {
-+		id: 'app.navigation.sidebar-required',
-+		defaultMessage: 'This page needs the sidebar',
-+	},
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2271,6 +2339,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2022,6 +2068,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -168,81 +141,21 @@ index c5d4703..f9dd80a 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2396,16 +2465,42 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 				<Breadcrumbs />
- 			</div>
- 			<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
--				<IconButton
--					v-if="!forceSidebar && appSettings.toggleSidebar"
--					:type="sidebarToggled ? 'base' : 'quiet'"
--					:label="formatMessage(messages.nextImage)"
--					class="mr-3 transition-transform"
--					:class="{ 'rotate-180': !sidebarToggled }"
--					@click="sidebarToggled = !sidebarToggled"
-+				<!--
-+					Stays in place on pages that need the sidebar, so the title bar does
-+					not shift. The tooltip sits on the wrapper since a disabled button
-+					gets no hover events.
-+				-->
-+				<span
-+					v-tooltip="
-+						formatMessage(
-+							forceSidebar
-+								? messages.sidebarRequired
-+								: sidebarToggled
-+									? messages.hideSidebar
-+									: messages.showSidebar,
-+						)
-+					"
-+					class="relative mr-3 flex"
- 				>
--					<RightArrowIcon />
--				</IconButton>
-+					<IconButton
-+						:type="sidebarVisible ? 'base' : 'quiet'"
-+						:label="formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)"
-+						:disabled="forceSidebar"
-+						class="transition-transform"
-+						:class="{ 'rotate-180': !sidebarVisible }"
-+						@click="setSidebarCollapsed(sidebarToggled)"
-+					>
-+						<RightArrowIcon />
-+					</IconButton>
-+					<Transition name="sidebar-saved">
-+						<span
-+							v-if="sidebarSaved && !forceSidebar"
-+							class="sidebar-saved-badge pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-brand text-brand-inverted"
-+						>
-+							<CheckIcon class="size-3" stroke-width="3" />
-+						</span>
-+					</Transition>
-+				</span>
- 				<div class="flex mr-3">
- 					<Suspense>
- 						<AppActionBar />
-@@ -2521,10 +2616,18 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 						class="p-4 border-0 border-b-[1px] border-[--brand-gradient-border] border-solid"
- 					/>
- 					<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
--						<h3 class="text-base mb-4 text-primary font-medium m-0 text-left w-full">
-+						<button
-+							class="button-base m-0 mb-4 flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-transparent p-0 text-left text-base font-medium text-primary"
-+							:aria-expanded="!newsCollapsed"
-+							@click="setNewsCollapsed(!newsCollapsed)"
-+						>
- 							{{ formatMessage(messages.news) }}
--						</h3>
--						<div class="space-y-4 flex flex-col items-center w-full">
-+							<ChevronDownIcon
-+								class="h-5 w-5 shrink-0 transition-transform"
-+								:class="{ '-rotate-90': newsCollapsed }"
-+							/>
-+						</button>
-+						<div v-if="!newsCollapsed" class="space-y-4 flex flex-col items-center w-full">
- 							<NewsArticleCard
- 								v-for="(item, index) in news"
- 								:key="`news-${index}`"
-@@ -2550,6 +2653,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2118,9 +2165,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+ 		<AppTitleBar
+ 			:can-navigate-back="canNavigateBack"
+ 			:can-navigate-forward="canNavigateForward"
+-			:show-sidebar-toggle="!forceSidebar && appSettings.toggleSidebar"
++			:sidebar-required="forceSidebar"
+ 			:sidebar-toggled="sidebarToggled"
+-			@toggle-sidebar="sidebarToggled = !sidebarToggled"
++			:sidebar-visible="sidebarVisible"
++			:sidebar-saved="sidebarSaved"
++			@toggle-sidebar="setSidebarCollapsed(sidebarToggled)"
+ 		/>
+ 	</div>
+ 	<div
+@@ -2199,6 +2248,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
@@ -264,10 +177,100 @@ index c5d4703..f9dd80a 100644
  	<ErrorModal ref="errorModal" />
  	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
  	<MinecraftRequiredModal ref="minecraftRequiredModal" />
-@@ -2762,6 +2880,38 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
- 	display: contents;
- }
+diff --git a/apps/app-frontend/src/app/shell/title-bar/index.vue b/apps/app-frontend/src/app/shell/title-bar/index.vue
+index 9a31844..e6a645d 100644
+--- a/apps/app-frontend/src/app/shell/title-bar/index.vue
++++ b/apps/app-frontend/src/app/shell/title-bar/index.vue
+@@ -1,5 +1,5 @@
+ <script setup lang="ts">
+-import { ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@modrinth/assets'
++import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@modrinth/assets'
+ import { defineMessages, IconButton, TextLogo, useVIntl } from '@modrinth/ui'
+ import { useRouter } from 'vue-router'
  
+@@ -10,8 +10,10 @@ import WindowControls from './window-controls.vue'
+ defineProps<{
+ 	canNavigateBack: boolean
+ 	canNavigateForward: boolean
+-	showSidebarToggle: boolean
++	sidebarRequired: boolean
+ 	sidebarToggled: boolean
++	sidebarVisible: boolean
++	sidebarSaved: boolean
+ }>()
+ 
+ const emit = defineEmits<{
+@@ -23,7 +25,12 @@ const { formatMessage } = useVIntl()
+ const messages = defineMessages({
+ 	goBack: { id: 'app.navigation.go-back', defaultMessage: 'Go back' },
+ 	goForward: { id: 'app.navigation.go-forward', defaultMessage: 'Go forward' },
+-	nextImage: { id: 'app.navigation.next-image', defaultMessage: 'Next image' },
++	hideSidebar: { id: 'app.navigation.hide-sidebar', defaultMessage: 'Hide sidebar' },
++	showSidebar: { id: 'app.navigation.show-sidebar', defaultMessage: 'Show sidebar' },
++	sidebarRequired: {
++		id: 'app.navigation.sidebar-required',
++		defaultMessage: 'This page needs the sidebar',
++	},
+ })
+ </script>
+ 
+@@ -63,16 +70,42 @@ const messages = defineMessages({
+ 			<Breadcrumbs />
+ 		</div>
+ 		<section data-tauri-drag-region class="flex shrink-0 ml-auto items-center">
+-			<IconButton
+-				v-if="showSidebarToggle"
+-				:type="sidebarToggled ? 'base' : 'quiet'"
+-				:label="formatMessage(messages.nextImage)"
+-				class="mr-3 transition-transform"
+-				:class="{ 'rotate-180': !sidebarToggled }"
+-				@click="emit('toggle-sidebar')"
++			<!--
++				Stays in place on pages that need the sidebar, so the title bar does
++				not shift. The tooltip sits on the wrapper since a disabled button
++				gets no hover events.
++			-->
++			<span
++				v-tooltip="
++					formatMessage(
++						sidebarRequired
++							? messages.sidebarRequired
++							: sidebarToggled
++								? messages.hideSidebar
++								: messages.showSidebar,
++					)
++				"
++				class="relative mr-3 flex"
+ 			>
+-				<RightArrowIcon />
+-			</IconButton>
++				<IconButton
++					:type="sidebarVisible ? 'base' : 'quiet'"
++					:label="formatMessage(sidebarToggled ? messages.hideSidebar : messages.showSidebar)"
++					:disabled="sidebarRequired"
++					class="transition-transform"
++					:class="{ 'rotate-180': !sidebarVisible }"
++					@click="emit('toggle-sidebar')"
++				>
++					<RightArrowIcon />
++				</IconButton>
++				<Transition name="sidebar-saved">
++					<span
++						v-if="sidebarSaved && !sidebarRequired"
++						class="sidebar-saved-badge pointer-events-none absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-brand text-brand-inverted"
++					>
++						<CheckIcon class="size-3" stroke-width="3" />
++					</span>
++				</Transition>
++			</span>
+ 			<div class="flex mr-3">
+ 				<Suspense>
+ 					<AppActionBar />
+@@ -88,4 +121,36 @@ const messages = defineMessages({
+ 	height: var(--top-bar-height);
+ 	padding-right: var(--window-controls-width, 0px);
+ }
++
 +@media (prefers-reduced-motion: no-preference) {
 +	.sidebar-saved-enter-active {
 +		transition: transform 0.35s cubic-bezier(0.15, 1.4, 0.64, 0.96);
@@ -299,14 +302,98 @@ index c5d4703..f9dd80a 100644
 +		stroke-dashoffset: 0;
 +	}
 +}
+ </style>
+diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
+index dceec83..bce1f20 100644
+--- a/apps/app-frontend/src/composables/use-app-settings.ts
++++ b/apps/app-frontend/src/composables/use-app-settings.ts
+@@ -11,6 +11,10 @@ export const DEFAULT_FEATURE_FLAGS = {
+ 	pride_fundraiser: true,
+ 	i18n_debug: false,
+ 	localhost_sign_in: false,
++	show_hosting_in_sidebar: true,
++	news_collapsed: false,
++	sidebar_fold_explained: false,
++	right_sidebar_collapsed: false,
+ }
+ 
+ export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
+diff --git a/apps/app-frontend/src/features/news/news-sidebar.vue b/apps/app-frontend/src/features/news/news-sidebar.vue
+index 17b82dc..76c7e8b 100644
+--- a/apps/app-frontend/src/features/news/news-sidebar.vue
++++ b/apps/app-frontend/src/features/news/news-sidebar.vue
+@@ -1,12 +1,23 @@
+ <script setup lang="ts">
+-import { NewspaperIcon } from '@modrinth/assets'
+-import { ButtonLink, defineMessages, NewsArticleCard, useVIntl } from '@modrinth/ui'
++import { ChevronDownIcon, NewspaperIcon } from '@modrinth/assets'
++import {
++	ButtonLink,
++	defineMessages,
++	injectNotificationManager,
++	NewsArticleCard,
++	useVIntl,
++} from '@modrinth/ui'
+ import { useQuery } from '@tanstack/vue-query'
+-import { watch } from 'vue'
++import { computed, watch } from 'vue'
 +
- @media (prefers-reduced-motion: no-preference) {
- 	.nav-button-animated-enter-active {
- 		transition: all 0.5s cubic-bezier(0.15, 1.4, 0.64, 0.96);
-diff --git a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
-index db502ad..c433de6 100644
---- a/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/display/BehaviorSettings.vue
++import { useAppSettings } from '@/composables/use-app-settings.ts'
++import { get as getSettings, set as setSettings } from '@/helpers/settings.ts'
+ 
+ import { newsArticlesQueryOptions } from './queries'
+ 
+ const { formatMessage } = useVIntl()
++const { handleError } = injectNotificationManager()
++const appSettings = useAppSettings()
+ const messages = defineMessages({
+ 	news: {
+ 		id: 'app.news.title',
+@@ -26,14 +37,37 @@ const { data: news, error } = useQuery({
+ watch(error, (error) => {
+ 	if (error) console.error('Failed to fetch news articles', error)
+ })
++
++// Whether the news section is folded away. Kept in the feature flags so it
++// survives a restart, the same way the friends list remembers its collapsed
++// sections.
++const newsCollapsed = computed(() => appSettings.getFeatureFlag('news_collapsed'))
++
++function setNewsCollapsed(collapsed: boolean) {
++	appSettings.featureFlags.news_collapsed = collapsed
++	getSettings()
++		.then((settings) => {
++			settings.feature_flags.news_collapsed = collapsed
++			return setSettings(settings)
++		})
++		.catch(handleError)
++}
+ </script>
+ 
+ <template>
+ 	<div v-if="news && news.length > 0" class="p-4 flex flex-col items-center">
+-		<h3 class="text-base mb-4 text-primary font-medium m-0 text-left w-full">
++		<button
++			class="button-base m-0 mb-4 flex w-full cursor-pointer items-center justify-between gap-2 border-0 bg-transparent p-0 text-left text-base font-medium text-primary"
++			:aria-expanded="!newsCollapsed"
++			@click="setNewsCollapsed(!newsCollapsed)"
++		>
+ 			{{ formatMessage(messages.news) }}
+-		</h3>
+-		<div class="space-y-4 flex flex-col items-center w-full">
++			<ChevronDownIcon
++				class="h-5 w-5 shrink-0 transition-transform"
++				:class="{ '-rotate-90': newsCollapsed }"
++			/>
++		</button>
++		<div v-if="!newsCollapsed" class="space-y-4 flex flex-col items-center w-full">
+ 			<NewsArticleCard v-for="item in news" :key="item.path" :article="item" />
+ 			<ButtonLink
+ 				type="colored"
+diff --git a/apps/app-frontend/src/features/settings/display/behavior-settings.vue b/apps/app-frontend/src/features/settings/display/behavior-settings.vue
+index 7166d1e..280b531 100644
+--- a/apps/app-frontend/src/features/settings/display/behavior-settings.vue
++++ b/apps/app-frontend/src/features/settings/display/behavior-settings.vue
 @@ -79,14 +79,6 @@ const messages = defineMessages({
  		id: 'app.appearance-settings.default-landing-page.library',
  		defaultMessage: 'Library',
@@ -339,13 +426,13 @@ index db502ad..c433de6 100644
  		</div>
  	</section>
  
-diff --git a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-index 6ba67a9..2edfeb8 100644
---- a/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
-+++ b/apps/app-frontend/src/components/ui/settings/display/FeaturesSettings.vue
+diff --git a/apps/app-frontend/src/features/settings/display/features-settings.vue b/apps/app-frontend/src/features/settings/display/features-settings.vue
+index 8ad37cf..b974c00 100644
+--- a/apps/app-frontend/src/features/settings/display/features-settings.vue
++++ b/apps/app-frontend/src/features/settings/display/features-settings.vue
 @@ -12,7 +12,11 @@ import {
  import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
- import { inject, onBeforeUnmount, onMounted } from 'vue'
+ import { onBeforeUnmount, onMounted } from 'vue'
  
 -import { useAppSettings } from '@/composables/use-app-settings.ts'
 +import {
@@ -356,7 +443,7 @@ index 6ba67a9..2edfeb8 100644
  import {
  	QUICK_INSTANCE_LIMIT_MAX,
  	useQuickInstanceLimit,
-@@ -38,6 +42,8 @@ const settingsModal = inject(appSettingsModalContextKey, null)
+@@ -38,6 +42,8 @@ const settingsModal = injectAppSettingsModal()
  const quickInstances = useQuickInstanceLimit()
  const queryClient = useQueryClient()
  
@@ -437,21 +524,6 @@ index 6ba67a9..2edfeb8 100644
  			<div class="flex flex-col gap-2.5">
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
-diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index dceec83..bce1f20 100644
---- a/apps/app-frontend/src/composables/use-app-settings.ts
-+++ b/apps/app-frontend/src/composables/use-app-settings.ts
-@@ -11,6 +11,10 @@ export const DEFAULT_FEATURE_FLAGS = {
- 	pride_fundraiser: true,
- 	i18n_debug: false,
- 	localhost_sign_in: false,
-+	show_hosting_in_sidebar: true,
-+	news_collapsed: false,
-+	sidebar_fold_explained: false,
-+	right_sidebar_collapsed: false,
- }
- 
- export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
 index 47490ad..7797e78 100644
 --- a/packages/app-lib/src/state/settings.rs

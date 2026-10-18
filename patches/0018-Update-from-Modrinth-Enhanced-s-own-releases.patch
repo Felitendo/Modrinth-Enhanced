@@ -19,10 +19,10 @@ get a notice with a button to the release on GitHub.
  3 files changed, 76 insertions(+), 21 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 0a55cb4..9679884 100644
+index 10335e0..2e38416 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -1903,9 +1903,13 @@ const updatePopupMessages = defineMessages({
+@@ -1631,9 +1631,13 @@ const updatePopupMessages = defineMessages({
  		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
  	},
  	linuxBody: {
@@ -38,7 +38,7 @@ index 0a55cb4..9679884 100644
  	},
  	reload: {
  		id: 'app.update-popup.reload',
-@@ -2080,28 +2084,47 @@ async function checkUpdates() {
+@@ -1808,28 +1812,47 @@ async function checkUpdates() {
  	)
  }
  
