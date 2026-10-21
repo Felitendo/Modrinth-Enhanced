@@ -1153,10 +1153,10 @@ index 0000000..cfd0d8c
 +        .into()
 +}
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 8231367..96cc15a 100644
+index 975b5fe..7dafff0 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -308,6 +308,7 @@ fn main() {
+@@ -309,6 +309,7 @@ fn main() {
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())
          .plugin(api::crash_analysis::init())

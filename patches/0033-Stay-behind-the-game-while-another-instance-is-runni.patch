@@ -8,10 +8,10 @@ Subject: [PATCH] Stay behind the game while another instance is running
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index 4c9ea57..c242fea 100644
+index f278b0f..0390f34 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
-@@ -1063,8 +1063,11 @@ impl Process {
+@@ -1118,8 +1118,11 @@ impl Process {
  
          let _ = state.friends_socket.update_status(None).await;
  

@@ -1272,10 +1272,10 @@ index 693bc86..15a5c1e 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 8500c92..04be546 100644
+index f8d0840..07b9fab 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -306,6 +306,7 @@ fn main() {
+@@ -307,6 +307,7 @@ fn main() {
  
      builder = builder
          .plugin(api::auth::init())

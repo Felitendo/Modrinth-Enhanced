@@ -536,7 +536,7 @@ index 9f7b215..d750bdf 100644
  pub use self::screenshot_groups::{
      ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 4e46190..1d01c06 100644
+index f024d0f..d764ed9 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -20,6 +20,25 @@ pub enum QuickPlayType {
@@ -583,10 +583,10 @@ index 4e46190..1d01c06 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      let settings = Settings::get(&state.pool).await?;
-@@ -256,6 +277,7 @@ async fn run_credentials(
-         post_exit_hook,
+@@ -257,6 +278,7 @@ async fn run_credentials(
          &context,
          quick_play_type,
+         &state,
 +        additional,
      )
      .await
@@ -651,20 +651,20 @@ index 04fadf0..b6afa3a 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 4038e7f..a11ee2d 100644
+index da7eb3c..99a7061 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -886,6 +886,9 @@ pub async fn launch_minecraft(
-     post_exit_hook: Option<String>,
+@@ -906,6 +906,9 @@ pub async fn launch_minecraft(
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
+     state: &Arc<State>,
 +    // Whether this is another copy of an instance that is already running,
 +    // asked for on purpose.
 +    additional: bool,
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -1015,21 +1018,27 @@ pub async fn launch_minecraft(
+@@ -1039,21 +1042,27 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
@@ -677,7 +677,7 @@ index 4038e7f..a11ee2d 100644
 -        ))
 -        .as_error());
 -    }
--    if crate::state::instance_has_running_process(&instance.id, &state).await? {
+-    if crate::state::instance_has_running_process(&instance.id, state).await? {
 -        return Err(crate::ErrorKind::LauncherError(format!(
 -            "Instance {} is already running",
 -            instance.id
@@ -695,7 +695,7 @@ index 4038e7f..a11ee2d 100644
 +            ))
 +            .as_error());
 +        }
-+        if crate::state::instance_has_running_process(&instance.id, &state)
++        if crate::state::instance_has_running_process(&instance.id, state)
 +            .await?
 +        {
 +            return Err(crate::ErrorKind::LauncherError(format!(
@@ -707,19 +707,19 @@ index 4038e7f..a11ee2d 100644
      }
  
      if let Some(path) = download::missing_runtime_file(
-@@ -1265,7 +1274,10 @@ pub async fn launch_minecraft(
+@@ -1289,7 +1298,10 @@ pub async fn launch_minecraft(
      let _store_lease = state.content_store.lease().await;
      state.content_store.recover(Some(&instance.id)).await?;
      // state.content_store.validate_instance(instance).await?;
--    if crate::state::instance_has_running_process(&instance.id, &state).await? {
+-    if crate::state::instance_has_running_process(&instance.id, state).await? {
 +    if !additional
-+        && crate::state::instance_has_running_process(&instance.id, &state)
++        && crate::state::instance_has_running_process(&instance.id, state)
 +            .await?
 +    {
          return Err(crate::ErrorKind::LauncherError(format!(
              "Instance {} is already running",
              instance.id
-@@ -1312,6 +1324,8 @@ pub async fn launch_minecraft(
+@@ -1336,6 +1348,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,
@@ -729,10 +729,10 @@ index 4038e7f..a11ee2d 100644
              post_exit_hook,
              env_args,
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index 45471b9..4c9ea57 100644
+index 4cd3943..f278b0f 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
-@@ -47,37 +47,74 @@ impl LogRingBuffer {
+@@ -49,37 +49,74 @@ impl LogRingBuffer {
      fn get_all(&self) -> Vec<String> {
          self.lines.iter().cloned().collect()
      }
@@ -821,7 +821,7 @@ index 45471b9..4c9ea57 100644
  }
  
  async fn clear_persisted_process(
-@@ -171,6 +208,10 @@ impl ProcessManager {
+@@ -203,6 +240,10 @@ impl ProcessManager {
          instance_id: &str,
          instance_path: &str,
          instance_name: &str,
@@ -832,7 +832,7 @@ index 45471b9..4c9ea57 100644
          mut mc_command: Command,
          post_exit_command: Option<String>,
          post_exit_env_vars: Vec<(String, String)>,
-@@ -200,13 +241,17 @@ impl ProcessManager {
+@@ -233,13 +274,17 @@ impl ProcessManager {
  
          let log_path = logs_folder.join(LAUNCHER_LOG_PATH);
  
@@ -852,7 +852,7 @@ index 45471b9..4c9ea57 100644
                  .open(&log_path)
                  .map_err(|e| IOError::with_path(e, &log_path))?;
  
-@@ -219,6 +264,10 @@ impl ProcessManager {
+@@ -252,6 +297,10 @@ impl ProcessManager {
              .map_err(|e| IOError::with_path(e, &log_path))?;
              writeln!(log_file, "# Instance: {instance_path} \n")
                  .map_err(|e| IOError::with_path(e, &log_path))?;
@@ -863,7 +863,7 @@ index 45471b9..4c9ea57 100644
              writeln!(log_file).map_err(|e| IOError::with_path(e, &log_path))?;
          }
  
-@@ -230,11 +279,12 @@ impl ProcessManager {
+@@ -263,11 +312,12 @@ impl ProcessManager {
  
          let mut process = Process {
              metadata: ProcessMetadata {
@@ -877,10 +877,10 @@ index 45471b9..4c9ea57 100644
              },
              child: mc_proc,
              rpc_server,
-@@ -297,10 +347,12 @@ impl ProcessManager {
- 
+@@ -324,10 +374,12 @@ impl ProcessManager {
              let instance_id = metadata.instance_id.clone();
              let instance_path = metadata.instance_path.clone();
+             let pool = state.pool.clone();
 +            let process_uuid = metadata.uuid;
              tokio::spawn(async move {
                  Process::process_output(
@@ -890,10 +890,10 @@ index 45471b9..4c9ea57 100644
                      stdout,
                      log_path_clone,
                      xml_logging,
-@@ -314,10 +366,12 @@ impl ProcessManager {
- 
+@@ -343,10 +395,12 @@ impl ProcessManager {
              let instance_id = metadata.instance_id.clone();
              let instance_path = metadata.instance_path.clone();
+             let pool = state.pool.clone();
 +            let process_uuid = metadata.uuid;
              tokio::spawn(async move {
                  Process::process_output(
@@ -903,7 +903,7 @@ index 45471b9..4c9ea57 100644
                      stderr,
                      log_path_clone,
                      xml_logging,
-@@ -400,6 +454,10 @@ pub struct ProcessMetadata {
+@@ -431,6 +485,10 @@ pub struct ProcessMetadata {
      pub instance_id: String,
      pub instance_path: String,
      pub instance_name: String,
@@ -914,7 +914,7 @@ index 45471b9..4c9ea57 100644
      pub start_time: DateTime<Utc>,
  }
  
-@@ -429,6 +487,7 @@ impl Process {
+@@ -460,6 +518,7 @@ impl Process {
      async fn process_output<R>(
          instance_id: &str,
          _instance_path: &str,
@@ -922,7 +922,7 @@ index 45471b9..4c9ea57 100644
          reader: R,
          log_path: impl AsRef<Path>,
          xml_logging: bool,
-@@ -555,6 +614,7 @@ impl Process {
+@@ -587,6 +646,7 @@ impl Process {
  
                                  Self::emit_log4j_event(
                                      instance_id,
@@ -930,7 +930,7 @@ index 45471b9..4c9ea57 100644
                                      &current_event,
                                  );
                              }
-@@ -599,6 +659,7 @@ impl Process {
+@@ -632,6 +692,7 @@ impl Process {
  
                                      Self::emit_log4j_event(
                                          instance_id,
@@ -938,7 +938,7 @@ index 45471b9..4c9ea57 100644
                                          &current_event,
                                      );
                                  }
-@@ -625,7 +686,11 @@ impl Process {
+@@ -658,7 +719,11 @@ impl Process {
                                      e
                                  );
                              }
@@ -951,7 +951,7 @@ index 45471b9..4c9ea57 100644
                          }
                      }
                      Ok(Event::CData(e)) => {
-@@ -652,7 +717,11 @@ impl Process {
+@@ -685,7 +750,11 @@ impl Process {
                      if let Err(e) = Self::append_to_log_file(&log_path, &line) {
                          tracing::warn!("Failed to write to log file: {}", e);
                      }
@@ -964,7 +964,7 @@ index 45471b9..4c9ea57 100644
                      if let Err(e) = Self::maybe_handle_old_server_join_logging(
                          instance_id,
                          line.trim_ascii_end(),
-@@ -711,13 +780,17 @@ impl Process {
+@@ -745,13 +814,17 @@ impl Process {
          ))
      }
  
@@ -985,7 +985,7 @@ index 45471b9..4c9ea57 100644
              }
          }
  
-@@ -726,6 +799,7 @@ impl Process {
+@@ -760,6 +833,7 @@ impl Process {
              let event_state = crate::EventState::get();
              let _ = event_state.send(crate::event::AppEvent::Log(LogPayload {
                  instance_id: instance_id.to_string(),
@@ -993,7 +993,7 @@ index 45471b9..4c9ea57 100644
                  event: LogEvent::Log4j(event.clone()),
              }));
          }
-@@ -735,14 +809,15 @@ impl Process {
+@@ -769,14 +843,15 @@ impl Process {
          }
      }
  

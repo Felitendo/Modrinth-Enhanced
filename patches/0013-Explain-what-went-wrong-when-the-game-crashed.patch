@@ -970,10 +970,10 @@ index 15a5c1e..565a39f 100644
  pub mod import;
  pub mod install;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 04be546..8231367 100644
+index 07b9fab..975b5fe 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -307,6 +307,7 @@ fn main() {
+@@ -308,6 +308,7 @@ fn main() {
      builder = builder
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())

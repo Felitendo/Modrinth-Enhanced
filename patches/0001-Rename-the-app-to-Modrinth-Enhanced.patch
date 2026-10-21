@@ -62,7 +62,7 @@ index b2f15f6..e410089 100644
    "app.settings.default-instance-options.environment-variables.description": {
      "message": "Environment variables set when launching an instance."
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index db4ef36..e69e6b7 100644
+index 2b5ad39..ae3af5d 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -55,9 +55,9 @@

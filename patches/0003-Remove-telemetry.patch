@@ -3,14 +3,10 @@ From: Modrinth Enhanced <patches@modrinth-enhanced.invalid>
 Date: Mon, 14 Sep 2026 10:23:01 +0200
 Subject: [PATCH] Remove telemetry
 
-Product analytics, crash reporting and the survey embeds are all
-removed, and the Modrinth analytics endpoints the launcher itself posts
-to are no longer called:
+Crash reporting and the survey embeds are removed, and the Modrinth
+analytics endpoints the launcher itself posts to are no longer called.
+Upstream already dropped PostHog product analytics:
 
-* `helpers/analytics.ts` becomes an inert module. It keeps the event map
-  and the exported functions so that every call site still type checks
-  without a patch of its own, but nothing is queued or sent and the
-  PostHog SDK is no longer part of the bundle at all.
 * `helpers/error-reporting.ts` no longer loads `@sentry/vue`; errors are
   logged locally, as they are in upstream development builds.
 * The third-party Tally embed is gone. It was loaded from `index.html`
@@ -22,12 +18,12 @@ to are no longer called:
 * `analytics/playtime` and `analytics/minecraft-server-play` are no
   longer posted from `app-lib`. The latter also removes a Mojang session
   handshake whose only purpose was to authenticate that report.
-* The webview CSP no longer allows PostHog, Sentry or Tally at all, so
-  this is enforced rather than merely intended.
+* The webview CSP no longer allows Sentry or Tally at all, so this is
+  enforced rather than merely intended.
 
-`posthog-js` and `@sentry/vue` stay in package.json. Removing them would
-mean carrying a patch against the lockfile, and nothing imports them any
-more, so neither ends up in a build.
+`@sentry/vue` stays in package.json. Removing it would mean carrying a
+patch against the lockfile, and nothing imports it any more, so it does
+not end up in a build.
 
 Download attribution is deliberately left in place: it is a header on
 downloads the user already requested and is what credits project authors
@@ -36,13 +32,12 @@ for them.
  apps/app-frontend/index.html                  |  1 -
  .../src/components/ui/SurveyPopup.vue         | 12 ++-
  .../settings/account/privacy-settings.vue     |  3 +-
- apps/app-frontend/src/helpers/analytics.ts    | 89 ++++---------------
- .../src/helpers/error-reporting.ts            | 72 +++------------
+ .../src/helpers/error-reporting.ts            | 72 +++-------------
  .../app-frontend/src/locales/en-US/index.json |  2 +-
  apps/app/tauri.conf.json                      |  6 +-
- packages/app-lib/src/api/instance/run.rs      | 83 +++--------------
+ packages/app-lib/src/api/instance/run.rs      | 83 +++----------------
  .../layouts/wrapped/hosting/manage/root.vue   |  8 +-
- 9 files changed, 53 insertions(+), 223 deletions(-)
+ 8 files changed, 34 insertions(+), 153 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
 index 6367788..9738bbc 100644
@@ -107,118 +102,6 @@ index 8773f8f..d31e8c5 100644
  	</div>
  
  	<div class="mt-4 flex items-center justify-between gap-4">
-diff --git a/apps/app-frontend/src/helpers/analytics.ts b/apps/app-frontend/src/helpers/analytics.ts
-index 6118ac3..5ba7d5d 100644
---- a/apps/app-frontend/src/helpers/analytics.ts
-+++ b/apps/app-frontend/src/helpers/analytics.ts
-@@ -1,4 +1,16 @@
--import type { PostHog } from 'posthog-js'
-+/**
-+ * Modrinth Enhanced does not collect analytics.
-+ *
-+ * Upstream this module lazily loads `posthog-js` on the first interaction and
-+ * sends every event below to `posthog.modrinth.com`. Here the whole module is
-+ * inert: nothing is loaded, nothing is queued and nothing is sent, which also
-+ * keeps the PostHog SDK out of the bundle entirely rather than merely leaving
-+ * it switched off.
-+ *
-+ * The event map and the exported functions are kept exactly as upstream
-+ * declares them so that every `trackEvent` call site still type checks and
-+ * needs no patch of its own.
-+ */
- 
- interface InstanceProperties {
- 	loader: string
-@@ -42,72 +54,13 @@ type AnalyticsEventMap = {
- 
- export type AnalyticsEvent = keyof AnalyticsEventMap
- 
--let analytics: PostHog | undefined
--let pending: Promise<void> | undefined
--let enabled = false
--let activated = false
--let debug = false
--let explicitlyOptedIn = false
--const events: Array<{ name: AnalyticsEvent; properties: Record<string, unknown> | undefined }> = []
--const allowed = import.meta.env.PROD || import.meta.env.VITE_ENABLE_ANALYTICS === 'true'
-+export const initAnalytics = () => {}
- 
--function removeActivationListeners() {
--	window.removeEventListener('pointerdown', activate)
--	window.removeEventListener('keydown', activate)
--}
--
--function activate() {
--	activated = true
--	removeActivationListeners()
--	if (!enabled || pending || analytics) return
--	pending = import('posthog-js')
--		.then(({ posthog }) => {
--			if (!enabled) return
--			posthog.init('phc_9Iqi6lFs9sr5BSqh9RRNRSJ0mATS9PSgirDiX3iOYJ', {
--				persistence: 'localStorage',
--				api_host: 'https://posthog.modrinth.com',
--			})
--			analytics = posthog
--			if (explicitlyOptedIn) posthog.opt_in_capturing()
--			if (debug) posthog.debug()
--			for (const event of events.splice(0)) posthog.capture(event.name, event.properties)
--		})
--		.catch(() => {
--			events.length = 0
--		})
--		.finally(() => {
--			pending = undefined
--		})
--}
-+export const debugAnalytics = () => {}
- 
--export const initAnalytics = () => {
--	if (!allowed || enabled) return
--	enabled = true
--	if (activated) activate()
--	else {
--		window.addEventListener('pointerdown', activate, { once: true, passive: true })
--		window.addEventListener('keydown', activate, { once: true })
--	}
--}
-+export const optOutAnalytics = () => {}
- 
--export const debugAnalytics = () => {
--	debug = true
--	analytics?.debug()
--}
--
--export const optOutAnalytics = () => {
--	explicitlyOptedIn = false
--	enabled = false
--	events.length = 0
--	removeActivationListeners()
--	analytics?.opt_out_capturing()
--}
--
--export const optInAnalytics = () => {
--	explicitlyOptedIn = true
--	initAnalytics()
--	analytics?.opt_in_capturing()
--}
-+export const optInAnalytics = () => {}
- 
- type OptionalArgs<T> = Record<string, never> extends T ? [properties?: T] : [properties: T]
- 
-@@ -115,10 +68,6 @@ export const trackEvent = <E extends AnalyticsEvent>(
- 	eventName: E,
- 	...args: OptionalArgs<AnalyticsEventMap[E]>
- ) => {
--	if (!enabled) return
--	if (analytics) analytics.capture(eventName, args[0])
--	else {
--		if (events.length >= 100) events.shift()
--		events.push({ name: eventName, properties: args[0] })
--	}
-+	void eventName
-+	void args
- }
 diff --git a/apps/app-frontend/src/helpers/error-reporting.ts b/apps/app-frontend/src/helpers/error-reporting.ts
 index bb20aa9..46a9749 100644
 --- a/apps/app-frontend/src/helpers/error-reporting.ts
@@ -315,19 +198,19 @@ index e410089..c82d230 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetry"
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index e69e6b7..e5bbabe 100644
+index ae3af5d..e5bbabe 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -102,12 +102,12 @@
  			"capabilities": ["ads", "core", "plugins"],
  			"csp": {
  				"default-src": "'self' customprotocol: asset:",
--				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.posthog.com https://posthog.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
+-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
 +				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
  				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
  				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
  				"style-src": "'unsafe-inline' 'self'",
--				"script-src": "https://*.posthog.com https://posthog.modrinth.com https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
+-				"script-src": "https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com https://tally.so/widgets/embed.js 'self'",
 -				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://tally.so/popup/ https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
 +				"script-src": "https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com 'self'",
 +				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
@@ -335,7 +218,7 @@ index e69e6b7..e5bbabe 100644
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 415af27..4e46190 100644
+index 70cce60..f024d0f 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -4,13 +4,10 @@ use crate::state::{
@@ -411,7 +294,7 @@ index 415af27..4e46190 100644
  
      crate::minecraft_skins::flush_pending_skin_change().await?;
      crate::launcher::launch_minecraft(
-@@ -307,21 +260,6 @@ async fn run_credentials(
+@@ -308,21 +261,6 @@ async fn run_credentials(
      .await
  }
  
@@ -433,7 +316,7 @@ index 415af27..4e46190 100644
  pub async fn kill(instance_id: &str) -> crate::Result<()> {
      let state = State::get().await?;
      let processes =
-@@ -383,13 +321,12 @@ pub async fn try_update_playtime_by_instance_id(
+@@ -384,13 +322,12 @@ pub async fn try_update_playtime_by_instance_id(
              }
          }
  

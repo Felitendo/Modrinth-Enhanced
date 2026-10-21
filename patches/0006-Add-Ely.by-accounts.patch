@@ -514,10 +514,10 @@ index a7fac4a..2d18da3 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index f783b20..90a9b9f 100644
+index fed2b28..6094d9a 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1141,6 +1141,22 @@ pub async fn launch_minecraft(
+@@ -1165,6 +1165,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  

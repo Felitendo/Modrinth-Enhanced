@@ -2493,10 +2493,10 @@ index a482f66..76bedc7 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 90a9b9f..4038e7f 100644
+index 6094d9a..da7eb3c 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1100,6 +1100,28 @@ pub async fn launch_minecraft(
+@@ -1124,6 +1124,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2525,7 +2525,7 @@ index 90a9b9f..4038e7f 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1126,6 +1148,7 @@ pub async fn launch_minecraft(
+@@ -1150,6 +1172,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),
@@ -2560,7 +2560,7 @@ index 181c89a..204e35f 100644
      #[inline]
      pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
 diff --git a/packages/app-lib/src/state/dirs/move_app_directory.rs b/packages/app-lib/src/state/dirs/move_app_directory.rs
-index 3d0abc7..352336d 100644
+index 0dadd9d..7700e2d 100644
 --- a/packages/app-lib/src/state/dirs/move_app_directory.rs
 +++ b/packages/app-lib/src/state/dirs/move_app_directory.rs
 @@ -11,13 +11,14 @@ use sqlx::SqlitePool;

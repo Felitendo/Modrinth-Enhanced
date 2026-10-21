@@ -1040,10 +1040,10 @@ index fba473f..fe95027 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index a11ee2d..ee01ef5 100644
+index 99a7061..9d61ac1 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1173,10 +1173,11 @@ pub async fn launch_minecraft(
+@@ -1197,10 +1197,11 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -1059,7 +1059,7 @@ index a11ee2d..ee01ef5 100644
          let injector = crate::util::authlib_injector::get_authlib_injector(
              &state.directories,
          )
-@@ -1185,7 +1186,7 @@ pub async fn launch_minecraft(
+@@ -1209,7 +1210,7 @@ pub async fn launch_minecraft(
          command.arg(format!(
              "-javaagent:{}={}",
              injector.to_string_lossy(),

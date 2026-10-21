@@ -173,10 +173,10 @@ index 773fcb2..cda652f 100644
  /// None if it can't be found or doesn't exist
  #[tauri::command]
 diff --git a/packages/app-lib/src/api/pack/import/mod.rs b/packages/app-lib/src/api/pack/import/mod.rs
-index 357002a..5bd986c 100644
+index 19207e6..7860827 100644
 --- a/packages/app-lib/src/api/pack/import/mod.rs
 +++ b/packages/app-lib/src/api/pack/import/mod.rs
-@@ -247,36 +247,130 @@ async fn import_instance_inner(
+@@ -248,36 +248,130 @@ async fn import_instance_inner(
  pub fn get_default_launcher_path(
      r#type: ImportLauncherType,
  ) -> Option<PathBuf> {
@@ -332,7 +332,7 @@ index 357002a..5bd986c 100644
      let mut candidates: Vec<PathBuf> = Vec::new();
  
      // Linux/macOS: ~/.local/share/multimc is the typical location
-@@ -318,8 +412,6 @@ fn find_multimc_path() -> Option<PathBuf> {
+@@ -319,8 +413,6 @@ fn find_multimc_path() -> Option<PathBuf> {
      }
  
      candidates
