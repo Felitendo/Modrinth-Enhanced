@@ -25,9 +25,9 @@ Ely.by one.
  .../minecraft-accounts/accounts-card.vue      |  31 ++-
  apps/app-frontend/src/pages/Skins.vue         |   1 +
  packages/app-lib/src/api/minecraft_skins.rs   |   4 +-
- packages/app-lib/src/state/minecraft_auth.rs  | 242 +++++++++++++++++-
- .../src/state/minecraft_skins/mojang_api.rs   |  64 +++--
- 6 files changed, 326 insertions(+), 31 deletions(-)
+ packages/app-lib/src/state/minecraft_auth.rs  | 238 +++++++++++++++++-
+ .../src/state/minecraft_skins/mojang_api.rs   |  58 +++--
+ 6 files changed, 319 insertions(+), 28 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
 index ee32e2e..7d9b78d 100644
@@ -171,10 +171,10 @@ index 38fdcac..761bd83 100644
  		@saved="onSkinSaved"
  		@deleted="() => loadSkins()"
 diff --git a/packages/app-lib/src/api/minecraft_skins.rs b/packages/app-lib/src/api/minecraft_skins.rs
-index e5431e3..aae52e3 100644
+index a990683..35a091a 100644
 --- a/packages/app-lib/src/api/minecraft_skins.rs
 +++ b/packages/app-lib/src/api/minecraft_skins.rs
-@@ -81,7 +81,7 @@ mod assets {
+@@ -82,7 +82,7 @@ mod assets {
      pub use default::DEFAULT_SKINS;
  }
  
@@ -183,7 +183,7 @@ index e5431e3..aae52e3 100644
  
  const SKIN_CHANGE_DEBOUNCE: Duration = Duration::from_secs(10);
  
-@@ -1345,7 +1345,7 @@ fn is_bundled_skin(texture_key: &str, variant: MinecraftSkinVariant) -> bool {
+@@ -1331,7 +1331,7 @@ fn is_bundled_skin(texture_key: &str, variant: MinecraftSkinVariant) -> bool {
      })
  }
  
@@ -193,10 +193,10 @@ index e5431e3..aae52e3 100644
          .iter()
          .find(|skin| {
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 0245152..b916a6d 100644
+index 98433ec..f169a8a 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -290,6 +290,10 @@ const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
+@@ -361,6 +361,10 @@ const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
  /// Ely.by's Yggdrasil endpoints.
  const ELY_AUTHSERVER: &str = "https://authserver.ely.by/auth";
  
@@ -207,7 +207,7 @@ index 0245152..b916a6d 100644
  /// An account server that speaks Yggdrasil, the protocol Mojang's own used to,
  /// and that authlib-injector can point the game at.
  #[derive(Debug, Clone)]
-@@ -334,6 +338,195 @@ impl AuthServer {
+@@ -405,6 +409,191 @@ impl AuthServer {
          INSECURE_REQWEST_CLIENT.post(url).json(&body).send().await
      }
  
@@ -366,11 +366,10 @@ index 0245152..b916a6d 100644
 +        form: Option<reqwest::multipart::Form>,
 +    ) -> crate::Result<()> {
 +        let Self::Authlib(root) = self else {
-+            return Err(crate::ErrorKind::OtherError(format!(
++            return Err(anyhow::anyhow!(
 +                "Skins on {} cannot be changed from here",
 +                self.name()
-+            ))
-+            .into());
++            ));
 +        };
 +
 +        let url = format!(
@@ -387,10 +386,7 @@ index 0245152..b916a6d 100644
 +            .send()
 +            .await
 +            .map_err(|error| {
-+                crate::ErrorKind::OtherError(format!(
-+                    "Could not reach {}: {error}",
-+                    self.name()
-+                ))
++                anyhow::anyhow!("Could not reach {}: {error}", self.name())
 +            })?;
 +
 +        if !response.status().is_success() {
@@ -403,7 +399,7 @@ index 0245152..b916a6d 100644
      fn refresh_token(&self, client_token: &str) -> String {
          match self {
              Self::Ely => format!("{ELY_REFRESH_TOKEN_PREFIX}{client_token}"),
-@@ -811,10 +1004,10 @@ impl Credentials {
+@@ -875,10 +1064,10 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {
@@ -418,7 +414,7 @@ index 0245152..b916a6d 100644
              return None;
          }
  
-@@ -864,7 +1057,15 @@ impl Credentials {
+@@ -928,7 +1117,15 @@ impl Credentials {
              stale_profile
          };
  
@@ -435,7 +431,7 @@ index 0245152..b916a6d 100644
              Ok(profile) => {
                  let profile = Arc::new(profile);
                  let cache_entry = ProfileCacheEntry::Hit(Arc::clone(&profile));
-@@ -1959,6 +2160,37 @@ impl Deref for MaybeOnlineMinecraftProfile<'_> {
+@@ -2018,6 +2215,37 @@ impl Deref for MaybeOnlineMinecraftProfile<'_> {
      }
  }
  
@@ -474,7 +470,7 @@ index 0245152..b916a6d 100644
  async fn minecraft_profile(
      token: &str,
 diff --git a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
-index 9e89537..d037c47 100644
+index f50a276..cb85960 100644
 --- a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
 +++ b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
 @@ -25,6 +25,12 @@ impl MinecraftCapeOperation {
@@ -502,7 +498,7 @@ index 9e89537..d037c47 100644
          update_profile_cache_from_response(
  			INSECURE_REQWEST_CLIENT
  				.delete("https://api.minecraftservices.com/minecraft/profile/capes/active")
-@@ -75,26 +86,37 @@ impl MinecraftSkinOperation {
+@@ -75,23 +86,34 @@ impl MinecraftSkinOperation {
          TextureStream::Error: Into<Box<dyn Error + Send + Sync>>,
          Bytes: From<TextureStream::Ok>,
      {
@@ -510,10 +506,7 @@ index 9e89537..d037c47 100644
 +            MinecraftSkinVariant::Slim => "slim",
 +            MinecraftSkinVariant::Classic => "classic",
 +            _ => {
-+                return Err(ErrorKind::OtherError(
-+                    "Cannot equip skin of unknown model variant".into(),
-+                )
-+                .into());
++                bail!("cannot equip skin of unknown model variant");
 +            }
 +        };
 +        let file = Part::stream(Body::wrap_stream(texture))
@@ -541,10 +534,7 @@ index 9e89537..d037c47 100644
 -                    MinecraftSkinVariant::Slim => "slim",
 -                    MinecraftSkinVariant::Classic => "classic",
 -                    _ => {
--                        return Err(ErrorKind::OtherError(
--                            "Cannot equip skin of unknown model variant".into(),
--                        )
--                        .into());
+-                        bail!("cannot equip skin of unknown model variant");
 -                    }
 -                },
 -            )
@@ -559,7 +549,7 @@ index 9e89537..d037c47 100644
  
          let profile = update_profile_cache_from_response(
              INSECURE_REQWEST_CLIENT
-@@ -115,6 +137,10 @@ impl MinecraftSkinOperation {
+@@ -112,6 +134,10 @@ impl MinecraftSkinOperation {
      }
  
      pub async fn unequip_any(credentials: &Credentials) -> crate::Result<()> {

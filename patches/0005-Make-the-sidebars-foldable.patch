@@ -40,7 +40,7 @@ bar button - so nothing there promises anything.
  7 files changed, 231 insertions(+), 42 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 7d0ce4b..7a28771 100644
+index 2c5e004..a4c6c18 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -2,6 +2,7 @@
@@ -133,7 +133,7 @@ index 7d0ce4b..7a28771 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2022,6 +2068,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2018,6 +2064,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -141,7 +141,7 @@ index 7d0ce4b..7a28771 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2118,9 +2165,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2114,9 +2161,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppTitleBar
  			:can-navigate-back="canNavigateBack"
  			:can-navigate-forward="canNavigateForward"
@@ -155,7 +155,7 @@ index 7d0ce4b..7a28771 100644
  		/>
  	</div>
  	<div
-@@ -2199,6 +2248,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2195,6 +2244,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
@@ -525,10 +525,10 @@ index 8ad37cf..b974c00 100644
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 47490ad..7797e78 100644
+index 08c9738..da9a404 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
-@@ -104,6 +104,10 @@ pub enum FeatureFlag {
+@@ -105,6 +105,10 @@ pub enum FeatureFlag {
      ServerProjectQa,
      I18nDebug,
      LocalhostSignIn,

@@ -75,7 +75,7 @@ index 675de85..0b94016 100644
  	},
  	macos: {
 diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
-index df67709..db5b80d 100644
+index ed3f1b9..b96cdd6 100644
 --- a/apps/app-frontend/src/locales/de-CH/index.json
 +++ b/apps/app-frontend/src/locales/de-CH/index.json
 @@ -3257,6 +3257,9 @@
@@ -88,7 +88,7 @@ index df67709..db5b80d 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -102,7 +102,7 @@ index df67709..db5b80d 100644
      "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
    },
 diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
-index c03cdd0..5ee3208 100644
+index b807442..037db59 100644
 --- a/apps/app-frontend/src/locales/de-DE/index.json
 +++ b/apps/app-frontend/src/locales/de-DE/index.json
 @@ -3257,6 +3257,9 @@
@@ -115,7 +115,7 @@ index c03cdd0..5ee3208 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -129,7 +129,7 @@ index c03cdd0..5ee3208 100644
      "message": "Oder melde dich mit Ely.by oder einem eigenen Server an – oder spiele Einzelspieler und Offline-Server ganz ohne Account."
    },
 diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
-index 4fd3eb6..17896d9 100644
+index 6c09cee..10165c0 100644
 --- a/apps/app-frontend/src/locales/es-419/index.json
 +++ b/apps/app-frontend/src/locales/es-419/index.json
 @@ -3257,6 +3257,9 @@
@@ -142,7 +142,7 @@ index 4fd3eb6..17896d9 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetría"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -156,7 +156,7 @@ index 4fd3eb6..17896d9 100644
      "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
    },
 diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
-index aaa2750..5631276 100644
+index fe53c23..48ba4c5 100644
 --- a/apps/app-frontend/src/locales/es-ES/index.json
 +++ b/apps/app-frontend/src/locales/es-ES/index.json
 @@ -3245,6 +3245,9 @@
@@ -169,7 +169,7 @@ index aaa2750..5631276 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetría"
    },
-@@ -5138,6 +5141,12 @@
+@@ -5129,6 +5132,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -183,7 +183,7 @@ index aaa2750..5631276 100644
      "message": "O inicia sesión con Ely.by o con un servidor personalizado, o juega en un jugador y en servidores sin conexión sin ninguna cuenta."
    },
 diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
-index e1f4eed..c710dc9 100644
+index 0419667..9a3e9d6 100644
 --- a/apps/app-frontend/src/locales/fr-FR/index.json
 +++ b/apps/app-frontend/src/locales/fr-FR/index.json
 @@ -3254,6 +3254,9 @@
@@ -196,7 +196,7 @@ index e1f4eed..c710dc9 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Télémétrie"
    },
-@@ -5102,6 +5105,12 @@
+@@ -5093,6 +5096,12 @@
    "minecraft-required.header": {
      "message": "Minecraft requis"
    },
@@ -210,7 +210,7 @@ index e1f4eed..c710dc9 100644
      "message": "Ou connectez-vous avec Ely.by ou un serveur personnalisé, ou jouez en solo et sur des serveurs en mode hors ligne sans aucun compte."
    },
 diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
-index d6bc920..c53718e 100644
+index 928eec5..3fc1f28 100644
 --- a/apps/app-frontend/src/locales/hu-HU/index.json
 +++ b/apps/app-frontend/src/locales/hu-HU/index.json
 @@ -3245,6 +3245,9 @@
@@ -223,7 +223,7 @@ index d6bc920..c53718e 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5147,6 +5150,12 @@
+@@ -5138,6 +5141,12 @@
    "minecraft-required.header": {
      "message": "Minecraft szükséges"
    },
@@ -237,7 +237,7 @@ index d6bc920..c53718e 100644
      "message": "Vagy jelentkezz be Ely.byjal vagy saját szerverrel, vagy játssz egyjátékos módban és offline szervereken bármilyen fiók nélkül."
    },
 diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
-index db2f3a4..073ec1e 100644
+index 737acb8..1edc03f 100644
 --- a/apps/app-frontend/src/locales/it-IT/index.json
 +++ b/apps/app-frontend/src/locales/it-IT/index.json
 @@ -3257,6 +3257,9 @@
@@ -250,7 +250,7 @@ index db2f3a4..073ec1e 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Minecraft richiesto"
    },
@@ -264,7 +264,7 @@ index db2f3a4..073ec1e 100644
      "message": "Oppure accedi con Ely.by o con un server personalizzato, o gioca in singolo e sui server in modalità offline senza alcun account."
    },
 diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
-index 16987fa..1f4f74c 100644
+index 79b5066..cc87a24 100644
 --- a/apps/app-frontend/src/locales/ja-JP/index.json
 +++ b/apps/app-frontend/src/locales/ja-JP/index.json
 @@ -2750,6 +2750,9 @@
@@ -277,7 +277,7 @@ index 16987fa..1f4f74c 100644
    "app.settings.privacy.telemetry.title": {
      "message": "テレメトリ"
    },
-@@ -4259,6 +4262,12 @@
+@@ -4250,6 +4253,12 @@
    "minecraft-required.header": {
      "message": "Minecraftが必要です"
    },
@@ -291,7 +291,7 @@ index 16987fa..1f4f74c 100644
      "message": "Ely.by やカスタムサーバーでサインインすることも、アカウントなしでシングルプレイやオフラインモードのサーバーで遊ぶこともできます。"
    },
 diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
-index fa9b884..f545996 100644
+index f32c8e3..7a08c28 100644
 --- a/apps/app-frontend/src/locales/nl-NL/index.json
 +++ b/apps/app-frontend/src/locales/nl-NL/index.json
 @@ -3185,6 +3185,9 @@
@@ -304,7 +304,7 @@ index fa9b884..f545996 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetrie"
    },
-@@ -4751,6 +4754,12 @@
+@@ -4742,6 +4745,12 @@
    "minecraft-required.header": {
      "message": "Minecraft vereist"
    },
@@ -318,7 +318,7 @@ index fa9b884..f545996 100644
      "message": "Of log in met Ely.by of een eigen server, of speel singleplayer en servers in offlinemodus zonder enig account."
    },
 diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
-index fb3d7e1..e596e93 100644
+index d624fde..ce98b14 100644
 --- a/apps/app-frontend/src/locales/pl-PL/index.json
 +++ b/apps/app-frontend/src/locales/pl-PL/index.json
 @@ -3245,6 +3245,9 @@
@@ -331,7 +331,7 @@ index fb3d7e1..e596e93 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5156,6 +5159,12 @@
+@@ -5147,6 +5150,12 @@
    "minecraft-required.header": {
      "message": "Minecraft wymagany"
    },
@@ -345,7 +345,7 @@ index fb3d7e1..e596e93 100644
      "message": "Albo zaloguj się przez Ely.by lub własny serwer, albo graj w trybie jednoosobowym i na serwerach offline zupełnie bez konta."
    },
 diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
-index 8d6d82f..6d248a0 100644
+index 834fceb..927c5c1 100644
 --- a/apps/app-frontend/src/locales/pt-BR/index.json
 +++ b/apps/app-frontend/src/locales/pt-BR/index.json
 @@ -3257,6 +3257,9 @@
@@ -358,7 +358,7 @@ index 8d6d82f..6d248a0 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetria"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "Minecraft necessário"
    },
@@ -372,7 +372,7 @@ index 8d6d82f..6d248a0 100644
      "message": "Ou entre com o Ely.by ou com um servidor personalizado, ou jogue sozinho e em servidores offline sem conta nenhuma."
    },
 diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
-index f2b17b6..aae96be 100644
+index d91b688..98a06ae 100644
 --- a/apps/app-frontend/src/locales/ru-RU/index.json
 +++ b/apps/app-frontend/src/locales/ru-RU/index.json
 @@ -3236,6 +3236,9 @@
@@ -385,7 +385,7 @@ index f2b17b6..aae96be 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Телеметрия"
    },
-@@ -5144,6 +5147,12 @@
+@@ -5135,6 +5138,12 @@
    "minecraft-required.header": {
      "message": "Требуется Minecraft"
    },
@@ -399,7 +399,7 @@ index f2b17b6..aae96be 100644
      "message": "Или войдите через Ely.by либо свой сервер — или играйте в одиночной игре и на офлайн-серверах вообще без учётной записи."
    },
 diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
-index 4f4f292..ff78d1d 100644
+index e19002f..b1017e6 100644
 --- a/apps/app-frontend/src/locales/sv-SE/index.json
 +++ b/apps/app-frontend/src/locales/sv-SE/index.json
 @@ -2957,6 +2957,9 @@
@@ -412,7 +412,7 @@ index 4f4f292..ff78d1d 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetri"
    },
-@@ -4625,6 +4628,12 @@
+@@ -4616,6 +4619,12 @@
    "minecraft-required.header": {
      "message": "Minecraft krävs"
    },
@@ -426,7 +426,7 @@ index 4f4f292..ff78d1d 100644
      "message": "Eller logga in med Ely.by eller en egen server, eller spela ensamspelarvärldar och servrar i offlineläge helt utan konto."
    },
 diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
-index 850e51b..a80efa6 100644
+index aafb1ce..b35e44d 100644
 --- a/apps/app-frontend/src/locales/tr-TR/index.json
 +++ b/apps/app-frontend/src/locales/tr-TR/index.json
 @@ -2975,6 +2975,9 @@
@@ -439,7 +439,7 @@ index 850e51b..a80efa6 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetri"
    },
-@@ -4448,6 +4451,12 @@
+@@ -4439,6 +4442,12 @@
    "minecraft-required.header": {
      "message": "Minecraft gereklidir"
    },
@@ -453,7 +453,7 @@ index 850e51b..a80efa6 100644
      "message": "Ya da Ely.by veya özel bir sunucuyla oturum açın; ya da hiçbir hesap olmadan tek oyunculu ve çevrimdışı sunucularda oynayın."
    },
 diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
-index 00e7e88..65a5456 100644
+index 409c639..ef32ea6 100644
 --- a/apps/app-frontend/src/locales/uk-UA/index.json
 +++ b/apps/app-frontend/src/locales/uk-UA/index.json
 @@ -3248,6 +3248,9 @@
@@ -466,7 +466,7 @@ index 00e7e88..65a5456 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Телеметрія"
    },
-@@ -5159,6 +5162,12 @@
+@@ -5150,6 +5153,12 @@
    "minecraft-required.header": {
      "message": "Потрібний Minecraft"
    },
@@ -480,7 +480,7 @@ index 00e7e88..65a5456 100644
      "message": "Або увійдіть через Ely.by чи власний сервер — або грайте в одиночній грі та на офлайн-серверах узагалі без облікового запису."
    },
 diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
-index 41692bd..9d31218 100644
+index 4ae34d5..8aeb4a9 100644
 --- a/apps/app-frontend/src/locales/zh-CN/index.json
 +++ b/apps/app-frontend/src/locales/zh-CN/index.json
 @@ -3257,6 +3257,9 @@
@@ -493,7 +493,7 @@ index 41692bd..9d31218 100644
    "app.settings.privacy.telemetry.title": {
      "message": "遥测"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -507,7 +507,7 @@ index 41692bd..9d31218 100644
      "message": "也可以使用 Ely.by 或自定义服务器登录，或者不用任何账户，直接玩单人游戏和离线模式服务器。"
    },
 diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
-index c50d3f9..2310408 100644
+index 1eab013..5fc0d64 100644
 --- a/apps/app-frontend/src/locales/zh-TW/index.json
 +++ b/apps/app-frontend/src/locales/zh-TW/index.json
 @@ -3257,6 +3257,9 @@
@@ -520,7 +520,7 @@ index c50d3f9..2310408 100644
    "app.settings.privacy.telemetry.title": {
      "message": "遙測"
    },
-@@ -5168,6 +5171,12 @@
+@@ -5159,6 +5162,12 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },

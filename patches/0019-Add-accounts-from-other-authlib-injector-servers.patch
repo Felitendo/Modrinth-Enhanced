@@ -34,11 +34,11 @@ account list shows which server an account is on.
  apps/app-frontend/src/helpers/auth.js         |  26 ++
  apps/app/build.rs                             |   2 +
  apps/app/src/api/auth.rs                      |  27 ++
- packages/app-lib/src/api/minecraft_auth.rs    |  77 +++-
+ packages/app-lib/src/api/minecraft_auth.rs    |  74 +++-
  packages/app-lib/src/launcher/mod.rs          |  11 +-
- packages/app-lib/src/state/minecraft_auth.rs  | 422 ++++++++++++------
- packages/app-lib/src/util/authlib_injector.rs | 138 +++++-
- 14 files changed, 1034 insertions(+), 211 deletions(-)
+ packages/app-lib/src/state/minecraft_auth.rs  | 408 ++++++++++++------
+ packages/app-lib/src/util/authlib_injector.rs | 135 +++++-
+ 14 files changed, 1020 insertions(+), 205 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 
@@ -873,7 +873,7 @@ index 9b2408e..f4d24a1 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index b89f379..70fb26b 100644
+index ffe9748..30fbedc 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -18,6 +18,8 @@ fn main() {
@@ -886,10 +886,10 @@ index b89f379..70fb26b 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index eab604d..c856d40 100644
+index 8e6ce97..349e735 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
-@@ -14,6 +14,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -15,6 +15,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
              login_device_poll,
              login_offline,
              login_ely,
@@ -898,7 +898,7 @@ index eab604d..c856d40 100644
              remove_user,
              get_default_user,
              set_default_user,
-@@ -167,6 +169,31 @@ pub async fn login_ely(
+@@ -158,6 +160,31 @@ pub async fn login_ely(
      Ok(minecraft_auth::login_ely(&username, &password).await?)
  }
  
@@ -931,10 +931,10 @@ index eab604d..c856d40 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index fba473f..fe95027 100644
+index c16e7cc..3aadc9b 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
-@@ -3,9 +3,13 @@
+@@ -4,9 +4,13 @@ use anyhow::Context;
  use reqwest::StatusCode;
  
  use crate::State;
@@ -949,19 +949,16 @@ index fba473f..fe95027 100644
  #[tracing::instrument]
  pub async fn check_reachable() -> crate::Result<()> {
      let resp = INSECURE_REQWEST_CLIENT
-@@ -126,28 +130,79 @@ pub async fn login_ely(
+@@ -127,28 +131,76 @@ pub async fn login_ely(
      username: &str,
      password: &str,
  ) -> crate::Result<Credentials> {
 +    match sign_in(AuthServer::Ely, username, password, None).await? {
 +        YggdrasilSignIn::SignedIn { credentials } => Ok(credentials),
 +        // An Ely.by account is a single player.
-+        YggdrasilSignIn::ChooseProfile { .. } => {
-+            Err(crate::ErrorKind::OtherError(
-+                "Ely.by did not say which player to sign in as".to_string(),
-+            )
-+            .into())
-+        }
++        YggdrasilSignIn::ChooseProfile { .. } => Err(anyhow::anyhow!(
++            "Ely.by did not say which player to sign in as"
++        )),
 +    }
 +}
 +
@@ -1040,10 +1037,10 @@ index fba473f..fe95027 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 99a7061..9d61ac1 100644
+index c83ed48..c8dbec2 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1197,10 +1197,11 @@ pub async fn launch_minecraft(
+@@ -1183,10 +1183,11 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -1059,7 +1056,7 @@ index 99a7061..9d61ac1 100644
          let injector = crate::util::authlib_injector::get_authlib_injector(
              &state.directories,
          )
-@@ -1209,7 +1210,7 @@ pub async fn launch_minecraft(
+@@ -1195,7 +1196,7 @@ pub async fn launch_minecraft(
          command.arg(format!(
              "-javaagent:{}={}",
              injector.to_string_lossy(),
@@ -1069,10 +1066,10 @@ index 99a7061..9d61ac1 100644
      }
  
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 2514d8e..0245152 100644
+index 92b1030..98433ec 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -276,63 +276,145 @@ pub fn offline_uuid(username: &str) -> Uuid {
+@@ -347,62 +347,145 @@ pub fn offline_uuid(username: &str) -> Uuid {
  
  /// Marker stored in front of an Ely.by account's client token.
  ///
@@ -1170,7 +1167,7 @@ index 2514d8e..0245152 100644
 +                format!("{} refused the request ({status})", self.name())
 +            });
 +
-+        crate::ErrorKind::OtherError(message).as_error()
++        anyhow::anyhow!(message)
 +    }
 +
 +    /// Yggdrasil UUIDs usually come without dashes.
@@ -1179,11 +1176,11 @@ index 2514d8e..0245152 100644
 +        profile: YggdrasilProfile,
 +    ) -> crate::Result<MinecraftProfile> {
 +        let id = Uuid::parse_str(&profile.id).map_err(|_| {
-+            crate::ErrorKind::OtherError(format!(
++            anyhow::anyhow!(
 +                "{} returned a player id that could not be read: {}",
 +                self.name(),
 +                profile.id
-+            ))
++            )
 +        })?;
 +
 +        Ok(MinecraftProfile {
@@ -1203,17 +1200,17 @@ index 2514d8e..0245152 100644
      client_token: String,
      #[serde(rename = "selectedProfile")]
 -    selected_profile: ElyProfile,
+-}
+-
+-#[derive(Deserialize)]
+-struct ElyProfile {
+-    id: String,
+-    name: String,
 +    selected_profile: Option<YggdrasilProfile>,
 +    #[serde(rename = "availableProfiles", default)]
 +    available_profiles: Vec<YggdrasilProfile>,
  }
  
--#[derive(Deserialize)]
--struct ElyProfile {
--    id: String,
--    name: String,
--}
--
 -/// Reads the error message out of an Ely.by refusal, falling back to the status.
 -async fn ely_error(response: Response) -> crate::Error {
 -    #[derive(Deserialize)]
@@ -1230,7 +1227,7 @@ index 2514d8e..0245152 100644
 -        .and_then(|error| error.error_message)
 -        .unwrap_or_else(|| format!("Ely.by refused the request ({status})"));
 -
--    crate::ErrorKind::OtherError(message).as_error()
+-    anyhow::anyhow!(message)
 +/// A player on a Yggdrasil server. One account there can have several.
 +#[derive(Serialize, Deserialize, Debug, Clone)]
 +pub struct YggdrasilProfile {
@@ -1241,10 +1238,9 @@ index 2514d8e..0245152 100644
 -/// Ely.by's Yggdrasil UUIDs come without dashes.
 -fn parse_ely_uuid(id: &str) -> crate::Result<Uuid> {
 -    Uuid::parse_str(id).map_err(|_| {
--        crate::ErrorKind::OtherError(format!(
+-        anyhow::anyhow!(
 -            "Ely.by returned a player id that could not be read: {id}"
--        ))
--        .as_error()
+-        )
 -    })
 +/// What signing in to a Yggdrasil server came to.
 +#[derive(Serialize, Debug)]
@@ -1260,7 +1256,7 @@ index 2514d8e..0245152 100644
  }
  
  /// An entry in the player profile cache, keyed by player UUID.
-@@ -420,90 +502,169 @@ impl Credentials {
+@@ -490,88 +573,163 @@ impl Credentials {
          self.refresh_token.starts_with(ELY_REFRESH_TOKEN_PREFIX)
      }
  
@@ -1272,9 +1268,8 @@ index 2514d8e..0245152 100644
 +    /// offline account.
 +    pub fn auth_server(&self) -> Option<AuthServer> {
 +        self.yggdrasil().map(|(server, _)| server)
-     }
- 
--    /// Signs in to Ely.by with an account name or email and a password.
++    }
++
 +    /// The account's server and the client token it issued.
 +    fn yggdrasil(&self) -> Option<(AuthServer, String)> {
 +        if let Some(client_token) =
@@ -1292,8 +1287,9 @@ index 2514d8e..0245152 100644
 +            AuthServer::Authlib(root.to_owned()),
 +            client_token.to_owned(),
 +        ))
-+    }
-+
+     }
+ 
+-    /// Signs in to Ely.by with an account name or email and a password.
 +    /// Signs in to a Yggdrasil server with an account name or email and a
 +    /// password, as the player with the id `profile` if the account has
 +    /// several.
@@ -1310,10 +1306,7 @@ index 2514d8e..0245152 100644
 +        profile: Option<&str>,
 +    ) -> crate::Result<YggdrasilSignIn> {
 +        let unreachable = |error: reqwest::Error| {
-+            crate::ErrorKind::OtherError(format!(
-+                "Could not reach {}: {error}",
-+                server.name()
-+            ))
++            anyhow::anyhow!("Could not reach {}: {error}", server.name())
 +        };
  
 -        let response = INSECURE_REQWEST_CLIENT
@@ -1339,9 +1332,7 @@ index 2514d8e..0245152 100644
 +            )
              .await
 -            .map_err(|error| {
--                crate::ErrorKind::OtherError(format!(
--                    "Could not reach Ely.by: {error}"
--                ))
+-                anyhow::anyhow!("Could not reach Ely.by: {error}")
 -            })?;
 +            .map_err(unreachable)?;
  
@@ -1361,11 +1352,10 @@ index 2514d8e..0245152 100644
 +                let players = std::mem::take(&mut auth.available_profiles);
 +                let player = match profile {
 +                    _ if players.is_empty() => {
-+                        return Err(crate::ErrorKind::OtherError(format!(
++                        return Err(anyhow::anyhow!(
 +                            "This account has no player on {} yet. Create one there first.",
 +                            server.name()
-+                        ))
-+                        .into());
++                        ));
 +                    }
 +                    Some(id) => {
 +                        players.into_iter().find(|player| player.id == id)
@@ -1378,9 +1368,7 @@ index 2514d8e..0245152 100644
 +                    }
 +                }
 +                .ok_or_else(|| {
-+                    crate::ErrorKind::OtherError(
-+                        "That player is not on this account.".to_owned(),
-+                    )
++                    anyhow::anyhow!("That player is not on this account.")
 +                })?;
 +
 +                let response = server
@@ -1399,17 +1387,17 @@ index 2514d8e..0245152 100644
 +                if !response.status().is_success() {
 +                    return Err(server.error(response).await);
 +                }
++
++                auth = response.json::<YggdrasilAuthResponse>().await?;
++                auth.selected_profile.take().unwrap_or(player)
++            }
++        };
  
 -        Ok(Self {
 -            offline_profile: MinecraftProfile {
 -                id: parse_ely_uuid(&auth.selected_profile.id)?,
 -                name: auth.selected_profile.name,
 -                ..MinecraftProfile::default()
-+                auth = response.json::<YggdrasilAuthResponse>().await?;
-+                auth.selected_profile.take().unwrap_or(player)
-+            }
-+        };
-+
 +        Ok(YggdrasilSignIn::SignedIn {
 +            credentials: Self {
 +                offline_profile: server.profile(player)?,
@@ -1491,7 +1479,7 @@ index 2514d8e..0245152 100644
                  return Ok(true);
              }
          };
-@@ -516,30 +677,26 @@ impl Credentials {
+@@ -584,30 +742,26 @@ impl Credentials {
              return Ok(false);
          }
  
@@ -1533,7 +1521,7 @@ index 2514d8e..0245152 100644
              Err(_) => true,
          }
      }
-@@ -563,14 +720,16 @@ impl Credentials {
+@@ -631,12 +785,15 @@ impl Credentials {
              return Ok(());
          }
  
@@ -1541,24 +1529,20 @@ index 2514d8e..0245152 100644
 -        // so Microsoft is not involved at any point below.
 -        if self.is_ely() {
 -            if !self.ely_token_is_valid().await && !self.refresh_ely().await? {
--                return Err(crate::ErrorKind::OtherError(
--                    "Ely.by no longer accepts this account's session. Sign in again."
--                        .to_string(),
--                )
 +        // Yggdrasil servers issue their own tokens and renew them at their own
 +        // endpoints, so Microsoft is not involved at any point below.
 +        if let Some((server, client_token)) = self.yggdrasil() {
 +            if !self.yggdrasil_token_is_valid(&server).await
 +                && !self.refresh_yggdrasil(&server, &client_token).await?
 +            {
-+                return Err(crate::ErrorKind::OtherError(format!(
+                 return Err(anyhow::anyhow!(
+-                    "Ely.by no longer accepts this account's session. Sign in again."
 +                    "{} no longer accepts this account's session. Sign in again.",
 +                    server.name()
-+                ))
-                 .into());
+                 ));
              }
  
-@@ -652,10 +811,10 @@ impl Credentials {
+@@ -718,10 +875,10 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {
@@ -1571,7 +1555,7 @@ index 2514d8e..0245152 100644
              return None;
          }
  
-@@ -990,7 +1149,7 @@ impl Serialize for Credentials {
+@@ -1054,7 +1211,7 @@ impl Serialize for Credentials {
                  ),
          };
  
@@ -1580,7 +1564,7 @@ index 2514d8e..0245152 100644
          ser.serialize_field("profile", &*profile)?;
          ser.serialize_field("access_token", &self.access_token)?;
          ser.serialize_field("refresh_token", &self.refresh_token)?;
-@@ -998,6 +1157,11 @@ impl Serialize for Credentials {
+@@ -1062,6 +1219,11 @@ impl Serialize for Credentials {
          ser.serialize_field("active", &self.active)?;
          // So the skin page can manage an Ely.by account's skins on Ely.by.
          ser.serialize_field("ely", &self.is_ely())?;
@@ -1593,10 +1577,10 @@ index 2514d8e..0245152 100644
      }
  }
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
-index dc099f9..13591ef 100644
+index 98930d6..1542143 100644
 --- a/packages/app-lib/src/util/authlib_injector.rs
 +++ b/packages/app-lib/src/util/authlib_injector.rs
-@@ -1,16 +1,137 @@
+@@ -1,16 +1,134 @@
 -//! Downloads and caches the authlib-injector Java agent.
 +//! The authlib-injector Java agent, and the servers it works with.
  //!
@@ -1695,10 +1679,9 @@ index dc099f9..13591ef 100644
 +            .await
 +            .map_err(|error| {
 +                tracing::warn!("Could not reach {host}: {error:?}");
-+                crate::ErrorKind::OtherError(format!(
++                anyhow::anyhow!(
 +                    "Could not reach {host}. Check the address and your connection."
-+                ))
-+                .as_error()
++                )
 +            })
 +    }
 +
@@ -1719,9 +1702,7 @@ index dc099f9..13591ef 100644
 +
 +    let host = api_root.host_str().unwrap_or_default().to_owned();
 +    let metadata = response.json::<Metadata>().await.map_err(|_| {
-+        crate::ErrorKind::OtherError(format!(
-+            "{host} is not a supported account server"
-+        ))
++        anyhow::anyhow!("{host} is not a supported account server")
 +    })?;
 +
 +    Ok(AuthlibServer {
@@ -1740,7 +1721,7 @@ index dc099f9..13591ef 100644
  /// The agent's own distribution metadata.
  const LATEST_URL: &str = "https://authlib-injector.yushi.moe/artifact/latest.json";
  
-@@ -22,8 +143,7 @@ struct LatestArtifact {
+@@ -22,8 +140,7 @@ struct LatestArtifact {
  /// Returns the path to the agent jar, downloading it once if it is not cached.
  ///
  /// The cached copy is reused as it is. The agent is not tied to a game or
@@ -1750,7 +1731,7 @@ index dc099f9..13591ef 100644
  pub async fn get_authlib_injector(
      directories: &DirectoryInfo,
  ) -> crate::Result<PathBuf> {
-@@ -35,7 +155,7 @@ pub async fn get_authlib_injector(
+@@ -35,7 +152,7 @@ pub async fn get_authlib_injector(
          return Ok(jar);
      }
  

@@ -38,9 +38,9 @@ Adapted from Noctrinth (https://github.com/Everelsu/Noctrinth).
  packages/app-lib/src/api/instance/run.rs      |  24 +++-
  packages/app-lib/src/api/logs.rs              |  23 +++-
  packages/app-lib/src/event/mod.rs             |   2 +
- packages/app-lib/src/launcher/mod.rs          |  46 ++++---
+ packages/app-lib/src/launcher/mod.rs          |  18 ++-
  packages/app-lib/src/state/process.rs         | 123 ++++++++++++++----
- 20 files changed, 422 insertions(+), 52 deletions(-)
+ 20 files changed, 407 insertions(+), 39 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ProcessConsole.vue
 
 diff --git a/apps/app-frontend/src/components/ui/ProcessConsole.vue b/apps/app-frontend/src/components/ui/ProcessConsole.vue
@@ -206,12 +206,12 @@ index 977bf82..c390c4c 100644
 + */
 +process_uuid: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-index 9fd4962..8f632c9 100644
+index 9ee59a9..077125a 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-@@ -48,7 +48,7 @@ export type FriendPayload = { tag: "friend_request", value: { from: string } } |
+@@ -47,7 +47,7 @@ export type InstanceGroupsChangedPayload = { instance_ids: string[] }
+ export type FriendPayload = { tag: "friend_request", value: { from: string } } | { tag: "user_offline", value: { id: string } } | { tag: "status_update", value: { user_status: FriendStatusPayload } } | { tag: "status_sync" }
  export type FriendStatusPayload = { user_id: string, profile_name: string | undefined, last_update: string }
- export type SharedInstanceUnavailableReason = { tag: "deleted" } | { tag: "access_revoked" } | { tag: "quarantined" }
  export type LogEvent = { tag: "log4j", value: Log4jEvent } | { tag: "legacy", value: { message: string } }
 -export type LogPayload = { instance_id: string, event: LogEvent }
 +export type LogPayload = { instance_id: string, process_uuid: string, event: LogEvent }
@@ -219,7 +219,7 @@ index 9fd4962..8f632c9 100644
  export type Log4jEvent = { timestamp_millis: i64 | undefined, logger_name: string | undefined, level: string | undefined, thread_name: string | undefined, message: string | undefined, throwable: string | undefined }
  export type ModLoader = { tag: "vanilla" } | { tag: "forge" } | { tag: "fabric" } | { tag: "quilt" } | { tag: "neoforge" }
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.js b/apps/app-frontend/src/generated/app-events/postcard/index.js
-index 1393f04..e69e456 100644
+index 30fb805..5bffabf 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.js
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.js
 @@ -434,6 +434,7 @@ function deserialize_LOG_EVENT(d) {
@@ -231,7 +231,7 @@ index 1393f04..e69e456 100644
      };
  }
 diff --git a/apps/app-frontend/src/helpers/instance.ts b/apps/app-frontend/src/helpers/instance.ts
-index 46de853..c0162e2 100644
+index a37a962..3d0373c 100644
 --- a/apps/app-frontend/src/helpers/instance.ts
 +++ b/apps/app-frontend/src/helpers/instance.ts
 @@ -601,11 +601,13 @@ export async function get_pack_export_candidates(
@@ -427,7 +427,7 @@ index 2aacfe0..e2a59fd 100644
  		liveConsole.clear()
  		invalidate()
 diff --git a/apps/app-frontend/src/providers/setup/app-event-codec.ts b/apps/app-frontend/src/providers/setup/app-event-codec.ts
-index c0eb80e..b9d5eeb 100644
+index 0294be9..12c6008 100644
 --- a/apps/app-frontend/src/providers/setup/app-event-codec.ts
 +++ b/apps/app-frontend/src/providers/setup/app-event-codec.ts
 @@ -112,7 +112,7 @@ function normalizeLogPayload(value: unknown): WireObject {
@@ -440,7 +440,7 @@ index c0eb80e..b9d5eeb 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 8697599..ccd7abd 100644
+index 2da9a56..ff15284 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,8 +110,10 @@ fn main() {
@@ -455,10 +455,10 @@ index 8697599..ccd7abd 100644
                      .default_permission(
                          DefaultPermissionRule::AllowAllCommands,
 diff --git a/apps/app/src/api/instance.rs b/apps/app/src/api/instance.rs
-index e0ba5c2..09534e2 100644
+index c7b6419..ab141ba 100644
 --- a/apps/app/src/api/instance.rs
 +++ b/apps/app/src/api/instance.rs
-@@ -1323,12 +1323,19 @@ pub async fn instance_get_pack_export_candidates(
+@@ -1315,12 +1315,19 @@ pub async fn instance_get_pack_export_candidates(
  pub async fn instance_run(
      instance_id: &str,
      server_address: Option<String>,
@@ -522,10 +522,10 @@ index 8104b3e..a956d17 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index 9f7b215..d750bdf 100644
+index c6378fb..260b338 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
-@@ -58,7 +58,8 @@ pub use self::projects::{
+@@ -59,7 +59,8 @@ pub use self::projects::{
      toggle_disable_project, update_managed_modrinth_version, update_project,
  };
  pub use self::run::{
@@ -536,10 +536,10 @@ index 9f7b215..d750bdf 100644
  pub use self::screenshot_groups::{
      ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index f024d0f..d764ed9 100644
+index 64c1397..f5353bb 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
-@@ -20,6 +20,25 @@ pub enum QuickPlayType {
+@@ -22,6 +22,25 @@ pub enum QuickPlayType {
  pub async fn run(
      instance_id: &str,
      quick_play_type: QuickPlayType,
@@ -565,9 +565,9 @@ index f024d0f..d764ed9 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
-@@ -53,7 +72,8 @@ pub async fn run(
+@@ -54,7 +73,8 @@ pub async fn run(
          .await?
-         .ok_or_else(|| crate::ErrorKind::NoCredentialsError.as_error())?;
+         .ok_or(ErrorKind::NotLoggedIn)?;
  
 -    run_credentials(instance_id, &default_account, quick_play_type).await
 +    run_credentials(instance_id, &default_account, quick_play_type, additional)
@@ -575,7 +575,7 @@ index f024d0f..d764ed9 100644
  }
  
  #[tracing::instrument(skip(credentials))]
-@@ -61,6 +81,7 @@ async fn run_credentials(
+@@ -62,6 +82,7 @@ async fn run_credentials(
      instance_id: &str,
      credentials: &Credentials,
      quick_play_type: QuickPlayType,
@@ -583,7 +583,7 @@ index f024d0f..d764ed9 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      let settings = Settings::get(&state.pool).await?;
-@@ -257,6 +278,7 @@ async fn run_credentials(
+@@ -252,6 +273,7 @@ async fn run_credentials(
          &context,
          quick_play_type,
          &state,
@@ -592,10 +592,10 @@ index f024d0f..d764ed9 100644
      .await
  }
 diff --git a/packages/app-lib/src/api/logs.rs b/packages/app-lib/src/api/logs.rs
-index 4ce0c57..3382b5b 100644
+index e1f632a..8d96f96 100644
 --- a/packages/app-lib/src/api/logs.rs
 +++ b/packages/app-lib/src/api/logs.rs
-@@ -469,12 +469,27 @@ pub async fn delete_logs_by_filename(
+@@ -466,12 +466,27 @@ pub async fn delete_logs_by_filename(
      Ok(())
  }
  
@@ -624,7 +624,7 @@ index 4ce0c57..3382b5b 100644
      let joined = lines.join("\n");
      let compacted = compact_duplicate_lines(&joined);
  
-@@ -488,7 +503,11 @@ pub async fn get_live_log_buffer(
+@@ -485,7 +500,11 @@ pub async fn get_live_log_buffer(
  }
  
  pub fn clear_live_log_buffer(instance_id: &str) {
@@ -638,10 +638,10 @@ index 4ce0c57..3382b5b 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
-index 04fadf0..b6afa3a 100644
+index 741e1bd..3432f09 100644
 --- a/packages/app-lib/src/event/mod.rs
 +++ b/packages/app-lib/src/event/mod.rs
-@@ -532,6 +532,8 @@ mod log_types {
+@@ -531,6 +531,8 @@ mod log_types {
      #[serde_binhum::serde_binhum]
      pub struct LogPayload {
          pub instance_id: String,
@@ -651,10 +651,10 @@ index 04fadf0..b6afa3a 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index da7eb3c..99a7061 100644
+index be196c6..c83ed48 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -906,6 +906,9 @@ pub async fn launch_minecraft(
+@@ -898,6 +898,9 @@ pub async fn launch_minecraft(
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
      state: &Arc<State>,
@@ -664,62 +664,34 @@ index da7eb3c..99a7061 100644
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -1039,21 +1042,27 @@ pub async fn launch_minecraft(
+@@ -1030,8 +1033,12 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
 -    // Check if instance has a running process, and reject running the command if it does
--    let existing_processes = process::get_by_instance_id(&instance.id).await?;
--    if let Some(process) = existing_processes.first() {
--        return Err(crate::ErrorKind::LauncherError(format!(
--            "Instance {} is already running as process {}",
--            instance.id, process.uuid
--        ))
--        .as_error());
--    }
 -    if crate::state::instance_has_running_process(&instance.id, state).await? {
--        return Err(crate::ErrorKind::LauncherError(format!(
--            "Instance {} is already running",
--            instance.id
--        ))
--        .as_error());
 +    // Check if instance has a running process, and reject running the command if it does,
 +    // unless another copy is exactly what was asked for.
-+    if !additional {
-+        let existing_processes =
-+            process::get_by_instance_id(&instance.id).await?;
-+        if let Some(process) = existing_processes.first() {
-+            return Err(crate::ErrorKind::LauncherError(format!(
-+                "Instance {} is already running as process {}",
-+                instance.id, process.uuid
-+            ))
-+            .as_error());
-+        }
-+        if crate::state::instance_has_running_process(&instance.id, state)
++    if !additional
++        && crate::state::instance_has_running_process(&instance.id, state)
 +            .await?
-+        {
-+            return Err(crate::ErrorKind::LauncherError(format!(
-+                "Instance {} is already running",
-+                instance.id
-+            ))
-+            .as_error());
-+        }
-     }
- 
-     if let Some(path) = download::missing_runtime_file(
-@@ -1289,7 +1298,10 @@ pub async fn launch_minecraft(
-     let _store_lease = state.content_store.lease().await;
-     state.content_store.recover(Some(&instance.id)).await?;
++    {
+         bail!(ErrorKind::LauncherError(format!(
+             "instance {} is already running",
+             instance.id
+@@ -1281,7 +1288,10 @@ pub async fn launch_minecraft(
+         .await
+         .context("recovering interrupted content changes")?;
      // state.content_store.validate_instance(instance).await?;
 -    if crate::state::instance_has_running_process(&instance.id, state).await? {
 +    if !additional
 +        && crate::state::instance_has_running_process(&instance.id, state)
 +            .await?
 +    {
-         return Err(crate::ErrorKind::LauncherError(format!(
-             "Instance {} is already running",
+         bail!(ErrorKind::LauncherError(format!(
+             "instance {} is already running",
              instance.id
-@@ -1336,6 +1348,8 @@ pub async fn launch_minecraft(
+@@ -1329,6 +1339,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,
@@ -729,10 +701,10 @@ index da7eb3c..99a7061 100644
              post_exit_hook,
              env_args,
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index 4cd3943..f278b0f 100644
+index fc6e8aa..c4ac145 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
-@@ -49,37 +49,74 @@ impl LogRingBuffer {
+@@ -51,37 +51,74 @@ impl LogRingBuffer {
      fn get_all(&self) -> Vec<String> {
          self.lines.iter().cloned().collect()
      }
@@ -821,7 +793,7 @@ index 4cd3943..f278b0f 100644
  }
  
  async fn clear_persisted_process(
-@@ -203,6 +240,10 @@ impl ProcessManager {
+@@ -205,6 +242,10 @@ impl ProcessManager {
          instance_id: &str,
          instance_path: &str,
          instance_name: &str,
@@ -832,7 +804,7 @@ index 4cd3943..f278b0f 100644
          mut mc_command: Command,
          post_exit_command: Option<String>,
          post_exit_env_vars: Vec<(String, String)>,
-@@ -233,13 +274,17 @@ impl ProcessManager {
+@@ -235,13 +276,17 @@ impl ProcessManager {
  
          let log_path = logs_folder.join(LAUNCHER_LOG_PATH);
  
@@ -852,7 +824,7 @@ index 4cd3943..f278b0f 100644
                  .open(&log_path)
                  .map_err(|e| IOError::with_path(e, &log_path))?;
  
-@@ -252,6 +297,10 @@ impl ProcessManager {
+@@ -254,6 +299,10 @@ impl ProcessManager {
              .map_err(|e| IOError::with_path(e, &log_path))?;
              writeln!(log_file, "# Instance: {instance_path} \n")
                  .map_err(|e| IOError::with_path(e, &log_path))?;
@@ -863,7 +835,7 @@ index 4cd3943..f278b0f 100644
              writeln!(log_file).map_err(|e| IOError::with_path(e, &log_path))?;
          }
  
-@@ -263,11 +312,12 @@ impl ProcessManager {
+@@ -265,11 +314,12 @@ impl ProcessManager {
  
          let mut process = Process {
              metadata: ProcessMetadata {
@@ -877,7 +849,7 @@ index 4cd3943..f278b0f 100644
              },
              child: mc_proc,
              rpc_server,
-@@ -324,10 +374,12 @@ impl ProcessManager {
+@@ -326,10 +376,12 @@ impl ProcessManager {
              let instance_id = metadata.instance_id.clone();
              let instance_path = metadata.instance_path.clone();
              let pool = state.pool.clone();
@@ -890,7 +862,7 @@ index 4cd3943..f278b0f 100644
                      stdout,
                      log_path_clone,
                      xml_logging,
-@@ -343,10 +395,12 @@ impl ProcessManager {
+@@ -345,10 +397,12 @@ impl ProcessManager {
              let instance_id = metadata.instance_id.clone();
              let instance_path = metadata.instance_path.clone();
              let pool = state.pool.clone();
@@ -903,7 +875,7 @@ index 4cd3943..f278b0f 100644
                      stderr,
                      log_path_clone,
                      xml_logging,
-@@ -431,6 +485,10 @@ pub struct ProcessMetadata {
+@@ -433,6 +487,10 @@ pub struct ProcessMetadata {
      pub instance_id: String,
      pub instance_path: String,
      pub instance_name: String,
@@ -914,7 +886,7 @@ index 4cd3943..f278b0f 100644
      pub start_time: DateTime<Utc>,
  }
  
-@@ -460,6 +518,7 @@ impl Process {
+@@ -462,6 +520,7 @@ impl Process {
      async fn process_output<R>(
          instance_id: &str,
          _instance_path: &str,
@@ -922,7 +894,7 @@ index 4cd3943..f278b0f 100644
          reader: R,
          log_path: impl AsRef<Path>,
          xml_logging: bool,
-@@ -587,6 +646,7 @@ impl Process {
+@@ -589,6 +648,7 @@ impl Process {
  
                                  Self::emit_log4j_event(
                                      instance_id,
@@ -930,7 +902,7 @@ index 4cd3943..f278b0f 100644
                                      &current_event,
                                  );
                              }
-@@ -632,6 +692,7 @@ impl Process {
+@@ -634,6 +694,7 @@ impl Process {
  
                                      Self::emit_log4j_event(
                                          instance_id,
@@ -938,7 +910,7 @@ index 4cd3943..f278b0f 100644
                                          &current_event,
                                      );
                                  }
-@@ -658,7 +719,11 @@ impl Process {
+@@ -660,7 +721,11 @@ impl Process {
                                      e
                                  );
                              }
@@ -951,7 +923,7 @@ index 4cd3943..f278b0f 100644
                          }
                      }
                      Ok(Event::CData(e)) => {
-@@ -685,7 +750,11 @@ impl Process {
+@@ -687,7 +752,11 @@ impl Process {
                      if let Err(e) = Self::append_to_log_file(&log_path, &line) {
                          tracing::warn!("Failed to write to log file: {}", e);
                      }
@@ -964,7 +936,7 @@ index 4cd3943..f278b0f 100644
                      if let Err(e) = Self::maybe_handle_old_server_join_logging(
                          instance_id,
                          line.trim_ascii_end(),
-@@ -745,13 +814,17 @@ impl Process {
+@@ -747,13 +816,17 @@ impl Process {
          ))
      }
  
@@ -985,7 +957,7 @@ index 4cd3943..f278b0f 100644
              }
          }
  
-@@ -760,6 +833,7 @@ impl Process {
+@@ -762,6 +835,7 @@ impl Process {
              let event_state = crate::EventState::get();
              let _ = event_state.send(crate::event::AppEvent::Log(LogPayload {
                  instance_id: instance_id.to_string(),
@@ -993,7 +965,7 @@ index 4cd3943..f278b0f 100644
                  event: LogEvent::Log4j(event.clone()),
              }));
          }
-@@ -769,14 +843,15 @@ impl Process {
+@@ -771,14 +845,15 @@ impl Process {
          }
      }
  

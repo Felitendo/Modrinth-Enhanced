@@ -185,7 +185,7 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index e410089..c82d230 100644
+index e3f789d..b6311b8 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
 @@ -2763,7 +2763,7 @@
@@ -218,15 +218,16 @@ index ae3af5d..e5bbabe 100644
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 70cce60..f024d0f 100644
+index 5d50c36..64c1397 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
-@@ -4,13 +4,10 @@ use crate::state::{
+@@ -5,14 +5,11 @@ use crate::state::{
      Credentials, InstanceLink, ProcessMetadata, Settings, State,
      game_options_sync_is_enabled, load_game_option_preferences,
  };
 -use crate::util::fetch;
  use crate::util::io::IOError;
+ use anyhow::{Context, bail};
  use serde_json::json;
  use std::collections::HashMap;
 -use std::time::Duration;
@@ -235,7 +236,7 @@ index 70cce60..f024d0f 100644
  
  #[derive(Debug, Clone)]
  pub enum QuickPlayType {
-@@ -242,54 +239,10 @@ async fn run_credentials(
+@@ -237,54 +234,10 @@ async fn run_credentials(
          mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
      }
  
@@ -294,7 +295,7 @@ index 70cce60..f024d0f 100644
  
      crate::minecraft_skins::flush_pending_skin_change().await?;
      crate::launcher::launch_minecraft(
-@@ -308,21 +261,6 @@ async fn run_credentials(
+@@ -303,21 +256,6 @@ async fn run_credentials(
      .await
  }
  
@@ -316,7 +317,7 @@ index 70cce60..f024d0f 100644
  pub async fn kill(instance_id: &str) -> crate::Result<()> {
      let state = State::get().await?;
      let processes =
-@@ -384,13 +322,12 @@ pub async fn try_update_playtime_by_instance_id(
+@@ -377,13 +315,12 @@ pub async fn try_update_playtime_by_instance_id(
              }
          }
  

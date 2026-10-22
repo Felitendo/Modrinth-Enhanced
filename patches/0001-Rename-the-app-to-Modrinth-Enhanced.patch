@@ -49,7 +49,7 @@ index 76249d9..e588fa9 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index b2f15f6..e410089 100644
+index 3055ce1..e3f789d 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
 @@ -1653,7 +1653,7 @@

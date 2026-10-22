@@ -29,7 +29,7 @@ ads and these prompts were shown, and nothing more.
  3 files changed, 27 insertions(+), 111 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index e9b449e..325a26c 100644
+index 38fc7a8..aa88a01 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -1,7 +1,6 @@
@@ -93,7 +93,7 @@ index e9b449e..325a26c 100644
  })
  
  function handleAdsConsentRequired(required) {
-@@ -1302,16 +1284,6 @@ const modrinthAccountMenuOptions = computed(() => [
+@@ -1298,16 +1280,6 @@ const modrinthAccountMenuOptions = computed(() => [
  		icon: UserIcon,
  		action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
  	},
@@ -110,7 +110,7 @@ index e9b449e..325a26c 100644
  	{
  		id: 'add-friend',
  		label: formatMessage(messages.addFriend),
-@@ -2215,7 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2211,7 +2183,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppSidebar
  			ref="sidebar"
  			:credentials="credentials"

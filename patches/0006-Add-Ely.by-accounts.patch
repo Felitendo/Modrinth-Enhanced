@@ -36,10 +36,10 @@ Modrinth Enhanced yet.
  apps/app/src/api/auth.rs                      |  10 +
  packages/app-lib/src/api/minecraft_auth.rs    |  34 +++
  packages/app-lib/src/launcher/mod.rs          |  16 ++
- packages/app-lib/src/state/minecraft_auth.rs  | 213 +++++++++++++++++-
- packages/app-lib/src/util/authlib_injector.rs |  77 +++++++
+ packages/app-lib/src/state/minecraft_auth.rs  | 208 +++++++++++++++++-
+ packages/app-lib/src/util/authlib_injector.rs |  75 +++++++
  packages/app-lib/src/util/mod.rs              |   1 +
- 13 files changed, 583 insertions(+), 13 deletions(-)
+ 13 files changed, 576 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/ElyAccountModal.vue
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
@@ -429,7 +429,7 @@ index cb7319a..57580ff 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index e3ccc66..9298918 100644
+index 0b7a1df..dc1b942 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {
@@ -441,10 +441,10 @@ index e3ccc66..9298918 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index f4eded6..dea07b2 100644
+index 03753c4..42f88b0 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
-@@ -10,6 +10,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -11,6 +11,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
              check_reachable,
              login,
              login_offline,
@@ -452,7 +452,7 @@ index f4eded6..dea07b2 100644
              remove_user,
              get_default_user,
              set_default_user,
-@@ -93,6 +94,15 @@ pub async fn login_offline(username: String) -> Result<Credentials> {
+@@ -91,6 +92,15 @@ pub async fn login_offline(username: String) -> Result<Credentials> {
      Ok(minecraft_auth::login_offline(&username).await?)
  }
  
@@ -469,10 +469,10 @@ index f4eded6..dea07b2 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index a7fac4a..2d18da3 100644
+index b735a6c..dffcbb8 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
-@@ -86,6 +86,40 @@ pub async fn login_offline(username: &str) -> crate::Result<Credentials> {
+@@ -87,6 +87,40 @@ pub async fn login_offline(username: &str) -> crate::Result<Credentials> {
      Ok(credentials)
  }
  
@@ -514,10 +514,10 @@ index a7fac4a..2d18da3 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index fed2b28..6094d9a 100644
+index b5e7180..6f65f39 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1165,6 +1165,22 @@ pub async fn launch_minecraft(
+@@ -1153,6 +1153,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -541,10 +541,10 @@ index fed2b28..6094d9a 100644
          .arg("com.modrinth.theseus.MinecraftLaunch")
          .arg(version_info.main_class.clone())
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 14455ec..4130488 100644
+index b777752..9106319 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -239,6 +239,67 @@ pub fn offline_uuid(username: &str) -> Uuid {
+@@ -310,6 +310,66 @@ pub fn offline_uuid(username: &str) -> Uuid {
      Uuid::from_bytes(bytes)
  }
  
@@ -596,23 +596,22 @@ index 14455ec..4130488 100644
 +        .and_then(|error| error.error_message)
 +        .unwrap_or_else(|| format!("Ely.by refused the request ({status})"));
 +
-+    crate::ErrorKind::OtherError(message).as_error()
++    anyhow::anyhow!(message)
 +}
 +
 +/// Ely.by's Yggdrasil UUIDs come without dashes.
 +fn parse_ely_uuid(id: &str) -> crate::Result<Uuid> {
 +    Uuid::parse_str(id).map_err(|_| {
-+        crate::ErrorKind::OtherError(format!(
++        anyhow::anyhow!(
 +            "Ely.by returned a player id that could not be read: {id}"
-+        ))
-+        .as_error()
++        )
 +    })
 +}
 +
  /// An entry in the player profile cache, keyed by player UUID.
  pub(super) enum ProfileCacheEntry {
      /// A cached profile that is valid, even though it may be stale.
-@@ -319,6 +380,135 @@ impl Credentials {
+@@ -390,6 +450,133 @@ impl Credentials {
          self.refresh_token == OFFLINE_REFRESH_TOKEN
      }
  
@@ -647,9 +646,7 @@ index 14455ec..4130488 100644
 +            .send()
 +            .await
 +            .map_err(|error| {
-+                crate::ErrorKind::OtherError(format!(
-+                    "Could not reach Ely.by: {error}"
-+                ))
++                anyhow::anyhow!("Could not reach Ely.by: {error}")
 +            })?;
 +
 +        if !response.status().is_success() {
@@ -748,7 +745,7 @@ index 14455ec..4130488 100644
      /// Refreshes the authentication tokens for this user if they are expired, or
      /// very close to expiration.
      async fn refresh(
-@@ -338,6 +528,22 @@ impl Credentials {
+@@ -409,6 +596,20 @@ impl Credentials {
              return Ok(());
          }
  
@@ -756,11 +753,9 @@ index 14455ec..4130488 100644
 +        // so Microsoft is not involved at any point below.
 +        if self.is_ely() {
 +            if !self.ely_token_is_valid().await && !self.refresh_ely().await? {
-+                return Err(crate::ErrorKind::OtherError(
++                return Err(anyhow::anyhow!(
 +                    "Ely.by no longer accepts this account's session. Sign in again."
-+                        .to_string(),
-+                )
-+                .into());
++                ));
 +            }
 +
 +            self.expires = Utc::now() + Duration::hours(6);
@@ -771,7 +766,7 @@ index 14455ec..4130488 100644
          let oauth_token = oauth_refresh(&self.refresh_token).await?;
          let (pair, current_date) =
              DeviceTokenPair::refresh_and_get_device_token(
-@@ -411,9 +617,10 @@ impl Credentials {
+@@ -482,9 +683,10 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {
@@ -787,10 +782,10 @@ index 14455ec..4130488 100644
  
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
 new file mode 100644
-index 0000000..dc099f9
+index 0000000..98930d6
 --- /dev/null
 +++ b/packages/app-lib/src/util/authlib_injector.rs
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,75 @@
 +//! Downloads and caches the authlib-injector Java agent.
 +//!
 +//! Minecraft asks Mojang who a player is. An Ely.by account is not a Mojang
@@ -835,16 +830,16 @@ index 0000000..dc099f9
 +        .send()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
++            anyhow::anyhow!(
 +                "Could not reach the authlib-injector distribution: {error}"
-+            ))
++            )
 +        })?
 +        .json::<LatestArtifact>()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
++            anyhow::anyhow!(
 +                "Could not read the authlib-injector metadata: {error}"
-+            ))
++            )
 +        })?;
 +
 +    let bytes = REQWEST_CLIENT
@@ -852,16 +847,14 @@ index 0000000..dc099f9
 +        .send()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
-+                "Could not download authlib-injector: {error}"
-+            ))
++            anyhow::anyhow!("Could not download authlib-injector: {error}")
 +        })?
 +        .bytes()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
++            anyhow::anyhow!(
 +                "Could not read the authlib-injector download: {error}"
-+            ))
++            )
 +        })?;
 +
 +    io::write(&jar, &bytes).await?;

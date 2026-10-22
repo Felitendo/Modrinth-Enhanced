@@ -417,7 +417,7 @@ index ea86e86..e3c4b21 100644
  	return await invoke('plugin:skin-browser|skin_browser_site_skin', { site, id })
  }
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 1bbcfa4..810c4f8 100644
+index e5b3635..f98a1c8 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -54,6 +54,8 @@ fn main() {
@@ -430,7 +430,7 @@ index 1bbcfa4..810c4f8 100644
                          "skin_browser_open_site",
                      ])
 diff --git a/apps/app/src/api/skin_browser.rs b/apps/app/src/api/skin_browser.rs
-index cfd0d8c..e4451cf 100644
+index 90d1682..5d10357 100644
 --- a/apps/app/src/api/skin_browser.rs
 +++ b/apps/app/src/api/skin_browser.rs
 @@ -1,6 +1,7 @@
@@ -451,7 +451,7 @@ index cfd0d8c..e4451cf 100644
 +    LittleSkinQuery, SiteSkin, SkinSite,
  };
  
- use crate::api::{Result, TheseusSerializableError};
+ use crate::api::{CommandError, Result};
 @@ -23,6 +25,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
          .invoke_handler(tauri::generate_handler![
              skin_browser_ely_catalogue,
@@ -481,7 +481,7 @@ index cfd0d8c..e4451cf 100644
  pub async fn skin_browser_site_skin(
      site: SkinSite,
 diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
-index fba085b..9038989 100644
+index 07a7bb8..13ebfe2 100644
 --- a/packages/app-lib/src/api/skin_browser.rs
 +++ b/packages/app-lib/src/api/skin_browser.rs
 @@ -1,9 +1,10 @@
@@ -499,7 +499,7 @@ index fba085b..9038989 100644
  
  use base64::Engine;
  use serde::{Deserialize, Serialize};
-@@ -194,6 +195,115 @@ pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
+@@ -193,6 +194,115 @@ pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
          .map_err(|error| failed("read the Ely.by search", error))
  }
  

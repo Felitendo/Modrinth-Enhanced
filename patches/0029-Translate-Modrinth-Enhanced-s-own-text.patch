@@ -47,7 +47,7 @@ first start as well.
  34 files changed, 12189 insertions(+)
 
 diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
-index 42b3fd4..df67709 100644
+index 2e92c3b..ed3f1b9 100644
 --- a/apps/app-frontend/src/locales/de-CH/index.json
 +++ b/apps/app-frontend/src/locales/de-CH/index.json
 @@ -200,6 +200,66 @@
@@ -880,7 +880,7 @@ index 42b3fd4..df67709 100644
    "instance.edit-server.title": {
      "message": "Server bearbeiten"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -908,7 +908,7 @@ index 42b3fd4..df67709 100644
    "minecraft-account.remove-account": {
      "message": "Konto entfernen"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "In Minecraft anmelden"
    },
@@ -927,7 +927,7 @@ index 42b3fd4..df67709 100644
    "minecraft-required.description": {
      "message": "Du benötigst ein Microsoft-Konto, welches Minecraft besitzt, bevor du das Spiel starten und spielen kannst."
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -938,7 +938,7 @@ index 42b3fd4..df67709 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
-index b939717..c03cdd0 100644
+index ad9d66f..b807442 100644
 --- a/apps/app-frontend/src/locales/de-DE/index.json
 +++ b/apps/app-frontend/src/locales/de-DE/index.json
 @@ -200,6 +200,66 @@
@@ -1771,7 +1771,7 @@ index b939717..c03cdd0 100644
    "instance.edit-server.title": {
      "message": "Server bearbeiten"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -1799,7 +1799,7 @@ index b939717..c03cdd0 100644
    "minecraft-account.remove-account": {
      "message": "Konto entfernen"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "Bei Minecraft anmelden"
    },
@@ -1818,7 +1818,7 @@ index b939717..c03cdd0 100644
    "minecraft-required.description": {
      "message": "Du benötigst ein Microsoft-Konto, welches Minecraft besitzt, bevor du das Spiel starten und spielen kannst."
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -1829,7 +1829,7 @@ index b939717..c03cdd0 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
-index e9ca090..4fd3eb6 100644
+index ddf3b4c..6c09cee 100644
 --- a/apps/app-frontend/src/locales/es-419/index.json
 +++ b/apps/app-frontend/src/locales/es-419/index.json
 @@ -200,6 +200,66 @@
@@ -2662,7 +2662,7 @@ index e9ca090..4fd3eb6 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "Añadir cuenta"
    },
@@ -2690,7 +2690,7 @@ index e9ca090..4fd3eb6 100644
    "minecraft-account.remove-account": {
      "message": "Eliminar cuenta"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "Inicia sesión en Minecraft"
    },
@@ -2709,7 +2709,7 @@ index e9ca090..4fd3eb6 100644
    "minecraft-required.description": {
      "message": "Necesitas una cuenta de Microsoft con Minecraft comprado para poder iniciar el juego."
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -2720,7 +2720,7 @@ index e9ca090..4fd3eb6 100644
      "message": "Inicia sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
-index dc862a5..aaa2750 100644
+index d10a0f7..fe53c23 100644
 --- a/apps/app-frontend/src/locales/es-ES/index.json
 +++ b/apps/app-frontend/src/locales/es-ES/index.json
 @@ -200,6 +200,66 @@
@@ -3553,7 +3553,7 @@ index dc862a5..aaa2750 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4397,12 +5078,27 @@
+@@ -4388,12 +5069,27 @@
    "minecraft-account.add-account": {
      "message": "Añadir cuenta"
    },
@@ -3581,7 +3581,7 @@ index dc862a5..aaa2750 100644
    "minecraft-account.remove-account": {
      "message": "Eliminar cuenta"
    },
-@@ -4412,6 +5108,18 @@
+@@ -4403,6 +5099,18 @@
    "minecraft-account.sign-in": {
      "message": "Registrarse en Minecraft"
    },
@@ -3600,7 +3600,7 @@ index dc862a5..aaa2750 100644
    "minecraft-required.description": {
      "message": "Necesitas una cuenta de Microsoft que posea Minecraft antes de poder lanzar y jugar."
    },
-@@ -4430,6 +5138,9 @@
+@@ -4421,6 +5129,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -3611,7 +3611,7 @@ index dc862a5..aaa2750 100644
      "message": "Iniciar sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
-index b903764..e1f4eed 100644
+index c6ab4d2..0419667 100644
 --- a/apps/app-frontend/src/locales/fr-FR/index.json
 +++ b/apps/app-frontend/src/locales/fr-FR/index.json
 @@ -200,6 +200,66 @@
@@ -4444,7 +4444,7 @@ index b903764..e1f4eed 100644
    "instance.edit-server.title": {
      "message": "Modifier le serveur"
    },
-@@ -4361,12 +5042,27 @@
+@@ -4352,12 +5033,27 @@
    "minecraft-account.add-account": {
      "message": "Ajouter un compte"
    },
@@ -4472,7 +4472,7 @@ index b903764..e1f4eed 100644
    "minecraft-account.remove-account": {
      "message": "Retirer le compte"
    },
-@@ -4376,6 +5072,18 @@
+@@ -4367,6 +5063,18 @@
    "minecraft-account.sign-in": {
      "message": "Se connecter à Minecraft"
    },
@@ -4491,7 +4491,7 @@ index b903764..e1f4eed 100644
    "minecraft-required.description": {
      "message": "Vous avez besoin d'un compte Microsoft qui possède Minecraft avant de jouer."
    },
-@@ -4394,6 +5102,9 @@
+@@ -4385,6 +5093,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requis"
    },
@@ -4502,7 +4502,7 @@ index b903764..e1f4eed 100644
      "message": "Se connecter à Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
-index ec464c1..d6bc920 100644
+index 11a7754..928eec5 100644
 --- a/apps/app-frontend/src/locales/hu-HU/index.json
 +++ b/apps/app-frontend/src/locales/hu-HU/index.json
 @@ -200,6 +200,66 @@
@@ -5335,7 +5335,7 @@ index ec464c1..d6bc920 100644
    "instance.edit-server.title": {
      "message": "Szerver módosítása"
    },
-@@ -4406,12 +5087,27 @@
+@@ -4397,12 +5078,27 @@
    "minecraft-account.add-account": {
      "message": "Fiók hozzáadása"
    },
@@ -5363,7 +5363,7 @@ index ec464c1..d6bc920 100644
    "minecraft-account.remove-account": {
      "message": "Fiók eltávolítása"
    },
-@@ -4421,6 +5117,18 @@
+@@ -4412,6 +5108,18 @@
    "minecraft-account.sign-in": {
      "message": "Bejelentkezés a Minecraftba"
    },
@@ -5382,7 +5382,7 @@ index ec464c1..d6bc920 100644
    "minecraft-required.description": {
      "message": "A játék indítása és használata előtt rendelkezned kell egy Microsoft-fiókkal, amelyhez Minecraft tartozik."
    },
-@@ -4439,6 +5147,9 @@
+@@ -4430,6 +5138,9 @@
    "minecraft-required.header": {
      "message": "Minecraft szükséges"
    },
@@ -5393,7 +5393,7 @@ index ec464c1..d6bc920 100644
      "message": "Bejelentkezés a Microsft-ba"
    },
 diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
-index d46609e..db2f3a4 100644
+index 63dba95..737acb8 100644
 --- a/apps/app-frontend/src/locales/it-IT/index.json
 +++ b/apps/app-frontend/src/locales/it-IT/index.json
 @@ -200,6 +200,66 @@
@@ -6226,7 +6226,7 @@ index d46609e..db2f3a4 100644
    "instance.edit-server.title": {
      "message": "Modifica server"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "Aggiungi account"
    },
@@ -6254,7 +6254,7 @@ index d46609e..db2f3a4 100644
    "minecraft-account.remove-account": {
      "message": "Rimuovi account"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "Accedi a Minecraft"
    },
@@ -6273,7 +6273,7 @@ index d46609e..db2f3a4 100644
    "minecraft-required.description": {
      "message": "Devi disporre di una copia di Minecraft da un account Microsoft prima di poter giocare."
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "Minecraft richiesto"
    },
@@ -6284,7 +6284,7 @@ index d46609e..db2f3a4 100644
      "message": "Accedi a Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
-index 7b83c82..16987fa 100644
+index a231d8e..79b5066 100644
 --- a/apps/app-frontend/src/locales/ja-JP/index.json
 +++ b/apps/app-frontend/src/locales/ja-JP/index.json
 @@ -200,6 +200,66 @@
@@ -7117,7 +7117,7 @@ index 7b83c82..16987fa 100644
    "instance.edit-server.title": {
      "message": "サーバーを編集する"
    },
-@@ -3518,12 +4199,27 @@
+@@ -3509,12 +4190,27 @@
    "minecraft-account.add-account": {
      "message": "アカウントを追加"
    },
@@ -7145,7 +7145,7 @@ index 7b83c82..16987fa 100644
    "minecraft-account.remove-account": {
      "message": "アカウントを一覧から削除"
    },
-@@ -3533,6 +4229,18 @@
+@@ -3524,6 +4220,18 @@
    "minecraft-account.sign-in": {
      "message": "Minecraftにサインイン"
    },
@@ -7164,7 +7164,7 @@ index 7b83c82..16987fa 100644
    "minecraft-required.description": {
      "message": "Minecraftを起動してプレイするには、Minecraftを所有しているMicrosoftアカウントが必要です。"
    },
-@@ -3551,6 +4259,9 @@
+@@ -3542,6 +4250,9 @@
    "minecraft-required.header": {
      "message": "Minecraftが必要です"
    },
@@ -7175,7 +7175,7 @@ index 7b83c82..16987fa 100644
      "message": "Microsoftにサインイン"
    },
 diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
-index f4dfc33..fa9b884 100644
+index 639638e..f32c8e3 100644
 --- a/apps/app-frontend/src/locales/nl-NL/index.json
 +++ b/apps/app-frontend/src/locales/nl-NL/index.json
 @@ -200,6 +200,66 @@
@@ -8008,7 +8008,7 @@ index f4dfc33..fa9b884 100644
    "instance.edit-server.title": {
      "message": "Server bewerken"
    },
-@@ -4010,12 +4691,27 @@
+@@ -4001,12 +4682,27 @@
    "minecraft-account.add-account": {
      "message": "Voeg account toe"
    },
@@ -8036,7 +8036,7 @@ index f4dfc33..fa9b884 100644
    "minecraft-account.remove-account": {
      "message": "Verwijder account"
    },
-@@ -4025,6 +4721,18 @@
+@@ -4016,6 +4712,18 @@
    "minecraft-account.sign-in": {
      "message": "Meld je aan bij Minecraft"
    },
@@ -8055,7 +8055,7 @@ index f4dfc33..fa9b884 100644
    "minecraft-required.description": {
      "message": "Je hebt een Microsoft-account nodig waarop Minecraft is geregistreerd voordat je het spel kunt starten en spelen."
    },
-@@ -4043,6 +4751,9 @@
+@@ -4034,6 +4742,9 @@
    "minecraft-required.header": {
      "message": "Minecraft vereist"
    },
@@ -8066,7 +8066,7 @@ index f4dfc33..fa9b884 100644
      "message": "Aanmelden bij Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
-index c5bff2e..fb3d7e1 100644
+index 420972b..d624fde 100644
 --- a/apps/app-frontend/src/locales/pl-PL/index.json
 +++ b/apps/app-frontend/src/locales/pl-PL/index.json
 @@ -200,6 +200,66 @@
@@ -8899,7 +8899,7 @@ index c5bff2e..fb3d7e1 100644
    "instance.edit-server.title": {
      "message": "Edytuj serwer"
    },
-@@ -4415,12 +5096,27 @@
+@@ -4406,12 +5087,27 @@
    "minecraft-account.add-account": {
      "message": "Dodaj konto"
    },
@@ -8927,7 +8927,7 @@ index c5bff2e..fb3d7e1 100644
    "minecraft-account.remove-account": {
      "message": "Usuń konto"
    },
-@@ -4430,6 +5126,18 @@
+@@ -4421,6 +5117,18 @@
    "minecraft-account.sign-in": {
      "message": "Zaloguj się do Minecraft"
    },
@@ -8946,7 +8946,7 @@ index c5bff2e..fb3d7e1 100644
    "minecraft-required.description": {
      "message": "Potrzebujesz konto Microsoft, które posiada Minecraft, zanim będziesz mógł włączyć i zacząć grać."
    },
-@@ -4448,6 +5156,9 @@
+@@ -4439,6 +5147,9 @@
    "minecraft-required.header": {
      "message": "Minecraft wymagany"
    },
@@ -8957,7 +8957,7 @@ index c5bff2e..fb3d7e1 100644
      "message": "Zaloguj się do Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
-index 5e9eaa2..8d6d82f 100644
+index ed15efa..834fceb 100644
 --- a/apps/app-frontend/src/locales/pt-BR/index.json
 +++ b/apps/app-frontend/src/locales/pt-BR/index.json
 @@ -200,6 +200,66 @@
@@ -9790,7 +9790,7 @@ index 5e9eaa2..8d6d82f 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "Adicionar conta"
    },
@@ -9818,7 +9818,7 @@ index 5e9eaa2..8d6d82f 100644
    "minecraft-account.remove-account": {
      "message": "Remover conta"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "Conecte-se no Minecraft"
    },
@@ -9837,7 +9837,7 @@ index 5e9eaa2..8d6d82f 100644
    "minecraft-required.description": {
      "message": "Você precisa de uma conta Microsoft que possui o Minecraft antes de iniciar e jogar."
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "Minecraft necessário"
    },
@@ -9848,7 +9848,7 @@ index 5e9eaa2..8d6d82f 100644
      "message": "Entrar na Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
-index 3651893..f2b17b6 100644
+index 8cd00cf..d91b688 100644
 --- a/apps/app-frontend/src/locales/ru-RU/index.json
 +++ b/apps/app-frontend/src/locales/ru-RU/index.json
 @@ -200,6 +200,66 @@
@@ -10681,7 +10681,7 @@ index 3651893..f2b17b6 100644
    "instance.edit-server.title": {
      "message": "Настройка сервера"
    },
-@@ -4403,12 +5084,27 @@
+@@ -4394,12 +5075,27 @@
    "minecraft-account.add-account": {
      "message": "Добавить аккаунт"
    },
@@ -10709,7 +10709,7 @@ index 3651893..f2b17b6 100644
    "minecraft-account.remove-account": {
      "message": "Удалить аккаунт"
    },
-@@ -4418,6 +5114,18 @@
+@@ -4409,6 +5105,18 @@
    "minecraft-account.sign-in": {
      "message": "Войти в Minecraft"
    },
@@ -10728,7 +10728,7 @@ index 3651893..f2b17b6 100644
    "minecraft-required.description": {
      "message": "Для запуска и игры требуется аккаунт Microsoft с приобретённым Minecraft."
    },
-@@ -4436,6 +5144,9 @@
+@@ -4427,6 +5135,9 @@
    "minecraft-required.header": {
      "message": "Требуется Minecraft"
    },
@@ -10739,7 +10739,7 @@ index 3651893..f2b17b6 100644
      "message": "Войти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
-index 14f33c5..4f4f292 100644
+index 452f1c6..e19002f 100644
 --- a/apps/app-frontend/src/locales/sv-SE/index.json
 +++ b/apps/app-frontend/src/locales/sv-SE/index.json
 @@ -200,6 +200,66 @@
@@ -11572,7 +11572,7 @@ index 14f33c5..4f4f292 100644
    "instance.edit-server.title": {
      "message": "Redigera server"
    },
-@@ -3884,12 +4565,27 @@
+@@ -3875,12 +4556,27 @@
    "minecraft-account.add-account": {
      "message": "Lägg till konto"
    },
@@ -11600,7 +11600,7 @@ index 14f33c5..4f4f292 100644
    "minecraft-account.remove-account": {
      "message": "Ta bort konto"
    },
-@@ -3899,6 +4595,18 @@
+@@ -3890,6 +4586,18 @@
    "minecraft-account.sign-in": {
      "message": "Logga in till Minecraft"
    },
@@ -11619,7 +11619,7 @@ index 14f33c5..4f4f292 100644
    "minecraft-required.description": {
      "message": "Du behöver ett Microsoft-konto som äger Minecraft innan du kan köra och spela."
    },
-@@ -3917,6 +4625,9 @@
+@@ -3908,6 +4616,9 @@
    "minecraft-required.header": {
      "message": "Minecraft krävs"
    },
@@ -11630,7 +11630,7 @@ index 14f33c5..4f4f292 100644
      "message": "Logga in på Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
-index c719222..850e51b 100644
+index bdde7e2..aafb1ce 100644
 --- a/apps/app-frontend/src/locales/tr-TR/index.json
 +++ b/apps/app-frontend/src/locales/tr-TR/index.json
 @@ -200,6 +200,66 @@
@@ -12463,7 +12463,7 @@ index c719222..850e51b 100644
    "instance.edit-server.title": {
      "message": "Sunucuyu düzenle"
    },
-@@ -3707,12 +4388,27 @@
+@@ -3698,12 +4379,27 @@
    "minecraft-account.add-account": {
      "message": "Hesap ekle"
    },
@@ -12491,7 +12491,7 @@ index c719222..850e51b 100644
    "minecraft-account.remove-account": {
      "message": "Hesabı kaldır"
    },
-@@ -3722,6 +4418,18 @@
+@@ -3713,6 +4409,18 @@
    "minecraft-account.sign-in": {
      "message": "Minecraft'a giriş yapın"
    },
@@ -12510,7 +12510,7 @@ index c719222..850e51b 100644
    "minecraft-required.description": {
      "message": "Oyunu başlatmak ve oynamak için Minecraft'a sahip olan bir Microsoft hesabına ihtiyaç vardır."
    },
-@@ -3740,6 +4448,9 @@
+@@ -3731,6 +4439,9 @@
    "minecraft-required.header": {
      "message": "Minecraft gereklidir"
    },
@@ -12521,7 +12521,7 @@ index c719222..850e51b 100644
      "message": "Microsoft'a giriş yap"
    },
 diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
-index 296070c..00e7e88 100644
+index 77e994a..409c639 100644
 --- a/apps/app-frontend/src/locales/uk-UA/index.json
 +++ b/apps/app-frontend/src/locales/uk-UA/index.json
 @@ -200,6 +200,66 @@
@@ -13354,7 +13354,7 @@ index 296070c..00e7e88 100644
    "instance.edit-server.title": {
      "message": "Редагувати сервер"
    },
-@@ -4418,12 +5099,27 @@
+@@ -4409,12 +5090,27 @@
    "minecraft-account.add-account": {
      "message": "Додати обліковий запис"
    },
@@ -13382,7 +13382,7 @@ index 296070c..00e7e88 100644
    "minecraft-account.remove-account": {
      "message": "Видалити обліковий запис"
    },
-@@ -4433,6 +5129,18 @@
+@@ -4424,6 +5120,18 @@
    "minecraft-account.sign-in": {
      "message": "Увійти в Minecraft"
    },
@@ -13401,7 +13401,7 @@ index 296070c..00e7e88 100644
    "minecraft-required.description": {
      "message": "Ви повинні мати обліковий запис Microsoft із придбаним Minecraft, перш ніж запускати ігри."
    },
-@@ -4451,6 +5159,9 @@
+@@ -4442,6 +5150,9 @@
    "minecraft-required.header": {
      "message": "Потрібний Minecraft"
    },
@@ -13412,7 +13412,7 @@ index 296070c..00e7e88 100644
      "message": "Увійти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
-index 523bdaa..41692bd 100644
+index 186e184..4ae34d5 100644
 --- a/apps/app-frontend/src/locales/zh-CN/index.json
 +++ b/apps/app-frontend/src/locales/zh-CN/index.json
 @@ -200,6 +200,66 @@
@@ -14245,7 +14245,7 @@ index 523bdaa..41692bd 100644
    "instance.edit-server.title": {
      "message": "编辑服务器"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "添加账户"
    },
@@ -14273,7 +14273,7 @@ index 523bdaa..41692bd 100644
    "minecraft-account.remove-account": {
      "message": "移除账户"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "登录 Minecraft"
    },
@@ -14292,7 +14292,7 @@ index 523bdaa..41692bd 100644
    "minecraft-required.description": {
      "message": "你需要先登录拥有 Minecraft 的 Microsoft 账户，然后才能启动游戏。"
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -14303,7 +14303,7 @@ index 523bdaa..41692bd 100644
      "message": "登录 Microsoft 账户"
    },
 diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
-index 33f30ee..c50d3f9 100644
+index 59a55c1..1eab013 100644
 --- a/apps/app-frontend/src/locales/zh-TW/index.json
 +++ b/apps/app-frontend/src/locales/zh-TW/index.json
 @@ -200,6 +200,66 @@
@@ -15136,7 +15136,7 @@ index 33f30ee..c50d3f9 100644
    "instance.edit-server.title": {
      "message": "編輯伺服器"
    },
-@@ -4427,12 +5108,27 @@
+@@ -4418,12 +5099,27 @@
    "minecraft-account.add-account": {
      "message": "新增帳號"
    },
@@ -15164,7 +15164,7 @@ index 33f30ee..c50d3f9 100644
    "minecraft-account.remove-account": {
      "message": "移除帳號"
    },
-@@ -4442,6 +5138,18 @@
+@@ -4433,6 +5129,18 @@
    "minecraft-account.sign-in": {
      "message": "登入 Minecraft"
    },
@@ -15183,7 +15183,7 @@ index 33f30ee..c50d3f9 100644
    "minecraft-required.description": {
      "message": "你需要登入擁有 Minecraft 的 Microsoft 帳號才能啟動遊戲。"
    },
-@@ -4460,6 +5168,9 @@
+@@ -4451,6 +5159,9 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -15194,7 +15194,7 @@ index 33f30ee..c50d3f9 100644
      "message": "登入 Microsoft"
    },
 diff --git a/packages/ui/src/locales/de-CH/index.json b/packages/ui/src/locales/de-CH/index.json
-index 774034f..e59c763 100644
+index c126cc9..d03e71f 100644
 --- a/packages/ui/src/locales/de-CH/index.json
 +++ b/packages/ui/src/locales/de-CH/index.json
 @@ -1028,6 +1028,12 @@
@@ -15211,7 +15211,7 @@ index 774034f..e59c763 100644
      "defaultMessage": "Instanznamen suchen"
    },
 diff --git a/packages/ui/src/locales/de-DE/index.json b/packages/ui/src/locales/de-DE/index.json
-index 4a2bd95..73dd87a 100644
+index c0b2aee..ef9e9d2 100644
 --- a/packages/ui/src/locales/de-DE/index.json
 +++ b/packages/ui/src/locales/de-DE/index.json
 @@ -1028,6 +1028,12 @@
@@ -15228,7 +15228,7 @@ index 4a2bd95..73dd87a 100644
      "defaultMessage": "Instanznamen suchen"
    },
 diff --git a/packages/ui/src/locales/es-419/index.json b/packages/ui/src/locales/es-419/index.json
-index ce8ada6..9fa2d18 100644
+index 8fbab07..10bd5d8 100644
 --- a/packages/ui/src/locales/es-419/index.json
 +++ b/packages/ui/src/locales/es-419/index.json
 @@ -1028,6 +1028,12 @@
@@ -15245,7 +15245,7 @@ index ce8ada6..9fa2d18 100644
      "defaultMessage": "Buscar nombre de instancia"
    },
 diff --git a/packages/ui/src/locales/es-ES/index.json b/packages/ui/src/locales/es-ES/index.json
-index 0a4176c..dbed3c0 100644
+index 29c2fb1..42f60dd 100644
 --- a/packages/ui/src/locales/es-ES/index.json
 +++ b/packages/ui/src/locales/es-ES/index.json
 @@ -1028,6 +1028,12 @@
@@ -15262,7 +15262,7 @@ index 0a4176c..dbed3c0 100644
      "defaultMessage": "Buscar instancia por nombre"
    },
 diff --git a/packages/ui/src/locales/fr-FR/index.json b/packages/ui/src/locales/fr-FR/index.json
-index f7d260c..ded5ca3 100644
+index 40c015a..e7c0877 100644
 --- a/packages/ui/src/locales/fr-FR/index.json
 +++ b/packages/ui/src/locales/fr-FR/index.json
 @@ -1022,6 +1022,12 @@
@@ -15279,7 +15279,7 @@ index f7d260c..ded5ca3 100644
      "defaultMessage": "Rechercher le nom de l'instance"
    },
 diff --git a/packages/ui/src/locales/hu-HU/index.json b/packages/ui/src/locales/hu-HU/index.json
-index 9fb8f6b..9d09174 100644
+index 570503c..3555375 100644
 --- a/packages/ui/src/locales/hu-HU/index.json
 +++ b/packages/ui/src/locales/hu-HU/index.json
 @@ -1010,6 +1010,12 @@
@@ -15296,7 +15296,7 @@ index 9fb8f6b..9d09174 100644
      "defaultMessage": "Példánynév keresése"
    },
 diff --git a/packages/ui/src/locales/it-IT/index.json b/packages/ui/src/locales/it-IT/index.json
-index 0e421a0..5b0bb19 100644
+index cf56a60..56505b7 100644
 --- a/packages/ui/src/locales/it-IT/index.json
 +++ b/packages/ui/src/locales/it-IT/index.json
 @@ -1028,6 +1028,12 @@
@@ -15313,7 +15313,7 @@ index 0e421a0..5b0bb19 100644
      "defaultMessage": "Cerca nome istanza"
    },
 diff --git a/packages/ui/src/locales/ja-JP/index.json b/packages/ui/src/locales/ja-JP/index.json
-index 0fae7c2..b8ba1f2 100644
+index 4418a08..514a262 100644
 --- a/packages/ui/src/locales/ja-JP/index.json
 +++ b/packages/ui/src/locales/ja-JP/index.json
 @@ -1022,6 +1022,12 @@
@@ -15330,7 +15330,7 @@ index 0fae7c2..b8ba1f2 100644
      "defaultMessage": "インスタンス名を検索"
    },
 diff --git a/packages/ui/src/locales/nl-NL/index.json b/packages/ui/src/locales/nl-NL/index.json
-index 3b377ea..bc3ff70 100644
+index 43253af..3c4ff54 100644
 --- a/packages/ui/src/locales/nl-NL/index.json
 +++ b/packages/ui/src/locales/nl-NL/index.json
 @@ -1022,6 +1022,12 @@
@@ -15347,7 +15347,7 @@ index 3b377ea..bc3ff70 100644
      "defaultMessage": "Op naam van instantie zoeken"
    },
 diff --git a/packages/ui/src/locales/pl-PL/index.json b/packages/ui/src/locales/pl-PL/index.json
-index 5fd9e08..d945ac2 100644
+index e61f269..e606c38 100644
 --- a/packages/ui/src/locales/pl-PL/index.json
 +++ b/packages/ui/src/locales/pl-PL/index.json
 @@ -1028,6 +1028,12 @@
@@ -15364,7 +15364,7 @@ index 5fd9e08..d945ac2 100644
      "defaultMessage": "Szukaj nazwy instancji"
    },
 diff --git a/packages/ui/src/locales/pt-BR/index.json b/packages/ui/src/locales/pt-BR/index.json
-index 2c3bcd7..a755b2e 100644
+index 8935ce9..f8eeb36 100644
 --- a/packages/ui/src/locales/pt-BR/index.json
 +++ b/packages/ui/src/locales/pt-BR/index.json
 @@ -1028,6 +1028,12 @@
@@ -15381,7 +15381,7 @@ index 2c3bcd7..a755b2e 100644
      "defaultMessage": "Buscar nome da instância"
    },
 diff --git a/packages/ui/src/locales/ru-RU/index.json b/packages/ui/src/locales/ru-RU/index.json
-index eec162a..288ae48 100644
+index 2d5835a..edf9eaf 100644
 --- a/packages/ui/src/locales/ru-RU/index.json
 +++ b/packages/ui/src/locales/ru-RU/index.json
 @@ -968,6 +968,12 @@
@@ -15398,7 +15398,7 @@ index eec162a..288ae48 100644
      "defaultMessage": "Поиск сборки по названию"
    },
 diff --git a/packages/ui/src/locales/sv-SE/index.json b/packages/ui/src/locales/sv-SE/index.json
-index 2728dd0..7b0cea4 100644
+index eb10615..7f21e96 100644
 --- a/packages/ui/src/locales/sv-SE/index.json
 +++ b/packages/ui/src/locales/sv-SE/index.json
 @@ -983,6 +983,12 @@
@@ -15415,7 +15415,7 @@ index 2728dd0..7b0cea4 100644
      "defaultMessage": "Sök instansnamn"
    },
 diff --git a/packages/ui/src/locales/tr-TR/index.json b/packages/ui/src/locales/tr-TR/index.json
-index 8842128..1b04a49 100644
+index f7b7a02..5a95990 100644
 --- a/packages/ui/src/locales/tr-TR/index.json
 +++ b/packages/ui/src/locales/tr-TR/index.json
 @@ -1025,6 +1025,12 @@
@@ -15432,7 +15432,7 @@ index 8842128..1b04a49 100644
      "defaultMessage": "Kurulum adını ara"
    },
 diff --git a/packages/ui/src/locales/uk-UA/index.json b/packages/ui/src/locales/uk-UA/index.json
-index 0986716..451aa7a 100644
+index a7ac031..5f308c8 100644
 --- a/packages/ui/src/locales/uk-UA/index.json
 +++ b/packages/ui/src/locales/uk-UA/index.json
 @@ -980,6 +980,12 @@
@@ -15449,7 +15449,7 @@ index 0986716..451aa7a 100644
      "defaultMessage": "Пошук за назвою примірника"
    },
 diff --git a/packages/ui/src/locales/zh-CN/index.json b/packages/ui/src/locales/zh-CN/index.json
-index 679de37..a210ffe 100644
+index eb5ac10..724fe19 100644
 --- a/packages/ui/src/locales/zh-CN/index.json
 +++ b/packages/ui/src/locales/zh-CN/index.json
 @@ -1028,6 +1028,12 @@
@@ -15466,7 +15466,7 @@ index 679de37..a210ffe 100644
      "defaultMessage": "搜索实例名称"
    },
 diff --git a/packages/ui/src/locales/zh-TW/index.json b/packages/ui/src/locales/zh-TW/index.json
-index cf8b474..5341f4d 100644
+index 6b5c771..b72f67a 100644
 --- a/packages/ui/src/locales/zh-TW/index.json
 +++ b/packages/ui/src/locales/zh-TW/index.json
 @@ -1028,6 +1028,12 @@

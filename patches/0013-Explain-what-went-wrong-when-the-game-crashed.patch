@@ -880,7 +880,7 @@ index e2a59fd..4fcddea 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index ccd7abd..27a637e 100644
+index ff15284..2ae5909 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {
@@ -958,11 +958,11 @@ index 0000000..1ec92c5
 +    Ok(crash_analysis::analyze_text(&text, kind, &source_name))
 +}
 diff --git a/apps/app/src/api/mod.rs b/apps/app/src/api/mod.rs
-index 15a5c1e..565a39f 100644
+index 998045a..a9d0aa3 100644
 --- a/apps/app/src/api/mod.rs
 +++ b/apps/app/src/api/mod.rs
 @@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
- use thiserror::Error;
+ use theseus::error_code;
  
  pub mod auth;
 +pub mod crash_analysis;
@@ -970,10 +970,10 @@ index 15a5c1e..565a39f 100644
  pub mod import;
  pub mod install;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 07b9fab..975b5fe 100644
+index 5cd4762..4960957 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -308,6 +308,7 @@ fn main() {
+@@ -307,6 +307,7 @@ fn main() {
      builder = builder
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())

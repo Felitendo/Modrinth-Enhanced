@@ -16,7 +16,7 @@ and never over a language that was picked in the settings.
  create mode 100644 apps/app-frontend/src/helpers/system-locale.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 95e003d..92cf132 100644
+index 39d674c..93f5a63 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -144,6 +144,7 @@ import {

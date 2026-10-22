@@ -52,11 +52,11 @@ which offered Microsoft and nothing else:
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index 89f897a..40942a9 100644
+index edc3baa..a98869a 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -12469,6 +12469,7 @@ dependencies = [
-  "indicatif",
+@@ -12471,6 +12471,7 @@ dependencies = [
+  "infer 0.22.0",
   "itertools 0.14.0",
   "json5",
 + "md5",
@@ -64,10 +64,10 @@ index 89f897a..40942a9 100644
   "notify",
   "notify-debouncer-mini",
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 325a26c..7d0ce4b 100644
+index aa88a01..2c5e004 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2192,6 +2192,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2188,6 +2188,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
  			@create-instance="installationModal?.show()"
@@ -475,7 +475,7 @@ index 94bd13e..cb7319a 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 77e64bd..e3ccc66 100644
+index 7ae9fd1..0b7a1df 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,7 @@ fn main() {
@@ -487,10 +487,10 @@ index 77e64bd..e3ccc66 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 8227d94..f4eded6 100644
+index 1a59db1..03753c4 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
-@@ -9,6 +9,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -10,6 +10,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
          .invoke_handler(tauri::generate_handler![
              check_reachable,
              login,
@@ -498,7 +498,7 @@ index 8227d94..f4eded6 100644
              remove_user,
              get_default_user,
              set_default_user,
-@@ -86,6 +87,12 @@ pub async fn login<R: Runtime>(
+@@ -84,6 +85,12 @@ pub async fn login<R: Runtime>(
      Ok(None)
  }
  
@@ -512,11 +512,11 @@ index 8227d94..f4eded6 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
-index 9bb14ce..58f85e3 100644
+index 8d75047..9115610 100644
 --- a/packages/app-lib/Cargo.toml
 +++ b/packages/app-lib/Cargo.toml
-@@ -52,6 +52,7 @@ image = { workspace = true, features = ["gif", "jpeg", "png", "webp"] }
- indicatif = { workspace = true, optional = true }
+@@ -54,6 +54,7 @@ indicatif = { workspace = true, optional = true }
+ infer = { workspace = true }
  itertools = { workspace = true }
  json5 = { workspace = true }
 +md5 = { workspace = true }
@@ -524,10 +524,10 @@ index 9bb14ce..58f85e3 100644
  notify = { workspace = true }
  notify-debouncer-mini = { workspace = true }
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index e7195c6..a7fac4a 100644
+index d3a07f1..b735a6c 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
-@@ -47,6 +47,45 @@ pub async fn finish_login(
+@@ -48,6 +48,45 @@ pub async fn finish_login(
      Ok(credentials)
  }
  
@@ -574,10 +574,10 @@ index e7195c6..a7fac4a 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index b835ad4..14455ec 100644
+index 2c43fa1..b777752 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -212,6 +212,33 @@ pub struct Credentials {
+@@ -283,6 +283,33 @@ pub struct Credentials {
      pub active: bool,
  }
  
@@ -611,7 +611,7 @@ index b835ad4..14455ec 100644
  /// An entry in the player profile cache, keyed by player UUID.
  pub(super) enum ProfileCacheEntry {
      /// A cached profile that is valid, even though it may be stale.
-@@ -265,12 +292,45 @@ impl OnlineProfileCacheIntent {
+@@ -336,12 +363,45 @@ impl OnlineProfileCacheIntent {
  }
  
  impl Credentials {
@@ -657,7 +657,7 @@ index b835ad4..14455ec 100644
          // Use a margin of 5 minutes to give e.g. Minecraft and potentially
          // other operations that depend on a fresh token 5 minutes to complete
          // from now, and deal with some classes of clock skew
-@@ -351,6 +411,12 @@ impl Credentials {
+@@ -422,6 +482,12 @@ impl Credentials {
          &self,
          cache_intent: OnlineProfileCacheIntent,
      ) -> Option<Arc<MinecraftProfile>> {

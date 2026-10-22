@@ -8,12 +8,12 @@ Subject: [PATCH] Stay behind the game while another instance is running
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index f278b0f..0390f34 100644
+index c4ac145..4e0cab8 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
-@@ -1118,8 +1118,11 @@ impl Process {
+@@ -1115,8 +1115,11 @@ impl Process {
  
-         let _ = state.friends_socket.update_status(None).await;
+         let _ = state.presence.friends_socket.update_status(None).await;
  
 +        // Refocus only once the last instance is gone: while another one is
 +        // still being played, taking the screen back from it is the last thing

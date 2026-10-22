@@ -24,10 +24,10 @@ menu closing.
  create mode 100644 apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 4fb63b1..10335e0 100644
+index e109579..3a75862 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2187,6 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2183,6 +2183,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			:sidebar-toggled="sidebarToggled"
  			:sidebar-visible="sidebarVisible"
  			:sidebar-saved="sidebarSaved"

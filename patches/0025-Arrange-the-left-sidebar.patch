@@ -26,7 +26,7 @@ where they belong; only the number of instances stays there.
  create mode 100644 apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 2e38416..95e003d 100644
+index 02b68b5..39d674c 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -4,6 +4,7 @@ import {
@@ -146,7 +146,7 @@ index 2e38416..95e003d 100644
  	createNewInstance: {
  		id: 'app.nav.create-new-instance',
  		defaultMessage: 'Create new instance',
-@@ -2074,52 +2156,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2070,52 +2152,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
  		>
  			<NavButton
@@ -207,7 +207,7 @@ index 2e38416..95e003d 100644
  			</NavButton>
  			<suspense>
  				<QuickInstanceSwitcher>
-@@ -2203,6 +2248,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2199,6 +2244,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<LogInIcon class="text-brand" />
  			</NavButton>
  		</div>

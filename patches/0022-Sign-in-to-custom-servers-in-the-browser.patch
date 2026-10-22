@@ -26,11 +26,11 @@ session in the refresh token column as JSON behind a marker.
  .../src/components/ui/AuthlibAccountModal.vue | 179 +++++++-
  apps/app-frontend/src/helpers/auth.js         |  23 +-
  apps/app/build.rs                             |   2 +
- apps/app/src/api/auth.rs                      |  49 +++
- packages/app-lib/src/api/minecraft_auth.rs    |  47 +-
- packages/app-lib/src/state/minecraft_auth.rs  | 402 +++++++++++++++++-
+ apps/app/src/api/auth.rs                      |  46 +++
+ packages/app-lib/src/api/minecraft_auth.rs    |  46 ++-
+ packages/app-lib/src/state/minecraft_auth.rs  | 390 +++++++++++++++++-
  packages/app-lib/src/util/authlib_injector.rs | 100 +++++
- 7 files changed, 788 insertions(+), 14 deletions(-)
+ 7 files changed, 772 insertions(+), 14 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 index a2873fe..0e1f9a7 100644
@@ -334,7 +334,7 @@ index f4d24a1..f93f4e9 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 70fb26b..1bbcfa4 100644
+index 30fbedc..e5b3635 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -20,6 +20,8 @@ fn main() {
@@ -347,10 +347,10 @@ index 70fb26b..1bbcfa4 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index c856d40..fc08b8b 100644
+index 349e735..0a6f90d 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
-@@ -16,6 +16,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -17,6 +17,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
              login_ely,
              authlib_server,
              login_authlib,
@@ -359,7 +359,7 @@ index c856d40..fc08b8b 100644
              remove_user,
              get_default_user,
              set_default_user,
-@@ -194,6 +196,53 @@ pub async fn login_authlib(
+@@ -185,6 +187,50 @@ pub async fn login_authlib(
      .await?)
  }
  
@@ -379,10 +379,7 @@ index c856d40..fc08b8b 100644
 +    app.opener()
 +        .open_url(page, None::<String>)
 +        .map_err(|error| {
-+            theseus::ErrorKind::OtherError(format!(
-+                "Could not open a browser to sign in with: {error}"
-+            ))
-+            .as_error()
++            anyhow::anyhow!("Could not open a browser to sign in with: {error}")
 +        })?;
 +
 +    Ok(code)
@@ -414,10 +411,10 @@ index c856d40..fc08b8b 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index fe95027..5c29113 100644
+index 3aadc9b..999a5ac 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
-@@ -7,7 +7,7 @@ use crate::state::{AuthServer, Credentials, MinecraftLoginFlow};
+@@ -8,7 +8,7 @@ use crate::state::{AuthServer, Credentials, MinecraftLoginFlow};
  use crate::util::authlib_injector;
  use crate::util::fetch::INSECURE_REQWEST_CLIENT;
  
@@ -426,7 +423,7 @@ index fe95027..5c29113 100644
  pub use crate::util::authlib_injector::AuthlibServer;
  
  #[tracing::instrument]
-@@ -170,6 +170,51 @@ pub async fn login_authlib(
+@@ -168,6 +168,50 @@ pub async fn login_authlib(
      .await
  }
  
@@ -438,11 +435,10 @@ index fe95027..5c29113 100644
 +) -> crate::Result<ConnectDeviceCode> {
 +    let server = authlib_injector::resolve_server(server).await?;
 +    let Some(config) = server.connect else {
-+        return Err(crate::ErrorKind::OtherError(format!(
++        return Err(anyhow::anyhow!(
 +            "{} has no sign-in in the browser",
 +            server.name
-+        ))
-+        .into());
++        ));
 +    };
 +
 +    crate::state::connect_device_begin(server.api_root, config).await
@@ -479,7 +475,7 @@ index fe95027..5c29113 100644
      server: AuthServer,
      username: &str,
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index b916a6d..e9fa853 100644
+index f169a8a..3fe2639 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -1,5 +1,6 @@
@@ -487,10 +483,10 @@ index b916a6d..e9fa853 100644
 -use crate::util::fetch::INSECURE_REQWEST_CLIENT;
 +use crate::util::authlib_injector::ConnectConfig;
 +use crate::util::fetch::{INSECURE_REQWEST_CLIENT, REQWEST_CLIENT};
+ use anyhow::Context;
  use base64::Engine;
  use base64::prelude::{BASE64_STANDARD, BASE64_URL_SAFE_NO_PAD};
- use chrono::{DateTime, Duration, TimeZone, Utc};
-@@ -287,6 +288,306 @@ const ELY_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:ely:";
+@@ -358,6 +359,294 @@ const ELY_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:ely:";
  /// holds a bare space, so the two always split apart again.
  const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
  
@@ -588,10 +584,7 @@ index b916a6d..e9fa853 100644
 +        .send()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
-+                "Could not reach {}: {error}",
-+                server.name()
-+            ))
++            anyhow::anyhow!("Could not reach {}: {error}", server.name())
 +        })?;
 +
 +    if !response.status().is_success() {
@@ -608,11 +601,10 @@ index b916a6d..e9fa853 100644
 +        .flatten()
 +        .any(|page| !page.starts_with("https://"))
 +    {
-+        return Err(crate::ErrorKind::OtherError(format!(
++        return Err(anyhow::anyhow!(
 +            "{} sent a sign-in page that is not https",
 +            server.name()
-+        ))
-+        .into());
++        ));
 +    }
 +
 +    let interval =
@@ -649,10 +641,9 @@ index b916a6d..e9fa853 100644
 +            .iter_mut()
 +            .find(|pending| pending.device_code == device_code)
 +        else {
-+            return Err(crate::ErrorKind::OtherError(
-+                "This sign-in has ended. Start it again.".to_owned(),
-+            )
-+            .into());
++            return Err(anyhow::anyhow!(
++                "This sign-in has ended. Start it again."
++            ));
 +        };
 +
 +        if Instant::now() < sign_in.next_poll {
@@ -673,10 +664,7 @@ index b916a6d..e9fa853 100644
 +        .send()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
-+                "Could not reach {}: {error}",
-+                server.name()
-+            ))
++            anyhow::anyhow!("Could not reach {}: {error}", server.name())
 +        })?;
 +
 +    if !response.status().is_success() {
@@ -709,7 +697,7 @@ index b916a6d..e9fa853 100644
 +                format!("{} refused the sign-in ({status})", server.name())
 +            }),
 +        };
-+        return Err(crate::ErrorKind::OtherError(message).into());
++        return Err(anyhow::anyhow!(message));
 +    }
 +
 +    PENDING_CONNECT
@@ -754,10 +742,7 @@ index b916a6d..e9fa853 100644
 +        .send()
 +        .await
 +        .map_err(|error| {
-+            crate::ErrorKind::OtherError(format!(
-+                "Could not reach {}: {error}",
-+                server.name()
-+            ))
++            anyhow::anyhow!("Could not reach {}: {error}", server.name())
 +        })?;
 +
 +    if !response.status().is_success() {
@@ -769,11 +754,10 @@ index b916a6d..e9fa853 100644
 +        .await?
 +        .selected_profile
 +        .ok_or_else(|| {
-+            crate::ErrorKind::OtherError(format!(
++            anyhow::anyhow!(
 +                "{} did not say which player to play as",
 +                server.name()
-+            ))
-+            .into()
++            )
 +        })
 +}
 +
@@ -791,13 +775,13 @@ index b916a6d..e9fa853 100644
 +            format!("{} refused the sign-in ({status})", server.name())
 +        });
 +
-+    crate::ErrorKind::OtherError(message).as_error()
++    anyhow::anyhow!(message)
 +}
 +
  /// Ely.by's Yggdrasil endpoints.
  const ELY_AUTHSERVER: &str = "https://authserver.ely.by/auth";
  
-@@ -701,12 +1002,27 @@ impl Credentials {
+@@ -768,12 +1057,27 @@ impl Credentials {
          self.yggdrasil().map(|(server, _)| server)
      }
  
@@ -828,7 +812,7 @@ index b916a6d..e9fa853 100644
          }
  
          let (root, client_token) = self
-@@ -716,7 +1032,7 @@ impl Credentials {
+@@ -783,7 +1087,7 @@ impl Credentials {
  
          Some((
              AuthServer::Authlib(root.to_owned()),
@@ -837,7 +821,7 @@ index b916a6d..e9fa853 100644
          ))
      }
  
-@@ -881,6 +1197,59 @@ impl Credentials {
+@@ -942,6 +1246,59 @@ impl Credentials {
          Ok(true)
      }
  
@@ -897,7 +881,7 @@ index b916a6d..e9fa853 100644
      /// Whether the server still accepts this account's access token.
      async fn yggdrasil_token_is_valid(&self, server: &AuthServer) -> bool {
          let response = server
-@@ -915,10 +1284,24 @@ impl Credentials {
+@@ -976,17 +1333,30 @@ impl Credentials {
  
          // Yggdrasil servers issue their own tokens and renew them at their own
          // endpoints, so Microsoft is not involved at any point below.
@@ -923,11 +907,10 @@ index b916a6d..e9fa853 100644
 +            };
 +
 +            if !renewed {
-                 return Err(crate::ErrorKind::OtherError(format!(
+                 return Err(anyhow::anyhow!(
                      "{} no longer accepts this account's session. Sign in again.",
                      server.name()
-@@ -926,7 +1309,6 @@ impl Credentials {
-                 .into());
+                 ));
              }
  
 -            self.expires = Utc::now() + Duration::hours(6);
@@ -935,7 +918,7 @@ index b916a6d..e9fa853 100644
              return Ok(());
          }
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
-index 13591ef..487b0ae 100644
+index 1542143..46c02dc 100644
 --- a/packages/app-lib/src/util/authlib_injector.rs
 +++ b/packages/app-lib/src/util/authlib_injector.rs
 @@ -17,6 +17,96 @@ use crate::state::DirectoryInfo;
@@ -1053,8 +1036,8 @@ index 13591ef..487b0ae 100644
  }
  
  #[derive(Deserialize, Default)]
-@@ -119,6 +213,11 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
-         ))
+@@ -116,6 +210,11 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
+         anyhow::anyhow!("{host} is not a supported account server")
      })?;
  
 +    let connect = match &metadata.meta.openid_configuration_url {
@@ -1065,7 +1048,7 @@ index 13591ef..487b0ae 100644
      Ok(AuthlibServer {
          api_root: api_root.as_str().trim_end_matches('/').to_owned(),
          name: metadata
-@@ -129,6 +228,7 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
+@@ -126,6 +225,7 @@ pub async fn resolve_server(address: &str) -> crate::Result<AuthlibServer> {
          implementation: metadata.meta.implementation_name,
          homepage: metadata.meta.links.homepage,
          register: metadata.meta.links.register,

@@ -19,10 +19,10 @@ get a notice with a button to the release on GitHub.
  3 files changed, 76 insertions(+), 21 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 10335e0..2e38416 100644
+index 3a75862..02b68b5 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -1631,9 +1631,13 @@ const updatePopupMessages = defineMessages({
+@@ -1627,9 +1627,13 @@ const updatePopupMessages = defineMessages({
  		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
  	},
  	linuxBody: {
@@ -38,7 +38,7 @@ index 10335e0..2e38416 100644
  	},
  	reload: {
  		id: 'app.update-popup.reload',
-@@ -1808,28 +1812,47 @@ async function checkUpdates() {
+@@ -1804,28 +1808,47 @@ async function checkUpdates() {
  	)
  }
  
@@ -105,10 +105,10 @@ index 10335e0..2e38416 100644
  	} catch (e) {
  		console.error('Failed to check for updates:', e)
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 2d76bfd..e9f7185 100644
+index 8cc5ebb..7734cf2 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -77,6 +77,25 @@ fn is_dev() -> bool {
+@@ -78,6 +78,25 @@ fn is_dev() -> bool {
  fn are_updates_enabled() -> bool {
      cfg!(feature = "updater")
          && env::var("MODRINTH_EXTERNAL_UPDATE_PROVIDER").is_err()
@@ -134,7 +134,7 @@ index 2d76bfd..e9f7185 100644
  }
  
  #[cfg(feature = "updater")]
-@@ -194,6 +213,17 @@ fn main() {
+@@ -193,6 +212,17 @@ fn main() {
                      HeaderValue::from_str(&launcher_user_agent()).unwrap(),
                  )
                  .unwrap()
@@ -152,7 +152,7 @@ index 2d76bfd..e9f7185 100644
                  .build(),
          );
      }
-@@ -361,6 +391,8 @@ fn main() {
+@@ -360,6 +390,8 @@ fn main() {
              initialize_state,
              is_dev,
              are_updates_enabled,

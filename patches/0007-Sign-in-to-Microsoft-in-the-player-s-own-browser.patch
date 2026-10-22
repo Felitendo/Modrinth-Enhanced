@@ -24,11 +24,11 @@ modal for anyone the browser does not work out for.
  .../features/minecraft-accounts/context.ts    |   2 +-
  apps/app-frontend/src/helpers/auth.js         |  23 ++
  apps/app/build.rs                             |   2 +
- apps/app/src/api/auth.rs                      |  64 +++++
+ apps/app/src/api/auth.rs                      |  57 +++++
  packages/app-lib/src/api/minecraft_auth.rs    |  30 +++
  packages/app-lib/src/api/mod.rs               |  12 +-
  packages/app-lib/src/state/minecraft_auth.rs  | 145 +++++++++++-
- 10 files changed, 500 insertions(+), 47 deletions(-)
+ 10 files changed, 493 insertions(+), 47 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 
 diff --git a/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
@@ -434,7 +434,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 9298918..8d3000f 100644
+index dc1b942..c88a3b6 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {
@@ -447,10 +447,10 @@ index 9298918..8d3000f 100644
                          "login_ely",
                          "remove_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index dea07b2..eab604d 100644
+index 42f88b0..8e6ce97 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
-@@ -2,6 +2,7 @@ use crate::api::Result;
+@@ -3,6 +3,7 @@ use anyhow::Context;
  use chrono::{Duration, Utc};
  use tauri::plugin::TauriPlugin;
  use tauri::{Manager, Runtime, UserAttentionType};
@@ -458,7 +458,7 @@ index dea07b2..eab604d 100644
  use theseus::prelude::*;
  
  pub fn init<R: Runtime>() -> TauriPlugin<R> {
-@@ -9,6 +10,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
+@@ -10,6 +11,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
          .invoke_handler(tauri::generate_handler![
              check_reachable,
              login,
@@ -467,7 +467,7 @@ index dea07b2..eab604d 100644
              login_offline,
              login_ely,
              remove_user,
-@@ -88,6 +91,67 @@ pub async fn login<R: Runtime>(
+@@ -86,6 +89,60 @@ pub async fn login<R: Runtime>(
      Ok(None)
  }
  
@@ -488,21 +488,14 @@ index dea07b2..eab604d 100644
 +) -> Result<MinecraftDeviceCode> {
 +    let code = minecraft_auth::begin_device_login().await?;
 +
-+    let mut url = url::Url::parse(&code.verification_uri).map_err(|_| {
-+        theseus::ErrorKind::OtherError(
-+            "Error parsing the sign-in address".to_string(),
-+        )
-+        .as_error()
-+    })?;
++    let mut url = url::Url::parse(&code.verification_uri)
++        .map_err(|_| anyhow::anyhow!("Error parsing the sign-in address"))?;
 +    url.query_pairs_mut().append_pair("otc", &code.user_code);
 +
 +    app.opener()
 +        .open_url(url.as_str(), None::<String>)
 +        .map_err(|error| {
-+            theseus::ErrorKind::OtherError(format!(
-+                "Could not open a browser to sign in with: {error}"
-+            ))
-+            .as_error()
++            anyhow::anyhow!("Could not open a browser to sign in with: {error}")
 +        })?;
 +
 +    Ok(code)
@@ -536,10 +529,10 @@ index dea07b2..eab604d 100644
  #[tauri::command]
  pub async fn login_offline(username: String) -> Result<Credentials> {
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index 2d18da3..fba473f 100644
+index dffcbb8..c16e7cc 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
-@@ -47,6 +47,36 @@ pub async fn finish_login(
+@@ -48,6 +48,36 @@ pub async fn finish_login(
      Ok(credentials)
  }
  
@@ -600,10 +593,10 @@ index 5fddc74..47d6f11 100644
      pub use ariadne::users::UserStatus;
      pub use modrinth_content_management::{
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 4130488..1331a24 100644
+index 9106319..3d26ef1 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
-@@ -36,6 +36,7 @@ use uuid::Uuid;
+@@ -38,6 +38,7 @@ use uuid::Uuid;
  pub enum MinecraftAuthStep {
      GetDeviceToken,
      SisuAuthenticate,
@@ -611,7 +604,7 @@ index 4130488..1331a24 100644
      GetOAuthToken,
      RefreshOAuthToken,
      SisuAuthorize,
-@@ -107,6 +108,16 @@ pub struct MinecraftLoginFlow {
+@@ -178,6 +179,16 @@ pub struct MinecraftLoginFlow {
      pub auth_request_uri: String,
  }
  
@@ -628,7 +621,7 @@ index 4130488..1331a24 100644
  #[tracing::instrument]
  pub async fn login_begin(
      exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
-@@ -143,13 +154,37 @@ pub async fn login_finish(
+@@ -214,13 +225,37 @@ pub async fn login_finish(
      code: &str,
      flow: MinecraftLoginFlow,
      exec: impl sqlx::Executor<'_, Database = sqlx::Sqlite> + Copy,
@@ -668,7 +661,7 @@ index 4130488..1331a24 100644
          &oauth_token.value.access_token,
          &pair.token.token,
          &pair.key,
-@@ -1271,6 +1306,112 @@ async fn oauth_token(
+@@ -1335,6 +1370,112 @@ async fn oauth_token(
      })
  }
  
@@ -759,7 +752,7 @@ index 4130488..1331a24 100644
 +            _ => "",
 +        };
 +        if !message.is_empty() {
-+            return Err(ErrorKind::OtherError(message.to_string()).into());
++            return Err(anyhow::anyhow!(message.to_string()));
 +        }
 +    }
 +
