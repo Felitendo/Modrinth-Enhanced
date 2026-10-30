@@ -13,7 +13,7 @@ stopped first, which the entry says.
  1 file changed, 47 insertions(+), 2 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue b/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
-index 5c58a50..2ad9979 100644
+index 5c58a506..2ad99791 100644
 --- a/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
 +++ b/apps/app-frontend/src/components/ui/QuickInstanceSwitcher.vue
 @@ -1,5 +1,12 @@

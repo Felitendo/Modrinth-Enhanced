@@ -24,10 +24,10 @@ menu closing.
  create mode 100644 apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index e109579..3a75862 100644
+index 7e660eba..5d732ad6 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2183,6 +2183,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2187,6 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			:sidebar-toggled="sidebarToggled"
  			:sidebar-visible="sidebarVisible"
  			:sidebar-saved="sidebarSaved"
@@ -36,10 +36,10 @@ index e109579..3a75862 100644
  		/>
  	</div>
 diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
-index c7ceaaa..1f45546 100644
+index 8ffadbc9..7036d6b4 100644
 --- a/apps/app-frontend/src/app/shell/sidebar/index.vue
 +++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
-@@ -70,7 +70,9 @@ function showAddFriendModal() {
+@@ -73,7 +73,9 @@ function showAddFriendModal() {
  	friends.value?.showAddFriendModal()
  }
  
@@ -52,7 +52,7 @@ index c7ceaaa..1f45546 100644
  	overflow: {
 diff --git a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 new file mode 100644
-index 0000000..4eea008
+index 00000000..4eea008e
 --- /dev/null
 +++ b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 @@ -0,0 +1,163 @@
@@ -220,7 +220,7 @@ index 0000000..4eea008
 +}
 +</script>
 diff --git a/apps/app-frontend/src/app/shell/title-bar/index.vue b/apps/app-frontend/src/app/shell/title-bar/index.vue
-index e6a645d..ef33bc3 100644
+index e6a645d1..ef33bc3f 100644
 --- a/apps/app-frontend/src/app/shell/title-bar/index.vue
 +++ b/apps/app-frontend/src/app/shell/title-bar/index.vue
 @@ -3,6 +3,9 @@ import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, RightArrowIcon } from '@m
@@ -256,7 +256,7 @@ index e6a645d..ef33bc3 100644
  		</section>
  	</div>
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 224d776..632483e 100644
+index 224d7762..632483ef 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -226,18 +226,6 @@ function showElyAccountModal(event?: MouseEvent) {

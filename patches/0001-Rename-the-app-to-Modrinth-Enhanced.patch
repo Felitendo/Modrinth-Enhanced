@@ -23,7 +23,7 @@ app and stays a drop-in replacement for it.
  6 files changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
-index 50867a4..6367788 100644
+index 50867a41..63677884 100644
 --- a/apps/app-frontend/index.html
 +++ b/apps/app-frontend/index.html
 @@ -4,7 +4,7 @@
@@ -36,7 +36,7 @@ index 50867a4..6367788 100644
  		<link rel="stylesheet" href="/src/assets/stylesheets/global.scss" />
  	</head>
 diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
-index 76249d9..e588fa9 100644
+index 76249d97..e588fa9c 100644
 --- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 +++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 @@ -361,7 +361,7 @@ const messages = defineMessages({
@@ -49,10 +49,10 @@ index 76249d9..e588fa9 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 3055ce1..e3f789d 100644
+index 288a7871..4b5c22d6 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -1653,7 +1653,7 @@
+@@ -1650,7 +1650,7 @@
      "message": "Oldest"
    },
    "app.settings.app-version": {
@@ -62,7 +62,7 @@ index 3055ce1..e3f789d 100644
    "app.settings.default-instance-options.environment-variables.description": {
      "message": "Environment variables set when launching an instance."
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index 2b5ad39..ae3af5d 100644
+index 2b5ad397..ae3af5dc 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -55,9 +55,9 @@
@@ -87,7 +87,7 @@ index 2b5ad39..ae3af5d 100644
  				"width": 1280,
  				"minHeight": 700,
 diff --git a/apps/app/tauri.linux.conf.json b/apps/app/tauri.linux.conf.json
-index 5b2e9ec..81a368c 100644
+index 5b2e9ec6..81a368cd 100644
 --- a/apps/app/tauri.linux.conf.json
 +++ b/apps/app/tauri.linux.conf.json
 @@ -1,3 +1,3 @@
@@ -96,7 +96,7 @@ index 5b2e9ec..81a368c 100644
 +	"mainBinaryName": "ModrinthEnhanced"
  }
 diff --git a/apps/app/tauri.macos.conf.json b/apps/app/tauri.macos.conf.json
-index 7ab0afc..2b20a49 100644
+index 7ab0afc8..2b20a495 100644
 --- a/apps/app/tauri.macos.conf.json
 +++ b/apps/app/tauri.macos.conf.json
 @@ -7,7 +7,7 @@

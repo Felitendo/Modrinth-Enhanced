@@ -35,12 +35,12 @@ The agent code comes from Noctrinth (https://github.com/Everelsu/Noctrinth).
  .../theseus/agent/skins/SkinSource.java       | 706 ++++++++++++++++++
  .../theseus/agent/skins/SkinSystemSource.java |  27 +
  .../SessionServiceTransformer.java            | 258 +++++++
- packages/app-lib/src/launcher/args.rs         |  35 +-
+ packages/app-lib/src/launcher/args.rs         |  32 +-
  packages/app-lib/src/launcher/mod.rs          |  23 +
  packages/app-lib/src/state/dirs.rs            |   8 +
  .../src/state/dirs/move_app_directory.rs      |   3 +-
  packages/app-lib/src/state/settings.rs        |   1 +
- 20 files changed, 2254 insertions(+), 2 deletions(-)
+ 20 files changed, 2251 insertions(+), 2 deletions(-)
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
@@ -52,7 +52,7 @@ The agent code comes from Noctrinth (https://github.com/Everelsu/Noctrinth).
  create mode 100644 packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
 
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index bce1f20..8d6e6f7 100644
+index bce1f20e..8d6e6f75 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
 @@ -15,6 +15,7 @@ export const DEFAULT_FEATURE_FLAGS = {
@@ -64,7 +64,7 @@ index bce1f20..8d6e6f7 100644
  
  export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/apps/app-frontend/src/features/settings/display/features-settings.vue b/apps/app-frontend/src/features/settings/display/features-settings.vue
-index b974c00..85e32a8 100644
+index b974c007..85e32a8c 100644
 --- a/apps/app-frontend/src/features/settings/display/features-settings.vue
 +++ b/apps/app-frontend/src/features/settings/display/features-settings.vue
 @@ -1,5 +1,7 @@
@@ -199,7 +199,7 @@ index b974c00..85e32a8 100644
  		<h2 class="m-0 text-xl font-semibold text-contrast">
  			{{ formatMessage(messages.playPageTitle) }}
 diff --git a/apps/app-frontend/src/helpers/utils.js b/apps/app-frontend/src/helpers/utils.js
-index f6e99d3..f06e812 100644
+index f6e99d31..f06e8124 100644
 --- a/apps/app-frontend/src/helpers/utils.js
 +++ b/apps/app-frontend/src/helpers/utils.js
 @@ -68,6 +68,10 @@ export async function showAppDbBackupsFolder() {
@@ -214,10 +214,10 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index e2a1bf1..2da9a56 100644
+index 3af5c16d..8bf67e2f 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -404,6 +404,7 @@ fn main() {
+@@ -403,6 +403,7 @@ fn main() {
                          "show_app_db_backups_folder",
                          "export_debug_info",
                          "cancel_debug_info_export",
@@ -226,7 +226,7 @@ index e2a1bf1..2da9a56 100644
                          "get_opening_command",
                          "get_image_thumbnail",
 diff --git a/apps/app/src/api/utils.rs b/apps/app/src/api/utils.rs
-index 0447e0b..d417de4 100644
+index 0447e0b4..d417de40 100644
 --- a/apps/app/src/api/utils.rs
 +++ b/apps/app/src/api/utils.rs
 @@ -49,6 +49,7 @@ pub fn init<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -258,7 +258,7 @@ index 0447e0b..d417de4 100644
  // For example, if a user clicks on an .mrpack to open the app.
  // This should be called once and only when the app is done booting up and ready to receive a command
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
-index 9dbf0bc..096071c 100644
+index 9dbf0bc4..096071cb 100644
 --- a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/TheseusAgent.java
 @@ -1,7 +1,9 @@
@@ -290,7 +290,7 @@ index 9dbf0bc..096071c 100644
              final ClassTransformer transformer = transformers.get(className);
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
 new file mode 100644
-index 0000000..9fe9023
+index 00000000..9fe90234
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/Http.java
 @@ -0,0 +1,148 @@
@@ -444,7 +444,7 @@ index 0000000..9fe9023
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
 new file mode 100644
-index 0000000..eda7ce1
+index 00000000..eda7ce12
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalSource.java
 @@ -0,0 +1,97 @@
@@ -547,7 +547,7 @@ index 0000000..eda7ce1
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
 new file mode 100644
-index 0000000..87a6487
+index 00000000..87a6487d
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/LocalTextures.java
 @@ -0,0 +1,99 @@
@@ -652,7 +652,7 @@ index 0000000..87a6487
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java
 new file mode 100644
-index 0000000..d2e0897
+index 00000000..d2e0897c
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/MojangSource.java
 @@ -0,0 +1,148 @@
@@ -806,7 +806,7 @@ index 0000000..d2e0897
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java
 new file mode 100644
-index 0000000..b7d5823
+index 00000000..b7d58233
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/OptiFineCapeSource.java
 @@ -0,0 +1,143 @@
@@ -955,7 +955,7 @@ index 0000000..b7d5823
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java
 new file mode 100644
-index 0000000..0132001
+index 00000000..01320017
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinHooks.java
 @@ -0,0 +1,459 @@
@@ -1420,7 +1420,7 @@ index 0000000..0132001
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java
 new file mode 100644
-index 0000000..24e7da6
+index 00000000..24e7da67
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSource.java
 @@ -0,0 +1,706 @@
@@ -2132,7 +2132,7 @@ index 0000000..24e7da6
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java
 new file mode 100644
-index 0000000..d40db99
+index 00000000..d40db990
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/skins/SkinSystemSource.java
 @@ -0,0 +1,27 @@
@@ -2165,7 +2165,7 @@ index 0000000..d40db99
 +}
 diff --git a/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
 new file mode 100644
-index 0000000..b64057e
+index 00000000..b64057e5
 --- /dev/null
 +++ b/packages/app-lib/java/src/main/java/com/modrinth/theseus/agent/transformers/SessionServiceTransformer.java
 @@ -0,0 +1,258 @@
@@ -2428,18 +2428,15 @@ index 0000000..b64057e
 +    }
 +}
 diff --git a/packages/app-lib/src/launcher/args.rs b/packages/app-lib/src/launcher/args.rs
-index 84d123d..af4d821 100644
+index 3906ad26..e0e01517 100644
 --- a/packages/app-lib/src/launcher/args.rs
 +++ b/packages/app-lib/src/launcher/args.rs
-@@ -18,12 +18,34 @@ use dunce::canonicalize;
- use itertools::Itertools;
+@@ -19,12 +19,31 @@ use minecraft_meta_manifest::{
+ };
  use std::io::{BufRead, BufReader, ErrorKind};
  use std::net::SocketAddr;
--use std::{collections::HashMap, path::Path};
-+use std::{
-+    collections::HashMap,
-+    path::{Path, PathBuf},
-+};
+-use std::path::Path;
++use std::path::{Path, PathBuf};
  use uuid::Uuid;
  
  // Replaces the space separator with a newline character, as to not split the arguments
@@ -2467,7 +2464,7 @@ index 84d123d..af4d821 100644
  pub fn get_class_paths(
      libraries_path: &Path,
      libraries: &[Library],
-@@ -121,6 +143,7 @@ pub fn get_jvm_arguments(
+@@ -118,6 +137,7 @@ pub fn get_jvm_arguments(
      quick_play_version: QuickPlayVersion,
      log_config: Option<&LoggingConfiguration>,
      ipc_addr: SocketAddr,
@@ -2475,7 +2472,7 @@ index 84d123d..af4d821 100644
  ) -> crate::Result<Vec<String>> {
      let mut parsed_arguments = Vec::new();
  
-@@ -195,6 +218,16 @@ pub fn get_jvm_arguments(
+@@ -192,6 +212,16 @@ pub fn get_jvm_arguments(
          ]);
      }
  
@@ -2493,10 +2490,10 @@ index 84d123d..af4d821 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 6f65f39..be196c6 100644
+index a7488f8f..3ea7d8ce 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1112,6 +1112,28 @@ pub async fn launch_minecraft(
+@@ -1127,6 +1127,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2525,7 +2522,7 @@ index 6f65f39..be196c6 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1138,6 +1160,7 @@ pub async fn launch_minecraft(
+@@ -1153,6 +1175,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),
@@ -2534,7 +2531,7 @@ index 6f65f39..be196c6 100644
          .into_iter(),
      );
 diff --git a/packages/app-lib/src/state/dirs.rs b/packages/app-lib/src/state/dirs.rs
-index 8e348b5..446fa72 100644
+index 8e348b59..446fa720 100644
 --- a/packages/app-lib/src/state/dirs.rs
 +++ b/packages/app-lib/src/state/dirs.rs
 @@ -14,6 +14,7 @@ pub const INSTANCES_FOLDER_NAME: &str = "profiles";
@@ -2560,7 +2557,7 @@ index 8e348b5..446fa72 100644
      #[inline]
      pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
 diff --git a/packages/app-lib/src/state/dirs/move_app_directory.rs b/packages/app-lib/src/state/dirs/move_app_directory.rs
-index a4efb81..befd5c4 100644
+index a4efb818..befd5c4e 100644
 --- a/packages/app-lib/src/state/dirs/move_app_directory.rs
 +++ b/packages/app-lib/src/state/dirs/move_app_directory.rs
 @@ -13,13 +13,14 @@ use sqlx::SqlitePool;
@@ -2580,7 +2577,7 @@ index a4efb81..befd5c4 100644
  pub(crate) async fn relocate_tree(from: &Path, to: &Path) -> crate::Result<()> {
      if !fs::try_exists(from).await? {
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index da9a404..a8ac389 100644
+index da9a4047..a8ac3890 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
 @@ -109,6 +109,7 @@ pub enum FeatureFlag {

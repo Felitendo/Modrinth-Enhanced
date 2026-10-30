@@ -44,7 +44,7 @@ else's logo around.
  create mode 100644 packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
 
 diff --git a/apps/app-frontend/src/helpers/import.js b/apps/app-frontend/src/helpers/import.js
-index 34cf250..bfc728e 100644
+index 34cf2505..bfc728e8 100644
 --- a/apps/app-frontend/src/helpers/import.js
 +++ b/apps/app-frontend/src/helpers/import.js
 @@ -45,6 +45,12 @@ export async function is_valid_importable_instance(instanceFolder, launcherType)
@@ -61,7 +61,7 @@ index 34cf250..bfc728e 100644
  /// null if it can't be found or doesn't exist
  /// eg: get_default_launcher_path("MultiMC")
 diff --git a/apps/app-frontend/src/providers/setup/creation-modal.ts b/apps/app-frontend/src/providers/setup/creation-modal.ts
-index 31ad5aa..f4a13ce 100644
+index 31ad5aa5..f4a13ce3 100644
 --- a/apps/app-frontend/src/providers/setup/creation-modal.ts
 +++ b/apps/app-frontend/src/providers/setup/creation-modal.ts
 @@ -113,7 +113,12 @@ export function setupCreationModal(
@@ -79,7 +79,7 @@ index 31ad5aa..f4a13ce 100644
  							importedInstanceId = installJobInstanceId(job)
  						}
 diff --git a/apps/app-frontend/src/providers/setup/instance-import.ts b/apps/app-frontend/src/providers/setup/instance-import.ts
-index 851e44d..752832c 100644
+index 851e44d7..752832c8 100644
 --- a/apps/app-frontend/src/providers/setup/instance-import.ts
 +++ b/apps/app-frontend/src/providers/setup/instance-import.ts
 @@ -2,9 +2,9 @@ import { type AbstractWebNotificationManager, provideInstanceImport } from '@mod
@@ -135,7 +135,7 @@ index 851e44d..752832c 100644
  			return (await get_importable_instances(launcherName, path)) ?? []
  		},
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index f98a1c8..fbb3c14 100644
+index de0d9e73..8a7135b2 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -108,6 +108,7 @@ fn main() {
@@ -147,7 +147,7 @@ index f98a1c8..fbb3c14 100644
                      .default_permission(
                          DefaultPermissionRule::AllowAllCommands,
 diff --git a/apps/app/src/api/import.rs b/apps/app/src/api/import.rs
-index 773fcb2..cda652f 100644
+index 773fcb27..cda652f6 100644
 --- a/apps/app/src/api/import.rs
 +++ b/apps/app/src/api/import.rs
 @@ -11,6 +11,7 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -173,7 +173,7 @@ index 773fcb2..cda652f 100644
  /// None if it can't be found or doesn't exist
  #[tauri::command]
 diff --git a/packages/app-lib/src/api/pack/import/mod.rs b/packages/app-lib/src/api/pack/import/mod.rs
-index 5e4b826..b37d478 100644
+index 5e4b826c..b37d4780 100644
 --- a/packages/app-lib/src/api/pack/import/mod.rs
 +++ b/packages/app-lib/src/api/pack/import/mod.rs
 @@ -247,36 +247,130 @@ async fn import_instance_inner(
@@ -343,7 +343,7 @@ index 5e4b826..b37d478 100644
  /// Checks if this PathBuf is a valid instance for the given launcher type
 diff --git a/packages/ui/src/assets/launchers/README.md b/packages/ui/src/assets/launchers/README.md
 new file mode 100644
-index 0000000..4c7d7a6
+index 00000000..4c7d7a69
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/README.md
 @@ -0,0 +1,16 @@
@@ -365,7 +365,7 @@ index 0000000..4c7d7a6
 +A launcher without a logo here falls back to a badge with its initials.
 diff --git a/packages/ui/src/assets/launchers/atlauncher.svg b/packages/ui/src/assets/launchers/atlauncher.svg
 new file mode 100644
-index 0000000..5dd0000
+index 00000000..5dd0000f
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/atlauncher.svg
 @@ -0,0 +1 @@
@@ -528,7 +528,7 @@ HcmV?d00001
 
 diff --git a/packages/ui/src/assets/launchers/multimc.svg b/packages/ui/src/assets/launchers/multimc.svg
 new file mode 100644
-index 0000000..0c072ef
+index 00000000..0c072ef9
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/multimc.svg
 @@ -0,0 +1 @@
@@ -536,7 +536,7 @@ index 0000000..0c072ef
 \ No newline at end of file
 diff --git a/packages/ui/src/assets/launchers/polymc.svg b/packages/ui/src/assets/launchers/polymc.svg
 new file mode 100644
-index 0000000..c192d50
+index 00000000..c192d503
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/polymc.svg
 @@ -0,0 +1,21 @@
@@ -563,7 +563,7 @@ index 0000000..c192d50
 +</svg>
 diff --git a/packages/ui/src/assets/launchers/prism-launcher.svg b/packages/ui/src/assets/launchers/prism-launcher.svg
 new file mode 100644
-index 0000000..aeee843
+index 00000000..aeee8433
 --- /dev/null
 +++ b/packages/ui/src/assets/launchers/prism-launcher.svg
 @@ -0,0 +1,57 @@
@@ -625,7 +625,7 @@ index 0000000..aeee843
 + </metadata>
 +</svg>
 diff --git a/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue b/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
-index a4dfcdb..5384d29 100644
+index a4dfcdbf..5384d296 100644
 --- a/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
 +++ b/packages/ui/src/components/flows/creation-flow-modal/components/ImportInstanceStage.vue
 @@ -51,6 +51,7 @@
@@ -806,7 +806,7 @@ index a4dfcdb..5384d29 100644
  			type: 'error',
 diff --git a/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
 new file mode 100644
-index 0000000..aa1b97d
+index 00000000..aa1b97d8
 --- /dev/null
 +++ b/packages/ui/src/components/flows/creation-flow-modal/components/LauncherMark.vue
 @@ -0,0 +1,55 @@
@@ -866,7 +866,7 @@ index 0000000..aa1b97d
 +)
 +</script>
 diff --git a/packages/ui/src/providers/instance-import.ts b/packages/ui/src/providers/instance-import.ts
-index 13c73a1..e9a9767 100644
+index 13c73a1d..e9a9767d 100644
 --- a/packages/ui/src/providers/instance-import.ts
 +++ b/packages/ui/src/providers/instance-import.ts
 @@ -2,13 +2,27 @@ import { createContext } from '.'

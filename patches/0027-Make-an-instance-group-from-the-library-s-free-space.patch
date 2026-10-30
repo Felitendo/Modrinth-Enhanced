@@ -12,7 +12,7 @@ The same menu now offers it, and opens the dialog that button does.
  2 files changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/library/index.vue b/apps/app-frontend/src/components/ui/library/index.vue
-index 20000b6..1849835 100644
+index 5c77fbb1..67c05ddc 100644
 --- a/apps/app-frontend/src/components/ui/library/index.vue
 +++ b/apps/app-frontend/src/components/ui/library/index.vue
 @@ -53,6 +53,7 @@ const {
@@ -34,7 +34,7 @@ index 20000b6..1849835 100644
  
  <template>
 diff --git a/apps/app-frontend/src/pages/Index.vue b/apps/app-frontend/src/pages/Index.vue
-index eb9496e..3fd7ea7 100644
+index eb9496e9..3fd7ea7a 100644
 --- a/apps/app-frontend/src/pages/Index.vue
 +++ b/apps/app-frontend/src/pages/Index.vue
 @@ -1,5 +1,5 @@

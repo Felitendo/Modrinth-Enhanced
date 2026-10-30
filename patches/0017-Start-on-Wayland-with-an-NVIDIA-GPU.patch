@@ -15,7 +15,7 @@ who set it, or WEBKIT_DISABLE_DMABUF_RENDERER, keeps their value.
  1 file changed, 14 insertions(+)
 
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 46be115..8cc5ebb 100644
+index 5fc404f2..7dedc61a 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -125,6 +125,20 @@ fn main() {
@@ -36,6 +36,6 @@ index 46be115..8cc5ebb 100644
 +        unsafe { std::env::set_var("WEBKIT_DMABUF_RENDERER_FORCE_SHM", "1") };
 +    }
 +
+     theseus::install_crypto_provider();
+ 
      let runtime = tokio::runtime::Builder::new_multi_thread()
-         .enable_all()
-         .build()

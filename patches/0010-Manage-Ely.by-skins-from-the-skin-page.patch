@@ -46,7 +46,7 @@ The website calls and the fallback Steve texture come from Noctrinth
 
 diff --git a/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue b/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
 new file mode 100644
-index 0000000..382ad1c
+index 00000000..382ad1c0
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
 @@ -0,0 +1,148 @@
@@ -200,7 +200,7 @@ index 0000000..382ad1c
 +</script>
 diff --git a/apps/app-frontend/src/helpers/ely-fallback-skin.ts b/apps/app-frontend/src/helpers/ely-fallback-skin.ts
 new file mode 100644
-index 0000000..4c47bde
+index 00000000..4c47bde9
 --- /dev/null
 +++ b/apps/app-frontend/src/helpers/ely-fallback-skin.ts
 @@ -0,0 +1,3 @@
@@ -209,7 +209,7 @@ index 0000000..4c47bde
 +	'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAE5klEQVR4Xu1aMWsUQRgVVJCAoIIgglaJBG2UGIKCOU0hJHZKijRBsAnaWSjaiNjESgtTpT0bmxQWNvkJ+U9n3ube8ubNt7e5xOzdxX3wmNmZb/fmvflmdtm9M2dqcOfmxR44N325KFnn8ecXDwbSrzdxoODO7auleNTdgHfP5hKeKgNUsJff1zqZeBJ9fr2Jg4vW9Ef5Xxiga9+XAkRWLYFTYYDOuGYDxIMU6psf2r6tL54OA3wPUEIkBFeVfr2Jg4r2DRGk2OWZSwnZ7tcbO2hqU9j0tQtJyjMLlGqCnqPX0WtEcSh9PI0jGiBIIVpX8V7yvEg04/z6aPPxNA4V4QNm2/ar5d7vD+u9P1/eFOWvt2tF2/2ZK1ksyGO2aZ0msM3H0zg4IB2oziSEQjCEUzyJvkhUdE3WGc9jH0/j0IGxxC0M4iACQoHnj76WolEHcIwYtOGc6Fo0NDJoLAzwGaIgJWf89eO7BTUDlBTlM6/7gxqCYx9P4+BAUHLmeQ//8XKxfKDBre390nzBpRtTSQxvecwEvaYb4Mc+nsbBpzYV7yaghGiYwJKiaZCey+vpk+Gt61MJ2e7jGTke3vvaUy4sLBScnZ0t6PEZ9vbK5aHGog19fn2nXy7Dzk6vZLebLNHiN44LHxCF0wiPz7AvUsWrCSdhgO5H+B0PHxo+oKNkwEkbMLW7mxkwVhlwoktgX3S0BI6cAU/mt3sgfhzl04c/S7KNJan957a2EurMYFCl+P7Aq+LBpF2FiuCSbPv0KaWfUwcKPKwB2g9isOc3NwuWgvpCmZbeHsUnIr2N7S4ehOiNjQPSAI2rwyCBnh3eD0LI2Y8fC6Je/nC/9DaPdxPcrEwQ2T3ImNAAPacOgwRWGaB1iiHrBHl8IoyiVISnuJPi1QRlHVwgj6M27SNdUDLjZoDOfmRAtva7B5scyQ1Vy4h6juvN4Ab4DEeG6LGndGlAX4gb4PGeIaX4/rHe4nTH1zYVrfHF5luHyABfBoP6KYr0FNZZ9dgo3s+NRKkRkQFad70ZKKxKYJ0BGKSKKTJAZ5TZ0Bfk8aEBEh8ZoEaoASg9xvVm8PRW4UqPIylIxVG4i2OMxyUGiHjE6Ky6OBqgRniM682wsrLSA31zczLOqaIiM1Sgx5YGiGgVD6pYFxeZ4P2uNwMebzudTiJqdXU1E4oYj0Vdl4gapplDIyjMY3T5aAwyscoAzQw3QGNdbwY+41OcC6TwKA51NYDUZcSSM+rxvtcwhu0qxkWCfmv0GNfbokWLFi1atJgc4AVoFf3xmU+dSUyLFi1atGjRokVT8FdpQ39c1XeE+/S3QB4+dnADhv68bgbwTc+hX3GNGm7AUTOAj7qaARNpwLEyYL+uGTCWS0Df/vpLTu/TfsZkHzODbwS6JDKOGocRyWzwPjD5wqsGDDJB20YNNwClG6D9dQaUH0uqBLsho4YLdJHer22FAXXf9+uoWdI3xt8bVPGfGOjieRy1aR/p3/b9Q4d/8FCiz8fTOKoE+2xrv8arGL3f687vt8Kxui1GAuuWgNINGCRc+1j38TQOF4gyMiAyB4xS3YW7AUofT+Pw9PeZ1vZomURr3EUOygofT+Pgl2QKrKJ/bifrxFcJHxsD+LlcRQ3z/4LIABfsx9rm42kc0f8GVCCFR3GoQ0jVPuBZEfX5eIbFX3srPNN8aUvJAAAAAElFTkSuQmCC'
 diff --git a/apps/app-frontend/src/helpers/ely_skins.ts b/apps/app-frontend/src/helpers/ely_skins.ts
 new file mode 100644
-index 0000000..a0eb40d
+index 00000000..a0eb40d5
 --- /dev/null
 +++ b/apps/app-frontend/src/helpers/ely_skins.ts
 @@ -0,0 +1,77 @@
@@ -291,7 +291,7 @@ index 0000000..a0eb40d
 +	return await invoke('plugin:ely-skins|ely_remove_skin', { skinId })
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 30ec659..50cc531 100644
+index 30ec659f..50cc531a 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -4,6 +4,7 @@ import {
@@ -845,7 +845,7 @@ index 30ec659..50cc531 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index c88a3b6..e2a1bf1 100644
+index 72011820..3af5c16d 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -873,7 +873,7 @@ index c88a3b6..e2a1bf1 100644
                  "cache",
                  InlinedPlugin::new()
 diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
-index b08053e..1492b97 100644
+index b08053e3..1492b972 100644
 --- a/apps/app/capabilities/plugins.json
 +++ b/apps/app/capabilities/plugins.json
 @@ -104,6 +104,7 @@
@@ -887,7 +887,7 @@ index b08053e..1492b97 100644
  }
 diff --git a/apps/app/src/api/ely_skins.rs b/apps/app/src/api/ely_skins.rs
 new file mode 100644
-index 0000000..d850755
+index 00000000..d850755d
 --- /dev/null
 +++ b/apps/app/src/api/ely_skins.rs
 @@ -0,0 +1,366 @@
@@ -1258,7 +1258,7 @@ index 0000000..d850755
 +    Err(other("Ely.by did not answer in time"))
 +}
 diff --git a/apps/app/src/api/mod.rs b/apps/app/src/api/mod.rs
-index 90b0f62..998045a 100644
+index 90b0f623..998045ac 100644
 --- a/apps/app/src/api/mod.rs
 +++ b/apps/app/src/api/mod.rs
 @@ -3,6 +3,7 @@ use serde::{Serialize, Serializer};
@@ -1270,10 +1270,10 @@ index 90b0f62..998045a 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 4f37cc8..5cd4762 100644
+index 78ead22e..f560cf96 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -306,6 +306,7 @@ fn main() {
+@@ -308,6 +308,7 @@ fn main() {
  
      builder = builder
          .plugin(api::auth::init())
@@ -1283,7 +1283,7 @@ index 4f37cc8..5cd4762 100644
          .plugin(api::import::init())
 diff --git a/packages/app-lib/src/api/ely_skins.rs b/packages/app-lib/src/api/ely_skins.rs
 new file mode 100644
-index 0000000..2c659af
+index 00000000..2c659af6
 --- /dev/null
 +++ b/packages/app-lib/src/api/ely_skins.rs
 @@ -0,0 +1,121 @@
@@ -1409,7 +1409,7 @@ index 0000000..2c659af
 +    Ok(bytes.to_vec())
 +}
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 47d6f11..d9cb8d8 100644
+index a7419055..62956e80 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
 @@ -1,6 +1,7 @@
@@ -1421,7 +1421,7 @@ index 47d6f11..d9cb8d8 100644
  pub mod handler;
  pub mod instance;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 3d26ef1..92b1030 100644
+index d2029727..1ef1929c 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -1054,12 +1054,14 @@ impl Serialize for Credentials {

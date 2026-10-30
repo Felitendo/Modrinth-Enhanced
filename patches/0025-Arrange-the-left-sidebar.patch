@@ -26,7 +26,7 @@ where they belong; only the number of instances stays there.
  create mode 100644 apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 02b68b5..39d674c 100644
+index 729c99ec..ff89a3cf 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -4,6 +4,7 @@ import {
@@ -45,7 +45,7 @@ index 02b68b5..39d674c 100644
  	CreationFlowModal,
  	defineMessages,
  	I18nDebugPanel,
-@@ -88,6 +90,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
+@@ -90,6 +92,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { useError } from '@/composables/use-error.js'
  import { useInstanceMetadataRefresh } from '@/composables/use-instance-metadata-refresh'
  import { useQuickInstanceLimit } from '@/composables/use-quick-instance-limit.ts'
@@ -53,7 +53,7 @@ index 02b68b5..39d674c 100644
  import { isDarkTheme, useTheme } from '@/composables/use-theme.ts'
  import { config } from '@/config'
  import { provideMinecraftAccounts } from '@/features/minecraft-accounts/context'
-@@ -221,6 +224,73 @@ const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
+@@ -224,6 +227,73 @@ const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
  const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
@@ -127,7 +127,7 @@ index 02b68b5..39d674c 100644
  const sidebarToggled = ref(true)
  // Whether the right sidebar is folded away, remembered across restarts in the
  // feature flags. The title bar's fold button is the only thing that sets it:
-@@ -620,6 +690,18 @@ const messages = defineMessages({
+@@ -624,6 +694,18 @@ const messages = defineMessages({
  		id: 'app.nav.screenshots',
  		defaultMessage: 'Screenshots',
  	},
@@ -146,7 +146,7 @@ index 02b68b5..39d674c 100644
  	createNewInstance: {
  		id: 'app.nav.create-new-instance',
  		defaultMessage: 'Create new instance',
-@@ -2070,52 +2152,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2074,52 +2156,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
  		>
  			<NavButton
@@ -207,7 +207,7 @@ index 02b68b5..39d674c 100644
  			</NavButton>
  			<suspense>
  				<QuickInstanceSwitcher>
-@@ -2199,6 +2244,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2203,6 +2248,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<LogInIcon class="text-brand" />
  			</NavButton>
  		</div>
@@ -217,7 +217,7 @@ index 02b68b5..39d674c 100644
  			:can-navigate-forward="canNavigateForward"
 diff --git a/apps/app-frontend/src/composables/use-sidebar-layout.ts b/apps/app-frontend/src/composables/use-sidebar-layout.ts
 new file mode 100644
-index 0000000..7225c21
+index 00000000..7225c21b
 --- /dev/null
 +++ b/apps/app-frontend/src/composables/use-sidebar-layout.ts
 @@ -0,0 +1,72 @@
@@ -294,7 +294,7 @@ index 0000000..7225c21
 +	return { order, hidden, isHidden, setHidden, move, setOrder, reset }
 +}
 diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
-index e588fa9..675de85 100644
+index e588fa9c..675de855 100644
 --- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 +++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 @@ -6,6 +6,7 @@ import {
@@ -362,7 +362,7 @@ index e588fa9..675de85 100644
  const { progress, version: downloadingVersion } = injectAppUpdateDownloadProgress()
  
 diff --git a/apps/app-frontend/src/features/settings/display/features-settings.vue b/apps/app-frontend/src/features/settings/display/features-settings.vue
-index 85e32a8..72c63aa 100644
+index 85e32a8c..72c63aa0 100644
 --- a/apps/app-frontend/src/features/settings/display/features-settings.vue
 +++ b/apps/app-frontend/src/features/settings/display/features-settings.vue
 @@ -82,32 +82,6 @@ const messages = defineMessages({
@@ -451,7 +451,7 @@ index 85e32a8..72c63aa 100644
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 new file mode 100644
-index 0000000..dc0cd1f
+index 00000000..dc0cd1f3
 --- /dev/null
 +++ b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 @@ -0,0 +1,125 @@

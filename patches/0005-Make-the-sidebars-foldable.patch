@@ -40,7 +40,7 @@ bar button - so nothing there promises anything.
  7 files changed, 231 insertions(+), 42 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 2c5e004..a4c6c18 100644
+index 26990c27..a683eee1 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -2,6 +2,7 @@
@@ -66,8 +66,8 @@ index 2c5e004..a4c6c18 100644
 +	NewModal,
  	NotificationPanel,
  	PopupNotificationPanel,
- 	provideLoadingState,
-@@ -218,12 +221,42 @@ const credentials = ref()
+ 	provideFileDownload,
+@@ -221,12 +224,42 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
@@ -113,7 +113,7 @@ index 2c5e004..a4c6c18 100644
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -502,6 +535,19 @@ const formatBytes = useFormatBytes()
+@@ -506,6 +539,19 @@ const formatBytes = useFormatBytes()
  
  const messages = defineMessages({
  	warning: { id: 'app.notification.warning', defaultMessage: 'Warning' },
@@ -133,7 +133,7 @@ index 2c5e004..a4c6c18 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2018,6 +2064,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2022,6 +2068,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -141,7 +141,7 @@ index 2c5e004..a4c6c18 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2114,9 +2161,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2118,9 +2165,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppTitleBar
  			:can-navigate-back="canNavigateBack"
  			:can-navigate-forward="canNavigateForward"
@@ -155,7 +155,7 @@ index 2c5e004..a4c6c18 100644
  		/>
  	</div>
  	<div
-@@ -2195,6 +2244,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2199,6 +2248,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />
@@ -178,7 +178,7 @@ index 2c5e004..a4c6c18 100644
  	<MinecraftAuthErrorModal ref="minecraftAuthErrorModal" />
  	<MinecraftRequiredModal ref="minecraftRequiredModal" />
 diff --git a/apps/app-frontend/src/app/shell/title-bar/index.vue b/apps/app-frontend/src/app/shell/title-bar/index.vue
-index 9a31844..e6a645d 100644
+index 9a318449..e6a645d1 100644
 --- a/apps/app-frontend/src/app/shell/title-bar/index.vue
 +++ b/apps/app-frontend/src/app/shell/title-bar/index.vue
 @@ -1,5 +1,5 @@
@@ -304,7 +304,7 @@ index 9a31844..e6a645d 100644
 +}
  </style>
 diff --git a/apps/app-frontend/src/composables/use-app-settings.ts b/apps/app-frontend/src/composables/use-app-settings.ts
-index dceec83..bce1f20 100644
+index dceec839..bce1f20e 100644
 --- a/apps/app-frontend/src/composables/use-app-settings.ts
 +++ b/apps/app-frontend/src/composables/use-app-settings.ts
 @@ -11,6 +11,10 @@ export const DEFAULT_FEATURE_FLAGS = {
@@ -319,7 +319,7 @@ index dceec83..bce1f20 100644
  
  export type FeatureFlag = keyof typeof DEFAULT_FEATURE_FLAGS
 diff --git a/apps/app-frontend/src/features/news/news-sidebar.vue b/apps/app-frontend/src/features/news/news-sidebar.vue
-index 17b82dc..76c7e8b 100644
+index 17b82dcb..76c7e8b7 100644
 --- a/apps/app-frontend/src/features/news/news-sidebar.vue
 +++ b/apps/app-frontend/src/features/news/news-sidebar.vue
 @@ -1,12 +1,23 @@
@@ -391,7 +391,7 @@ index 17b82dc..76c7e8b 100644
  			<ButtonLink
  				type="colored"
 diff --git a/apps/app-frontend/src/features/settings/display/behavior-settings.vue b/apps/app-frontend/src/features/settings/display/behavior-settings.vue
-index 7166d1e..280b531 100644
+index 7166d1e6..280b5315 100644
 --- a/apps/app-frontend/src/features/settings/display/behavior-settings.vue
 +++ b/apps/app-frontend/src/features/settings/display/behavior-settings.vue
 @@ -79,14 +79,6 @@ const messages = defineMessages({
@@ -427,7 +427,7 @@ index 7166d1e..280b531 100644
  	</section>
  
 diff --git a/apps/app-frontend/src/features/settings/display/features-settings.vue b/apps/app-frontend/src/features/settings/display/features-settings.vue
-index 8ad37cf..b974c00 100644
+index 8ad37cf8..b974c007 100644
 --- a/apps/app-frontend/src/features/settings/display/features-settings.vue
 +++ b/apps/app-frontend/src/features/settings/display/features-settings.vue
 @@ -12,7 +12,11 @@ import {
@@ -525,7 +525,7 @@ index 8ad37cf..b974c00 100644
  				<h3 class="m-0 text-lg font-semibold text-contrast">
  					{{ formatMessage(messages.quickInstancesTitle) }}
 diff --git a/packages/app-lib/src/state/settings.rs b/packages/app-lib/src/state/settings.rs
-index 08c9738..da9a404 100644
+index 08c97389..da9a4047 100644
 --- a/packages/app-lib/src/state/settings.rs
 +++ b/packages/app-lib/src/state/settings.rs
 @@ -105,6 +105,10 @@ pub enum FeatureFlag {

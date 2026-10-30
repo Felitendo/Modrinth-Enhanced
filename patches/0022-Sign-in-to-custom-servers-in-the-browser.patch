@@ -33,7 +33,7 @@ session in the refresh token column as JSON behind a marker.
  7 files changed, 772 insertions(+), 14 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
-index a2873fe..0e1f9a7 100644
+index a2873fe6..0e1f9a73 100644
 --- a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 +++ b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 @@ -1,5 +1,11 @@
@@ -293,7 +293,7 @@ index a2873fe..0e1f9a7 100644
  		id: 'app.authlib-account.drasl-token-hint',
  		defaultMessage:
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index f4d24a1..f93f4e9 100644
+index f4d24a10..f93f4e93 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
 @@ -89,7 +89,7 @@ export async function login_ely(username, password) {
@@ -334,7 +334,7 @@ index f4d24a1..f93f4e9 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 30fbedc..e5b3635 100644
+index 7e31d8e5..559f3ece 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -20,6 +20,8 @@ fn main() {
@@ -347,7 +347,7 @@ index 30fbedc..e5b3635 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 349e735..0a6f90d 100644
+index 349e7358..0a6f90df 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -17,6 +17,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
@@ -411,7 +411,7 @@ index 349e735..0a6f90d 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index 3aadc9b..999a5ac 100644
+index 3aadc9b8..999a5ac8 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
 @@ -8,7 +8,7 @@ use crate::state::{AuthServer, Credentials, MinecraftLoginFlow};
@@ -475,7 +475,7 @@ index 3aadc9b..999a5ac 100644
      server: AuthServer,
      username: &str,
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index f169a8a..3fe2639 100644
+index e6710b90..cf98b3f7 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -1,5 +1,6 @@
@@ -918,7 +918,7 @@ index f169a8a..3fe2639 100644
              return Ok(());
          }
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
-index 1542143..46c02dc 100644
+index 15421437..46c02dc3 100644
 --- a/packages/app-lib/src/util/authlib_injector.rs
 +++ b/packages/app-lib/src/util/authlib_injector.rs
 @@ -17,6 +17,96 @@ use crate::state::DirectoryInfo;

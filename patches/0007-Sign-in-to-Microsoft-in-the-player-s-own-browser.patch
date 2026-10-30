@@ -33,7 +33,7 @@ modal for anyone the browser does not work out for.
 
 diff --git a/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 new file mode 100644
-index 0000000..d587736
+index 00000000..d587736e
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/MicrosoftLoginModal.vue
 @@ -0,0 +1,219 @@
@@ -257,7 +257,7 @@ index 0000000..d587736
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index cf7c3ba..262311e 100644
+index cf7c3ba0..262311e4 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -25,10 +25,8 @@
@@ -322,7 +322,7 @@ index cf7c3ba..262311e 100644
  
  function addOfflineAccount(event: MouseEvent) {
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 35c21fa..224d776 100644
+index 35c21fac..224d7762 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -105,6 +105,7 @@
@@ -387,7 +387,7 @@ index 35c21fa..224d776 100644
  	addOfflineAccount: {
  		id: 'minecraft-account.add-offline-account',
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
-index 0d147e7..fa9623e 100644
+index 0d147e79..fa9623e4 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
 +++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
 @@ -10,7 +10,7 @@ export interface MinecraftAccountsActions {
@@ -400,7 +400,7 @@ index 0d147e7..fa9623e 100644
  
  export const [injectMinecraftAccounts, provideMinecraftAccounts] = createContext<
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index 57580ff..9b2408e 100644
+index 57580ff5..9b2408e3 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
 @@ -33,6 +33,29 @@ export async function login() {
@@ -434,7 +434,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index dc1b942..c88a3b6 100644
+index 894db3f3..72011820 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {
@@ -447,7 +447,7 @@ index dc1b942..c88a3b6 100644
                          "login_ely",
                          "remove_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 42f88b0..8e6ce97 100644
+index 42f88b00..8e6ce978 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -3,6 +3,7 @@ use anyhow::Context;
@@ -529,7 +529,7 @@ index 42f88b0..8e6ce97 100644
  #[tauri::command]
  pub async fn login_offline(username: String) -> Result<Credentials> {
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index dffcbb8..c16e7cc 100644
+index dffcbb84..c16e7cc4 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
 @@ -48,6 +48,36 @@ pub async fn finish_login(
@@ -570,10 +570,10 @@ index dffcbb8..c16e7cc 100644
  /// makes it the active account.
  ///
 diff --git a/packages/app-lib/src/api/mod.rs b/packages/app-lib/src/api/mod.rs
-index 5fddc74..47d6f11 100644
+index c67f5edf..a7419055 100644
 --- a/packages/app-lib/src/api/mod.rs
 +++ b/packages/app-lib/src/api/mod.rs
-@@ -29,12 +29,12 @@ pub mod data {
+@@ -30,12 +30,12 @@ pub mod data {
          InstanceInstallCandidate, InstanceInstallTarget,
          InstanceLaunchOverridesPatch, InstanceLink, InstanceMetadata,
          InstanceSyncedOption, InstanceSyncedOptions, InstanceTabVisibility,
@@ -593,7 +593,7 @@ index 5fddc74..47d6f11 100644
      pub use ariadne::users::UserStatus;
      pub use modrinth_content_management::{
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 9106319..3d26ef1 100644
+index bce98344..d2029727 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -38,6 +38,7 @@ use uuid::Uuid;

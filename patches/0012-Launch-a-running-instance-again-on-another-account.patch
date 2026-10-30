@@ -45,7 +45,7 @@ Adapted from Noctrinth (https://github.com/Everelsu/Noctrinth).
 
 diff --git a/apps/app-frontend/src/components/ui/ProcessConsole.vue b/apps/app-frontend/src/components/ui/ProcessConsole.vue
 new file mode 100644
-index 0000000..b5102eb
+index 00000000..b5102eb5
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/ProcessConsole.vue
 @@ -0,0 +1,92 @@
@@ -142,7 +142,7 @@ index 0000000..b5102eb
 +})
 +</script>
 diff --git a/apps/app-frontend/src/composables/useInstanceConsole.ts b/apps/app-frontend/src/composables/useInstanceConsole.ts
-index e7e30d4..c2b3277 100644
+index e7e30d48..c2b32770 100644
 --- a/apps/app-frontend/src/composables/useInstanceConsole.ts
 +++ b/apps/app-frontend/src/composables/useInstanceConsole.ts
 @@ -1,6 +1,12 @@
@@ -192,7 +192,7 @@ index e7e30d4..c2b3277 100644
  	const entry = getOrCreate(instanceId)
  	return {
 diff --git a/apps/app-frontend/src/generated/app-events/LogPayload.ts b/apps/app-frontend/src/generated/app-events/LogPayload.ts
-index 977bf82..c390c4c 100644
+index 977bf82f..c390c4c6 100644
 --- a/apps/app-frontend/src/generated/app-events/LogPayload.ts
 +++ b/apps/app-frontend/src/generated/app-events/LogPayload.ts
 @@ -1,4 +1,8 @@
@@ -206,7 +206,7 @@ index 977bf82..c390c4c 100644
 + */
 +process_uuid: string, } & ({ "type": "log4j" } & Log4jEvent | { "type": "legacy", message: string, });
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
-index 9ee59a9..077125a 100644
+index 9ee59a91..077125af 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.d.ts
 @@ -47,7 +47,7 @@ export type InstanceGroupsChangedPayload = { instance_ids: string[] }
@@ -219,7 +219,7 @@ index 9ee59a9..077125a 100644
  export type Log4jEvent = { timestamp_millis: i64 | undefined, logger_name: string | undefined, level: string | undefined, thread_name: string | undefined, message: string | undefined, throwable: string | undefined }
  export type ModLoader = { tag: "vanilla" } | { tag: "forge" } | { tag: "fabric" } | { tag: "quilt" } | { tag: "neoforge" }
 diff --git a/apps/app-frontend/src/generated/app-events/postcard/index.js b/apps/app-frontend/src/generated/app-events/postcard/index.js
-index 30fb805..5bffabf 100644
+index 30fb805f..5bffabf8 100644
 --- a/apps/app-frontend/src/generated/app-events/postcard/index.js
 +++ b/apps/app-frontend/src/generated/app-events/postcard/index.js
 @@ -434,6 +434,7 @@ function deserialize_LOG_EVENT(d) {
@@ -231,7 +231,7 @@ index 30fb805..5bffabf 100644
      };
  }
 diff --git a/apps/app-frontend/src/helpers/instance.ts b/apps/app-frontend/src/helpers/instance.ts
-index a37a962..3d0373c 100644
+index a37a962d..3d0373c1 100644
 --- a/apps/app-frontend/src/helpers/instance.ts
 +++ b/apps/app-frontend/src/helpers/instance.ts
 @@ -601,11 +601,13 @@ export async function get_pack_export_candidates(
@@ -250,7 +250,7 @@ index a37a962..3d0373c 100644
  
  export async function kill(instanceId: string): Promise<void> {
 diff --git a/apps/app-frontend/src/helpers/logs.js b/apps/app-frontend/src/helpers/logs.js
-index 843e572..44d07d5 100644
+index 843e5728..44d07d54 100644
 --- a/apps/app-frontend/src/helpers/logs.js
 +++ b/apps/app-frontend/src/helpers/logs.js
 @@ -72,3 +72,13 @@ export async function get_live_log_buffer(instanceId) {
@@ -268,7 +268,7 @@ index 843e572..44d07d5 100644
 +	return await invoke('plugin:logs|logs_clear_live_log_buffer_for_process', { processUuid })
 +}
 diff --git a/apps/app-frontend/src/pages/instance/components/page-header/index.vue b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
-index 1aa3ec9..5390355 100644
+index 1aa3ec94..5390355e 100644
 --- a/apps/app-frontend/src/pages/instance/components/page-header/index.vue
 +++ b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
 @@ -144,6 +144,19 @@
@@ -311,7 +311,7 @@ index 1aa3ec9..5390355 100644
  	settings: []
  	openFolder: []
 diff --git a/apps/app-frontend/src/pages/instance/layout.vue b/apps/app-frontend/src/pages/instance/layout.vue
-index f28f8ce..55b1719 100644
+index f28f8ce2..55b17198 100644
 --- a/apps/app-frontend/src/pages/instance/layout.vue
 +++ b/apps/app-frontend/src/pages/instance/layout.vue
 @@ -46,6 +46,7 @@
@@ -354,7 +354,7 @@ index f28f8ce..55b1719 100644
  	reason: SharedInstanceUnavailableReason | null = null,
  ) {
 diff --git a/apps/app-frontend/src/pages/instance/logs/index.vue b/apps/app-frontend/src/pages/instance/logs/index.vue
-index 2aacfe0..e2a59fd 100644
+index 2aacfe0d..e2a59fdb 100644
 --- a/apps/app-frontend/src/pages/instance/logs/index.vue
 +++ b/apps/app-frontend/src/pages/instance/logs/index.vue
 @@ -1,6 +1,10 @@
@@ -427,7 +427,7 @@ index 2aacfe0..e2a59fd 100644
  		liveConsole.clear()
  		invalidate()
 diff --git a/apps/app-frontend/src/providers/setup/app-event-codec.ts b/apps/app-frontend/src/providers/setup/app-event-codec.ts
-index 0294be9..12c6008 100644
+index 0294be98..12c60089 100644
 --- a/apps/app-frontend/src/providers/setup/app-event-codec.ts
 +++ b/apps/app-frontend/src/providers/setup/app-event-codec.ts
 @@ -112,7 +112,7 @@ function normalizeLogPayload(value: unknown): WireObject {
@@ -440,7 +440,7 @@ index 0294be9..12c6008 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 2da9a56..ff15284 100644
+index 8bf67e2f..65f20cbc 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,8 +110,10 @@ fn main() {
@@ -455,7 +455,7 @@ index 2da9a56..ff15284 100644
                      .default_permission(
                          DefaultPermissionRule::AllowAllCommands,
 diff --git a/apps/app/src/api/instance.rs b/apps/app/src/api/instance.rs
-index c7b6419..ab141ba 100644
+index c7b64194..ab141bab 100644
 --- a/apps/app/src/api/instance.rs
 +++ b/apps/app/src/api/instance.rs
 @@ -1315,12 +1315,19 @@ pub async fn instance_get_pack_export_candidates(
@@ -480,7 +480,7 @@ index c7b6419..ab141ba 100644
  
  #[tauri::command]
 diff --git a/apps/app/src/api/logs.rs b/apps/app/src/api/logs.rs
-index 8104b3e..a956d17 100644
+index 8104b3ef..a956d171 100644
 --- a/apps/app/src/api/logs.rs
 +++ b/apps/app/src/api/logs.rs
 @@ -23,8 +23,10 @@ pub fn init<R: tauri::Runtime>() -> tauri::plugin::TauriPlugin<R> {
@@ -522,7 +522,7 @@ index 8104b3e..a956d17 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index c6378fb..260b338 100644
+index c6378fb7..260b3381 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
 @@ -59,7 +59,8 @@ pub use self::projects::{
@@ -536,7 +536,7 @@ index c6378fb..260b338 100644
  pub use self::screenshot_groups::{
      ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 64c1397..f5353bb 100644
+index 07787523..712be037 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -22,6 +22,25 @@ pub enum QuickPlayType {
@@ -565,7 +565,7 @@ index 64c1397..f5353bb 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
-@@ -54,7 +73,8 @@ pub async fn run(
+@@ -44,7 +63,8 @@ pub async fn run(
          .await?
          .ok_or(ErrorKind::NotLoggedIn)?;
  
@@ -575,7 +575,7 @@ index 64c1397..f5353bb 100644
  }
  
  #[tracing::instrument(skip(credentials))]
-@@ -62,6 +82,7 @@ async fn run_credentials(
+@@ -52,6 +72,7 @@ async fn run_credentials(
      instance_id: &str,
      credentials: &Credentials,
      quick_play_type: QuickPlayType,
@@ -583,7 +583,7 @@ index 64c1397..f5353bb 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      let settings = Settings::get(&state.pool).await?;
-@@ -252,6 +273,7 @@ async fn run_credentials(
+@@ -242,6 +263,7 @@ async fn run_credentials(
          &context,
          quick_play_type,
          &state,
@@ -592,10 +592,10 @@ index 64c1397..f5353bb 100644
      .await
  }
 diff --git a/packages/app-lib/src/api/logs.rs b/packages/app-lib/src/api/logs.rs
-index e1f632a..8d96f96 100644
+index 864cc7f2..e8a22055 100644
 --- a/packages/app-lib/src/api/logs.rs
 +++ b/packages/app-lib/src/api/logs.rs
-@@ -466,12 +466,27 @@ pub async fn delete_logs_by_filename(
+@@ -476,12 +476,27 @@ pub async fn delete_logs_by_filename(
      Ok(())
  }
  
@@ -624,7 +624,7 @@ index e1f632a..8d96f96 100644
      let joined = lines.join("\n");
      let compacted = compact_duplicate_lines(&joined);
  
-@@ -485,7 +500,11 @@ pub async fn get_live_log_buffer(
+@@ -495,7 +510,11 @@ pub async fn get_live_log_buffer(
  }
  
  pub fn clear_live_log_buffer(instance_id: &str) {
@@ -638,7 +638,7 @@ index e1f632a..8d96f96 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/event/mod.rs b/packages/app-lib/src/event/mod.rs
-index 741e1bd..3432f09 100644
+index 741e1bdf..3432f09d 100644
 --- a/packages/app-lib/src/event/mod.rs
 +++ b/packages/app-lib/src/event/mod.rs
 @@ -531,6 +531,8 @@ mod log_types {
@@ -651,10 +651,10 @@ index 741e1bd..3432f09 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index be196c6..c83ed48 100644
+index 3ea7d8ce..564e79d0 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -898,6 +898,9 @@ pub async fn launch_minecraft(
+@@ -912,6 +912,9 @@ pub async fn launch_minecraft(
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
      state: &Arc<State>,
@@ -664,7 +664,7 @@ index be196c6..c83ed48 100644
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -1030,8 +1033,12 @@ pub async fn launch_minecraft(
+@@ -1045,8 +1048,12 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
@@ -679,10 +679,10 @@ index be196c6..c83ed48 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1281,7 +1288,10 @@ pub async fn launch_minecraft(
+@@ -1295,7 +1302,10 @@ pub async fn launch_minecraft(
+         .recover(Some(&instance.id))
          .await
          .context("recovering interrupted content changes")?;
-     // state.content_store.validate_instance(instance).await?;
 -    if crate::state::instance_has_running_process(&instance.id, state).await? {
 +    if !additional
 +        && crate::state::instance_has_running_process(&instance.id, state)
@@ -691,7 +691,7 @@ index be196c6..c83ed48 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1329,6 +1339,8 @@ pub async fn launch_minecraft(
+@@ -1343,6 +1353,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,
@@ -701,7 +701,7 @@ index be196c6..c83ed48 100644
              post_exit_hook,
              env_args,
 diff --git a/packages/app-lib/src/state/process.rs b/packages/app-lib/src/state/process.rs
-index fc6e8aa..c4ac145 100644
+index ea857479..b5661be9 100644
 --- a/packages/app-lib/src/state/process.rs
 +++ b/packages/app-lib/src/state/process.rs
 @@ -51,37 +51,74 @@ impl LogRingBuffer {
@@ -894,7 +894,7 @@ index fc6e8aa..c4ac145 100644
          reader: R,
          log_path: impl AsRef<Path>,
          xml_logging: bool,
-@@ -589,6 +648,7 @@ impl Process {
+@@ -584,6 +643,7 @@ impl Process {
  
                                  Self::emit_log4j_event(
                                      instance_id,
@@ -902,7 +902,7 @@ index fc6e8aa..c4ac145 100644
                                      &current_event,
                                  );
                              }
-@@ -634,6 +694,7 @@ impl Process {
+@@ -629,6 +689,7 @@ impl Process {
  
                                      Self::emit_log4j_event(
                                          instance_id,
@@ -910,7 +910,7 @@ index fc6e8aa..c4ac145 100644
                                          &current_event,
                                      );
                                  }
-@@ -660,7 +721,11 @@ impl Process {
+@@ -654,7 +715,11 @@ impl Process {
                                      e
                                  );
                              }
@@ -922,8 +922,8 @@ index fc6e8aa..c4ac145 100644
 +                            );
                          }
                      }
-                     Ok(Event::CData(e)) => {
-@@ -687,7 +752,11 @@ impl Process {
+                     Ok(Event::CData(e)) if in_message || in_throwable => {
+@@ -678,7 +743,11 @@ impl Process {
                      if let Err(e) = Self::append_to_log_file(&log_path, &line) {
                          tracing::warn!("Failed to write to log file: {}", e);
                      }
@@ -936,7 +936,7 @@ index fc6e8aa..c4ac145 100644
                      if let Err(e) = Self::maybe_handle_old_server_join_logging(
                          instance_id,
                          line.trim_ascii_end(),
-@@ -747,13 +816,17 @@ impl Process {
+@@ -738,13 +807,17 @@ impl Process {
          ))
      }
  
@@ -957,7 +957,7 @@ index fc6e8aa..c4ac145 100644
              }
          }
  
-@@ -762,6 +835,7 @@ impl Process {
+@@ -753,6 +826,7 @@ impl Process {
              let event_state = crate::EventState::get();
              let _ = event_state.send(crate::event::AppEvent::Log(LogPayload {
                  instance_id: instance_id.to_string(),
@@ -965,7 +965,7 @@ index fc6e8aa..c4ac145 100644
                  event: LogEvent::Log4j(event.clone()),
              }));
          }
-@@ -771,14 +845,15 @@ impl Process {
+@@ -762,14 +836,15 @@ impl Process {
          }
      }
  

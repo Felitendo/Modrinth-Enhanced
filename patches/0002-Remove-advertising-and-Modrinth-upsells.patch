@@ -29,7 +29,7 @@ ads and these prompts were shown, and nothing more.
  3 files changed, 27 insertions(+), 111 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 38fc7a8..aa88a01 100644
+index 50a9ae60..e6580a1b 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -1,7 +1,6 @@
@@ -40,7 +40,7 @@ index 38fc7a8..aa88a01 100644
  	ArrowLeftRightIcon,
  	CompassIcon,
  	ImageIcon,
-@@ -138,7 +137,6 @@ import {
+@@ -140,7 +139,6 @@ import {
  	syncedServersQueryOptions,
  } from '@/helpers/synced-options'
  import { syncedPackQueryOptions } from '@/helpers/synced-packs'
@@ -48,10 +48,10 @@ index 38fc7a8..aa88a01 100644
  import { get_user_preferences } from '@/helpers/user-preferences.ts'
  import { parse_modrinth_user_link } from '@/helpers/users'
  import {
-@@ -283,12 +281,6 @@ useAppEvent('ads_consent_required', handleAdsConsentRequired, appEvents)
- 
+@@ -287,12 +285,6 @@ useAppEvent('ads_consent_required', handleAdsConsentRequired, appEvents)
  const tauriApiClient = createAppClient()
  provideModrinthClient(tauriApiClient)
+ provideFileDownload(createFileDownload(tauriApiClient, trackExternalFileDownload))
 -const { data: authenticatedModrinthUser } = useQuery({
 -	queryKey: computed(() => ['authenticated-user', 'campaigns', credentials.value?.user?.id]),
 -	queryFn: () => tauriApiClient.labrinth.users_v3.getAuthenticated(),
@@ -61,7 +61,7 @@ index 38fc7a8..aa88a01 100644
  useQuery({
  	queryKey: computed(() => instanceKeys.sharedEligibility(credentials.value?.user?.id)),
  	queryFn: can_current_user_use_shared_instances,
-@@ -299,16 +291,10 @@ useQuery({
+@@ -303,16 +295,10 @@ useQuery({
  	refetchOnWindowFocus: false,
  	refetchOnReconnect: false,
  })
@@ -82,7 +82,7 @@ index 38fc7a8..aa88a01 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -610,10 +596,6 @@ const messages = defineMessages({
+@@ -614,10 +600,6 @@ const messages = defineMessages({
  		id: 'app.restarting',
  		defaultMessage: 'Restarting...',
  	},
@@ -93,7 +93,7 @@ index 38fc7a8..aa88a01 100644
  })
  
  function handleAdsConsentRequired(required) {
-@@ -1298,16 +1280,6 @@ const modrinthAccountMenuOptions = computed(() => [
+@@ -1302,16 +1284,6 @@ const modrinthAccountMenuOptions = computed(() => [
  		icon: UserIcon,
  		action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
  	},
@@ -110,7 +110,7 @@ index 38fc7a8..aa88a01 100644
  	{
  		id: 'add-friend',
  		label: formatMessage(messages.addFriend),
-@@ -2211,7 +2183,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2215,7 +2187,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppSidebar
  			ref="sidebar"
  			:credentials="credentials"
@@ -120,7 +120,7 @@ index 38fc7a8..aa88a01 100644
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
 diff --git a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
-index 6591516..ea109e5 100644
+index 6591516e..ea109e53 100644
 --- a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
 +++ b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
 @@ -276,39 +276,6 @@ async function handleCopyAdDetails() {
@@ -164,7 +164,7 @@ index 6591516..ea109e5 100644
  			<div>
  				<h2 class="m-0 text-lg font-semibold text-contrast">
 diff --git a/apps/app-frontend/src/helpers/ads.js b/apps/app-frontend/src/helpers/ads.js
-index 59ac0e9..48c2335 100644
+index 59ac0e9a..48c2335d 100644
 --- a/apps/app-frontend/src/helpers/ads.js
 +++ b/apps/app-frontend/src/helpers/ads.js
 @@ -1,59 +1,36 @@

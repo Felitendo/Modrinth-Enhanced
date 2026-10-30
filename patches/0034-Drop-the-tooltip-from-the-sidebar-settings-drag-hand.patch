@@ -8,7 +8,7 @@ Subject: [PATCH] Drop the tooltip from the sidebar settings' drag handles
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
-index dc0cd1f..8f2ea3a 100644
+index dc0cd1f3..8f2ea3af 100644
 --- a/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 +++ b/apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 @@ -15,8 +15,9 @@

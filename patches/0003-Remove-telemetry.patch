@@ -40,7 +40,7 @@ for them.
  8 files changed, 34 insertions(+), 153 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
-index 6367788..9738bbc 100644
+index 63677884..9738bbcd 100644
 --- a/apps/app-frontend/index.html
 +++ b/apps/app-frontend/index.html
 @@ -11,7 +11,6 @@
@@ -52,7 +52,7 @@ index 6367788..9738bbc 100644
  	</body>
  </html>
 diff --git a/apps/app-frontend/src/components/ui/SurveyPopup.vue b/apps/app-frontend/src/components/ui/SurveyPopup.vue
-index 7c2f406..6d63e0a 100644
+index 7c2f4069..6d63e0a8 100644
 --- a/apps/app-frontend/src/components/ui/SurveyPopup.vue
 +++ b/apps/app-frontend/src/components/ui/SurveyPopup.vue
 @@ -2,7 +2,6 @@
@@ -82,7 +82,7 @@ index 7c2f406..6d63e0a 100644
  	const surveyToShow = surveys.find(
  		(survey) =>
 diff --git a/apps/app-frontend/src/features/settings/account/privacy-settings.vue b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
-index 8773f8f..d31e8c5 100644
+index 8773f8f6..d31e8c5b 100644
 --- a/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 +++ b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 @@ -40,7 +40,7 @@ const messages = defineMessages({
@@ -103,7 +103,7 @@ index 8773f8f..d31e8c5 100644
  
  	<div class="mt-4 flex items-center justify-between gap-4">
 diff --git a/apps/app-frontend/src/helpers/error-reporting.ts b/apps/app-frontend/src/helpers/error-reporting.ts
-index bb20aa9..46a9749 100644
+index bb20aa9c..46a97499 100644
 --- a/apps/app-frontend/src/helpers/error-reporting.ts
 +++ b/apps/app-frontend/src/helpers/error-reporting.ts
 @@ -1,66 +1,16 @@
@@ -185,10 +185,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index e3f789d..b6311b8 100644
+index 4b5c22d6..9aabc45c 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2763,7 +2763,7 @@
+@@ -2760,7 +2760,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {
@@ -198,7 +198,7 @@ index e3f789d..b6311b8 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetry"
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index ae3af5d..e5bbabe 100644
+index ae3af5dc..e5bbabef 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -102,12 +102,12 @@
@@ -218,7 +218,7 @@ index ae3af5d..e5bbabe 100644
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 5d50c36..64c1397 100644
+index 1164a5e3..07787523 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -5,14 +5,11 @@ use crate::state::{
@@ -236,7 +236,7 @@ index 5d50c36..64c1397 100644
  
  #[derive(Debug, Clone)]
  pub enum QuickPlayType {
-@@ -237,54 +234,10 @@ async fn run_credentials(
+@@ -227,54 +224,10 @@ async fn run_credentials(
          mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
      }
  
@@ -295,7 +295,7 @@ index 5d50c36..64c1397 100644
  
      crate::minecraft_skins::flush_pending_skin_change().await?;
      crate::launcher::launch_minecraft(
-@@ -303,21 +256,6 @@ async fn run_credentials(
+@@ -293,21 +246,6 @@ async fn run_credentials(
      .await
  }
  
@@ -317,7 +317,7 @@ index 5d50c36..64c1397 100644
  pub async fn kill(instance_id: &str) -> crate::Result<()> {
      let state = State::get().await?;
      let processes =
-@@ -377,13 +315,12 @@ pub async fn try_update_playtime_by_instance_id(
+@@ -367,13 +305,12 @@ pub async fn try_update_playtime_by_instance_id(
              }
          }
  
@@ -338,7 +338,7 @@ index 5d50c36..64c1397 100644
          Ok(())
      };
 diff --git a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-index d96c14d..b69ee85 100644
+index d96c14d4..b69ee853 100644
 --- a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
 +++ b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
 @@ -965,11 +965,9 @@ function showSurvey() {
