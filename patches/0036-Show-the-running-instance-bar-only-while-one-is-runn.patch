@@ -8,7 +8,7 @@ Subject: [PATCH] Show the running instance bar only while one is running
  1 file changed, 91 insertions(+), 98 deletions(-)
 
 diff --git a/apps/app-frontend/src/app/shell/title-bar/action-bar.vue b/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
-index eff399e4..d4648a55 100644
+index eff399e..d4648a5 100644
 --- a/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
 +++ b/apps/app-frontend/src/app/shell/title-bar/action-bar.vue
 @@ -17,106 +17,103 @@

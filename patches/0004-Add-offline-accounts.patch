@@ -53,10 +53,10 @@ which offered Microsoft and nothing else:
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index 9aa8bcb3..d5531d42 100644
+index eb8dfae..a28019c 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -13789,6 +13789,7 @@ dependencies = [
+@@ -13802,6 +13802,7 @@ dependencies = [
   "infer 0.22.0",
   "itertools 0.15.0",
   "json5",
@@ -65,10 +65,10 @@ index 9aa8bcb3..d5531d42 100644
   "modrinth-content-management",
   "notify",
 diff --git a/Cargo.toml b/Cargo.toml
-index e784e9a4..e36693e0 100644
+index a01116a..0046924 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -140,6 +140,7 @@ lz4_flex = { version = "0.14.0", default-features = false, features = [
+@@ -141,6 +141,7 @@ lz4_flex = { version = "0.14.0", default-features = false, features = [
    "std",
  ] }
  maxminddb = "0.32.0"
@@ -77,10 +77,10 @@ index e784e9a4..e36693e0 100644
  minecraft-meta-model = { path = "packages/minecraft-meta-model" }
  modrinth-content-management = { path = "packages/modrinth-content-management" }
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index e6580a1b..26990c27 100644
+index 64cca3e..43b8d09 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2192,6 +2192,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2214,6 +2214,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
  			@create-instance="installationModal?.show()"
@@ -89,7 +89,7 @@ index e6580a1b..26990c27 100644
  		/>
  	</div>
 diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
-index a431fa52..bd7e1593 100644
+index a431fa5..bd7e159 100644
 --- a/apps/app-frontend/src/app/shell/sidebar/index.vue
 +++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
 @@ -25,12 +25,13 @@ const props = defineProps<{
@@ -143,7 +143,7 @@ index a431fa52..bd7e1593 100644
  						</h3>
 diff --git a/apps/app-frontend/src/components/ui/OfflineAccountModal.vue b/apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 new file mode 100644
-index 00000000..8300e28e
+index 0000000..8300e28
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 @@ -0,0 +1,136 @@
@@ -284,7 +284,7 @@ index 00000000..8300e28e
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 4437d405..bfbb1b22 100644
+index 4437d40..bfbb1b2 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -43,6 +43,16 @@
@@ -360,7 +360,7 @@ index 4437d405..bfbb1b22 100644
  	show,
  })
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 70cc46e9..ebc92c16 100644
+index 70cc46e..ebc92c1 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -9,6 +9,10 @@
@@ -455,7 +455,7 @@ index 70cc46e9..ebc92c16 100644
  		id: 'minecraft-account.remove-account',
  		defaultMessage: 'Remove account',
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
-index 958097bf..22abc8d5 100644
+index 958097b..22abc8d 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
 +++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
 @@ -5,6 +5,7 @@ import type { Skin } from '@/helpers/skins'
@@ -467,7 +467,7 @@ index 958097bf..22abc8d5 100644
  	setEquippedSkin: (skin: Skin) => Promise<void>
  	setLoginDisabled: (disabled: boolean) => void
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index 94bd13e3..cb7319a8 100644
+index 94bd13e..cb7319a 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
 @@ -33,6 +33,19 @@ export async function login() {
@@ -491,7 +491,7 @@ index 94bd13e3..cb7319a8 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 63bf263b..76c82c6b 100644
+index 1fd2fb7..18b6927 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,7 @@ fn main() {
@@ -503,7 +503,7 @@ index 63bf263b..76c82c6b 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 1a59db1c..03753c4d 100644
+index 1a59db1..03753c4 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -10,6 +10,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
@@ -528,7 +528,7 @@ index 1a59db1c..03753c4d 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
-index 305f7854..8a155a6c 100644
+index 305f785..8a155a6 100644
 --- a/packages/app-lib/Cargo.toml
 +++ b/packages/app-lib/Cargo.toml
 @@ -46,6 +46,7 @@ indicatif = { workspace = true, optional = true }
@@ -540,7 +540,7 @@ index 305f7854..8a155a6c 100644
  modrinth-content-management = { workspace = true }
  notify = { workspace = true }
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index d3a07f19..b735a6c8 100644
+index d3a07f1..b735a6c 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
 @@ -48,6 +48,45 @@ pub async fn finish_login(
@@ -590,7 +590,7 @@ index d3a07f19..b735a6c8 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 4e1a89ac..9eb49050 100644
+index 4e1a89a..9eb4905 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -283,6 +283,33 @@ pub struct Credentials {

@@ -21,7 +21,7 @@ do: the site sends no CORS headers.
  5 files changed, 318 insertions(+), 29 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
-index 3d92c683..26646a44 100644
+index 3d92c68..26646a4 100644
 --- a/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
 +++ b/apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
 @@ -1,7 +1,7 @@
@@ -349,7 +349,7 @@ index 3d92c683..26646a44 100644
  }
  
 diff --git a/apps/app-frontend/src/helpers/skin-browser.ts b/apps/app-frontend/src/helpers/skin-browser.ts
-index ea86e860..e3c4b21a 100644
+index ea86e86..e3c4b21 100644
 --- a/apps/app-frontend/src/helpers/skin-browser.ts
 +++ b/apps/app-frontend/src/helpers/skin-browser.ts
 @@ -1,9 +1,11 @@
@@ -417,7 +417,7 @@ index ea86e860..e3c4b21a 100644
  	return await invoke('plugin:skin-browser|skin_browser_site_skin', { site, id })
  }
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 559f3ece..de0d9e73 100644
+index 93b64da..05e15e8 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -54,6 +54,8 @@ fn main() {
@@ -430,7 +430,7 @@ index 559f3ece..de0d9e73 100644
                          "skin_browser_open_site",
                      ])
 diff --git a/apps/app/src/api/skin_browser.rs b/apps/app/src/api/skin_browser.rs
-index 90d16820..5d103571 100644
+index 90d1682..5d10357 100644
 --- a/apps/app/src/api/skin_browser.rs
 +++ b/apps/app/src/api/skin_browser.rs
 @@ -1,6 +1,7 @@
@@ -481,7 +481,7 @@ index 90d16820..5d103571 100644
  pub async fn skin_browser_site_skin(
      site: SkinSite,
 diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
-index 07a7bb8b..13ebfe20 100644
+index 07a7bb8..13ebfe2 100644
 --- a/packages/app-lib/src/api/skin_browser.rs
 +++ b/packages/app-lib/src/api/skin_browser.rs
 @@ -1,9 +1,10 @@

@@ -19,10 +19,10 @@ get a notice with a button to the release on GitHub.
  3 files changed, 76 insertions(+), 21 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 5d732ad6..729c99ec 100644
+index 2281cc6..0da9dc2 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -1631,9 +1631,13 @@ const updatePopupMessages = defineMessages({
+@@ -1645,9 +1645,13 @@ const updatePopupMessages = defineMessages({
  		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
  	},
  	linuxBody: {
@@ -38,7 +38,7 @@ index 5d732ad6..729c99ec 100644
  	},
  	reload: {
  		id: 'app.update-popup.reload',
-@@ -1808,28 +1812,47 @@ async function checkUpdates() {
+@@ -1822,28 +1826,47 @@ async function checkUpdates() {
  	)
  }
  
@@ -105,7 +105,7 @@ index 5d732ad6..729c99ec 100644
  	} catch (e) {
  		console.error('Failed to check for updates:', e)
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 7dedc61a..ffde627c 100644
+index 7dedc61..ffde627 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -78,6 +78,25 @@ fn is_dev() -> bool {
@@ -162,15 +162,15 @@ index 7dedc61a..ffde627c 100644
              enqueue_update_for_installation,
              remove_enqueued_update,
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index e5bbabef..bd2434d8 100644
+index b204c07..f7bac4b 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -102,7 +102,7 @@
  			"capabilities": ["ads", "core", "plugins"],
  			"csp": {
  				"default-src": "'self' customprotocol: asset:",
--				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
-+				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org https://api.github.com 'self' data: blob:",
+-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://kyros-test3.tail029726.ts.net wss://kyros-test3.tail029726.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
++				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://kyros-test3.tail029726.ts.net wss://kyros-test3.tail029726.ts.net https://fill.papermc.io https://api.purpurmc.org https://api.github.com 'self' data: blob:",
  				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
  				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
  				"style-src": "'unsafe-inline' 'self'",

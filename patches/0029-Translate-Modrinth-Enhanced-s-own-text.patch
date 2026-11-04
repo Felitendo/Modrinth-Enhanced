@@ -47,7 +47,7 @@ first start as well.
  34 files changed, 12189 insertions(+)
 
 diff --git a/apps/app-frontend/src/locales/de-CH/index.json b/apps/app-frontend/src/locales/de-CH/index.json
-index ff07a244..ae410139 100644
+index 3f38d4b..4763cde 100644
 --- a/apps/app-frontend/src/locales/de-CH/index.json
 +++ b/apps/app-frontend/src/locales/de-CH/index.json
 @@ -200,6 +200,66 @@
@@ -451,7 +451,7 @@ index ff07a244..ae410139 100644
    "app.debug-export.canceling": {
      "message": "Export wird abgebrochen…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Download-Manager"
    },
@@ -482,7 +482,7 @@ index ff07a244..ae410139 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Sicherungsordner öffnen"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Seitenleiste"
    },
@@ -501,7 +501,7 @@ index ff07a244..ae410139 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Verwende diese Funktionseinstellungen auf allen Geräten, auf denen du angemeldet bist. Deaktiviere diese Option, um die Einstellungen auf diesem Gerät getrennt zu halten."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synchronisiere Funktionen über mehrere Geräte"
    },
@@ -514,7 +514,7 @@ index ff07a244..ae410139 100644
    "app.file-download.canceling": {
      "message": "Download wird abgebrochen…"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Bibliothek"
    },
@@ -551,7 +551,7 @@ index ff07a244..ae410139 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Zusätzlicher Kontext"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -567,7 +567,7 @@ index ff07a244..ae410139 100644
    "app.nav.home": {
      "message": "Startseite"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Screenshots"
    },
@@ -577,7 +577,7 @@ index ff07a244..ae410139 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Bei Modrinth anmelden"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Weiter"
    },
@@ -608,7 +608,7 @@ index ff07a244..ae410139 100644
    "app.news.title": {
      "message": "Neuigkeiten"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Warnung"
    },
@@ -633,7 +633,7 @@ index ff07a244..ae410139 100644
    "app.project.actions.label": {
      "message": "Projektaktionen"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Instanzaktionen"
    },
@@ -643,7 +643,7 @@ index ff07a244..ae410139 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Ziehen, um letzte Instanzen anzuzeigen"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Ressourcen"
    },
@@ -653,7 +653,7 @@ index ff07a244..ae410139 100644
    "app.settings.tabs.syncing": {
      "message": "Synchronisierung"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Update wird gesendet…"
    },
@@ -684,7 +684,7 @@ index ff07a244..ae410139 100644
    "app.sidebar.playing-as": {
      "message": "Du spielst als"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Anwenden"
    },
@@ -775,7 +775,7 @@ index ff07a244..ae410139 100644
    "app.skins.delete-button": {
      "message": "Skin löschen"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Skin bearbeiten"
    },
@@ -821,7 +821,7 @@ index ff07a244..ae410139 100644
    "app.skins.modal.add-skin-button": {
      "message": "Skin hinzufügen"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Umhang"
    },
@@ -831,7 +831,7 @@ index ff07a244..ae410139 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Melde dich an, um Skins zu speichern."
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Bei Microsoft anmelden"
    },
@@ -844,7 +844,7 @@ index ff07a244..ae410139 100644
    "app.skins.title": {
      "message": "Skin-Auswahl"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} ist verfügbar. Benutze deinen Paketmanager zum aktualisieren, um die neusten Features und Bugfixes zu erhalten!"
    },
@@ -854,7 +854,7 @@ index ff07a244..ae410139 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} ist jetzt verfügbar! Da du in einem begrenzten Netzwerk bist, haben wir es nicht automatisch heruntergeladen."
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Download abgeschlossen"
    },
@@ -864,7 +864,7 @@ index ff07a244..ae410139 100644
    "app.update-popup.reload": {
      "message": "Zum Aktualisieren neu laden"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Ordner öffnen"
    },
@@ -874,7 +874,7 @@ index ff07a244..ae410139 100644
    "instance.action.repair": {
      "message": "Reparieren"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Einen Server hinzufügen"
    },
@@ -887,7 +887,7 @@ index ff07a244..ae410139 100644
    "instance.edit-server.title": {
      "message": "Server bearbeiten"
    },
-@@ -4307,12 +4988,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -915,7 +915,7 @@ index ff07a244..ae410139 100644
    "minecraft-account.remove-account": {
      "message": "Konto entfernen"
    },
-@@ -4322,6 +5018,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "In Minecraft anmelden"
    },
@@ -934,7 +934,7 @@ index ff07a244..ae410139 100644
    "minecraft-required.description": {
      "message": "Du benötigst ein Microsoft-Konto, welches Minecraft besitzt, bevor du das Spiel starten und spielen kannst."
    },
-@@ -4340,6 +5048,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -945,7 +945,7 @@ index ff07a244..ae410139 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/de-DE/index.json b/apps/app-frontend/src/locales/de-DE/index.json
-index aef33c05..d0ca21d2 100644
+index 430e165..703ee24 100644
 --- a/apps/app-frontend/src/locales/de-DE/index.json
 +++ b/apps/app-frontend/src/locales/de-DE/index.json
 @@ -200,6 +200,66 @@
@@ -1349,7 +1349,7 @@ index aef33c05..d0ca21d2 100644
    "app.debug-export.canceling": {
      "message": "Export wird abgebrochen…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Download-Manager"
    },
@@ -1380,7 +1380,7 @@ index aef33c05..d0ca21d2 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Sicherungsordner öffnen"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Seitenleiste"
    },
@@ -1399,7 +1399,7 @@ index aef33c05..d0ca21d2 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Verwende diese Funktionseinstellungen auf allen Geräten, auf denen du angemeldet bist. Deaktiviere diese Option, um die Einstellungen auf diesem Gerät getrennt zu halten."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synchronisiere Funktionen über mehrere Geräte"
    },
@@ -1412,7 +1412,7 @@ index aef33c05..d0ca21d2 100644
    "app.file-download.canceling": {
      "message": "Download wird abgebrochen…"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Bibliothek"
    },
@@ -1449,7 +1449,7 @@ index aef33c05..d0ca21d2 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Zusätzlicher Kontext"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -1465,7 +1465,7 @@ index aef33c05..d0ca21d2 100644
    "app.nav.home": {
      "message": "Startseite"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Screenshots"
    },
@@ -1475,7 +1475,7 @@ index aef33c05..d0ca21d2 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Bei Modrinth anmelden"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Weiter"
    },
@@ -1506,7 +1506,7 @@ index aef33c05..d0ca21d2 100644
    "app.news.title": {
      "message": "Neuigkeiten"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Warnung"
    },
@@ -1531,7 +1531,7 @@ index aef33c05..d0ca21d2 100644
    "app.project.actions.label": {
      "message": "Projektaktionen"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Instanzaktionen"
    },
@@ -1541,7 +1541,7 @@ index aef33c05..d0ca21d2 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Ziehen, um letzte Instanzen anzuzeigen"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Ressourcen"
    },
@@ -1551,7 +1551,7 @@ index aef33c05..d0ca21d2 100644
    "app.settings.tabs.syncing": {
      "message": "Synchronisierung"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Update wird gesendet…"
    },
@@ -1582,7 +1582,7 @@ index aef33c05..d0ca21d2 100644
    "app.sidebar.playing-as": {
      "message": "Du spielst als"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Anwenden"
    },
@@ -1673,7 +1673,7 @@ index aef33c05..d0ca21d2 100644
    "app.skins.delete-button": {
      "message": "Skin löschen"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Skin bearbeiten"
    },
@@ -1719,7 +1719,7 @@ index aef33c05..d0ca21d2 100644
    "app.skins.modal.add-skin-button": {
      "message": "Skin hinzufügen"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Umhang"
    },
@@ -1729,7 +1729,7 @@ index aef33c05..d0ca21d2 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Melde dich an, um Skins zu speichern."
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Bei Microsoft anmelden"
    },
@@ -1742,7 +1742,7 @@ index aef33c05..d0ca21d2 100644
    "app.skins.title": {
      "message": "Skin-Auswahl"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} ist verfügbar. Verwende deinen Paketmanager, um die neuesten Funktionen und Fehlerbehebungen zu installieren!"
    },
@@ -1752,7 +1752,7 @@ index aef33c05..d0ca21d2 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} ist jetzt verfügbar! Da du ein getaktetes Netzwerk nutzt, haben wir den Download nicht automatisch gestartet."
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Download abgeschlossen"
    },
@@ -1762,7 +1762,7 @@ index aef33c05..d0ca21d2 100644
    "app.update-popup.reload": {
      "message": "Zum Aktualisieren neu laden"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Ordner öffnen"
    },
@@ -1772,7 +1772,7 @@ index aef33c05..d0ca21d2 100644
    "instance.action.repair": {
      "message": "Reparieren"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Server hinzufügen"
    },
@@ -1785,7 +1785,7 @@ index aef33c05..d0ca21d2 100644
    "instance.edit-server.title": {
      "message": "Server bearbeiten"
    },
-@@ -4307,12 +4988,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Konto hinzufügen"
    },
@@ -1813,7 +1813,7 @@ index aef33c05..d0ca21d2 100644
    "minecraft-account.remove-account": {
      "message": "Konto entfernen"
    },
-@@ -4322,6 +5018,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "Bei Minecraft anmelden"
    },
@@ -1832,7 +1832,7 @@ index aef33c05..d0ca21d2 100644
    "minecraft-required.description": {
      "message": "Du benötigst ein Microsoft-Konto, welches Minecraft besitzt, bevor du das Spiel starten und spielen kannst."
    },
-@@ -4340,6 +5048,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft erforderlich"
    },
@@ -1843,7 +1843,7 @@ index aef33c05..d0ca21d2 100644
      "message": "Bei Microsoft anmelden"
    },
 diff --git a/apps/app-frontend/src/locales/es-419/index.json b/apps/app-frontend/src/locales/es-419/index.json
-index 7b237fc8..fa319d14 100644
+index cfe7274..8d6e24d 100644
 --- a/apps/app-frontend/src/locales/es-419/index.json
 +++ b/apps/app-frontend/src/locales/es-419/index.json
 @@ -200,6 +200,66 @@
@@ -2247,7 +2247,7 @@ index 7b237fc8..fa319d14 100644
    "app.debug-export.canceling": {
      "message": "Cancelando exportación..."
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Administrador de descargas"
    },
@@ -2278,7 +2278,7 @@ index 7b237fc8..fa319d14 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Abrir la carpeta de respaldos"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Barra lateral"
    },
@@ -2297,7 +2297,7 @@ index 7b237fc8..fa319d14 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Utilice estas funciones en cualquier lugar en que has iniciado sesión. Desactive esta opción para mantener los ajustes separados en este dispositivo."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Función de sincronización entre dispositivos"
    },
@@ -2310,7 +2310,7 @@ index 7b237fc8..fa319d14 100644
    "app.file-download.canceling": {
      "message": "Cancelando descarga…"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Biblioteca"
    },
@@ -2347,7 +2347,7 @@ index 7b237fc8..fa319d14 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Contexto adicional"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Añadir una cuenta"
    },
@@ -2363,7 +2363,7 @@ index 7b237fc8..fa319d14 100644
    "app.nav.home": {
      "message": "Inicio"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Screenshots"
    },
@@ -2373,7 +2373,7 @@ index 7b237fc8..fa319d14 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Inicia sesión en Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Avanzar"
    },
@@ -2404,7 +2404,7 @@ index 7b237fc8..fa319d14 100644
    "app.news.title": {
      "message": "Noticias"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Advertencia"
    },
@@ -2429,7 +2429,7 @@ index 7b237fc8..fa319d14 100644
    "app.project.actions.label": {
      "message": "Acciones del proyecto"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Acciones de instancia"
    },
@@ -2439,7 +2439,7 @@ index 7b237fc8..fa319d14 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Arrastra para mostrar las instancias recientes"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Recursos"
    },
@@ -2449,7 +2449,7 @@ index 7b237fc8..fa319d14 100644
    "app.settings.tabs.syncing": {
      "message": "Sincronización"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Publicando actualización..."
    },
@@ -2480,7 +2480,7 @@ index 7b237fc8..fa319d14 100644
    "app.sidebar.playing-as": {
      "message": "Jugando como"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Aplicar"
    },
@@ -2571,7 +2571,7 @@ index 7b237fc8..fa319d14 100644
    "app.skins.delete-button": {
      "message": "Eliminar skin"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Editar skin"
    },
@@ -2617,7 +2617,7 @@ index 7b237fc8..fa319d14 100644
    "app.skins.modal.add-skin-button": {
      "message": "Añadir skin"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Capa"
    },
@@ -2627,7 +2627,7 @@ index 7b237fc8..fa319d14 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Inicia sesión para guardar skins."
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Inicia sesión en Microsoft"
    },
@@ -2640,7 +2640,7 @@ index 7b237fc8..fa319d14 100644
    "app.skins.title": {
      "message": "Selector de skin"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "La Modrinth App v{version} está disponible. ¡Usa tu gestor de paquetes para actualizarla y tener las últimas funciones y corrección de errores!"
    },
@@ -2650,7 +2650,7 @@ index 7b237fc8..fa319d14 100644
    "app.update-popup.body.metered": {
      "message": "¡La Modrinth App v{version} ya está disponible! Al estar usando una red de datos límitada, no la hemos descargado automáticamente."
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Descarga completada"
    },
@@ -2660,7 +2660,7 @@ index 7b237fc8..fa319d14 100644
    "app.update-popup.reload": {
      "message": "Reinicia para actualizar"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Abrir carpeta"
    },
@@ -2670,7 +2670,7 @@ index 7b237fc8..fa319d14 100644
    "instance.action.repair": {
      "message": "Reparar"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Añadir un servidor"
    },
@@ -2683,7 +2683,7 @@ index 7b237fc8..fa319d14 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4304,12 +4985,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Añadir cuenta"
    },
@@ -2711,7 +2711,7 @@ index 7b237fc8..fa319d14 100644
    "minecraft-account.remove-account": {
      "message": "Eliminar cuenta"
    },
-@@ -4319,6 +5015,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "Inicia sesión en Minecraft"
    },
@@ -2730,7 +2730,7 @@ index 7b237fc8..fa319d14 100644
    "minecraft-required.description": {
      "message": "Necesitas una cuenta de Microsoft con Minecraft comprado para poder iniciar el juego."
    },
-@@ -4337,6 +5045,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -2741,7 +2741,7 @@ index 7b237fc8..fa319d14 100644
      "message": "Inicia sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/es-ES/index.json b/apps/app-frontend/src/locales/es-ES/index.json
-index f6c90bca..48f57e59 100644
+index c59d554..fba6da3 100644
 --- a/apps/app-frontend/src/locales/es-ES/index.json
 +++ b/apps/app-frontend/src/locales/es-ES/index.json
 @@ -200,6 +200,66 @@
@@ -3145,7 +3145,7 @@ index f6c90bca..48f57e59 100644
    "app.debug-export.canceling": {
      "message": "Cancelando exportación..."
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Gestor de descargas"
    },
@@ -3176,7 +3176,7 @@ index f6c90bca..48f57e59 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Abrir carpeta de copias de seguridad"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Barra lateral"
    },
@@ -3195,7 +3195,7 @@ index f6c90bca..48f57e59 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Usa estos ajustes en todos los inicios de sesión. Desactiva esto para mantener ajustes separados en este dispositivo."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Sincronice los ajustes entre dispositivos"
    },
@@ -3208,7 +3208,7 @@ index f6c90bca..48f57e59 100644
    "app.file-download.canceling": {
      "message": "Cancelando descarga..."
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Biblioteca"
    },
@@ -3245,7 +3245,7 @@ index f6c90bca..48f57e59 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Contexto adicional"
    },
-@@ -1370,9 +1829,15 @@
+@@ -1358,9 +1817,15 @@
    "app.nav.add-account": {
      "message": "Añadir cuenta"
    },
@@ -3261,7 +3261,7 @@ index f6c90bca..48f57e59 100644
    "app.nav.home": {
      "message": "Inicio"
    },
-@@ -1391,6 +1856,9 @@
+@@ -1379,6 +1844,9 @@
    "app.nav.screenshots": {
      "message": "Capturas de pantalla"
    },
@@ -3271,7 +3271,7 @@ index f6c90bca..48f57e59 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Registrarse a Modrinth"
    },
-@@ -1409,12 +1877,30 @@
+@@ -1397,12 +1865,30 @@
    "app.navigation.go-forward": {
      "message": "Avanzar"
    },
@@ -3302,7 +3302,7 @@ index f6c90bca..48f57e59 100644
    "app.news.title": {
      "message": "Noticias"
    },
-@@ -1424,6 +1910,24 @@
+@@ -1412,6 +1898,24 @@
    "app.notification.warning": {
      "message": "Advertencia"
    },
@@ -3327,7 +3327,7 @@ index f6c90bca..48f57e59 100644
    "app.project.actions.label": {
      "message": "Acciones del proyecto"
    },
-@@ -1472,6 +1976,9 @@
+@@ -1460,6 +1964,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Acciones de la instancia"
    },
@@ -3337,13 +3337,20 @@ index f6c90bca..48f57e59 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Arrastra para mostrar instancias recientes"
    },
-@@ -3092,6 +3599,33 @@
-   "app.settings.tabs.privacy": {
-     "message": "Privacidad"
+@@ -3098,6 +3605,9 @@
+   "app.settings.tabs.resources": {
+     "message": "Recursos"
    },
 +  "app.settings.tabs.sidebar": {
 +    "message": "Barra lateral"
 +  },
+   "app.settings.tabs.syncing": {
+     "message": "Sincronizando"
+   },
+@@ -3119,6 +3629,30 @@
+   "app.settings.troubleshooting.report-ad.copy": {
+     "message": "Copiar detalles de anuncio"
+   },
 +  "app.sidebar-settings.description": {
 +    "message": "Los botones que hay encima de las instancias en la barra lateral izquierda. Hacer clic derecho en uno también lo oculta."
 +  },
@@ -3371,7 +3378,7 @@ index f6c90bca..48f57e59 100644
    "app.sidebar.playing-as": {
      "message": "Jugando como"
    },
-@@ -3104,6 +3638,90 @@
+@@ -3131,6 +3665,90 @@
    "app.skins.apply-button": {
      "message": "Aplicar"
    },
@@ -3462,7 +3469,7 @@ index f6c90bca..48f57e59 100644
    "app.skins.delete-button": {
      "message": "Borrar skin"
    },
-@@ -3134,6 +3752,45 @@
+@@ -3161,6 +3779,45 @@
    "app.skins.edit-button": {
      "message": "Editar skin"
    },
@@ -3508,7 +3515,7 @@ index f6c90bca..48f57e59 100644
    "app.skins.modal.add-skin-button": {
      "message": "Añadir skin"
    },
-@@ -3155,6 +3812,9 @@
+@@ -3182,6 +3839,9 @@
    "app.skins.modal.cape-section": {
      "message": "Capa"
    },
@@ -3518,7 +3525,7 @@ index f6c90bca..48f57e59 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Inicia sesión para guardar skins."
    },
-@@ -3248,6 +3908,12 @@
+@@ -3275,6 +3935,12 @@
    "app.skins.sign-in.button": {
      "message": "Iniciar sesión en Microsoft"
    },
@@ -3531,7 +3538,7 @@ index f6c90bca..48f57e59 100644
    "app.skins.title": {
      "message": "Selector de Skin"
    },
-@@ -3407,6 +4073,9 @@
+@@ -3389,6 +4055,9 @@
    "app.update-popup.body.linux": {
      "message": "Ya está disponible Modrinth App v{version}. ¡Utiliza tu gestor de paquetes para actualizarla y disfrutar de las últimas funciones y correcciones!"
    },
@@ -3541,7 +3548,7 @@ index f6c90bca..48f57e59 100644
    "app.update-popup.body.metered": {
      "message": "¡Modrinth App v{version} ya está disponible! Como estás conectado a una red con tarifa por datos, no la hemos descargado automáticamente."
    },
-@@ -3419,6 +4088,9 @@
+@@ -3401,6 +4070,9 @@
    "app.update-popup.download-complete": {
      "message": "Descarga completada"
    },
@@ -3551,7 +3558,7 @@ index f6c90bca..48f57e59 100644
    "app.update-popup.reload": {
      "message": "Recarga para actualizar"
    },
-@@ -3629,6 +4301,9 @@
+@@ -3596,6 +4268,9 @@
    "instance.action.open-folder": {
      "message": "Abrir carpeta"
    },
@@ -3561,7 +3568,7 @@ index f6c90bca..48f57e59 100644
    "instance.action.repair": {
      "message": "Reparar"
    },
-@@ -3659,6 +4334,12 @@
+@@ -3626,6 +4301,12 @@
    "instance.add-server.title": {
      "message": "Añadir un servidor"
    },
@@ -3574,7 +3581,7 @@ index f6c90bca..48f57e59 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4166,12 +4847,27 @@
+@@ -4094,12 +4775,27 @@
    "minecraft-account.add-account": {
      "message": "Añadir cuenta"
    },
@@ -3602,7 +3609,7 @@ index f6c90bca..48f57e59 100644
    "minecraft-account.remove-account": {
      "message": "Eliminar cuenta"
    },
-@@ -4181,6 +4877,18 @@
+@@ -4109,6 +4805,18 @@
    "minecraft-account.sign-in": {
      "message": "Registrarse en Minecraft"
    },
@@ -3621,7 +3628,7 @@ index f6c90bca..48f57e59 100644
    "minecraft-required.description": {
      "message": "Necesitas una cuenta de Microsoft que posea Minecraft antes de poder lanzar y jugar."
    },
-@@ -4199,6 +4907,9 @@
+@@ -4127,6 +4835,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requerido"
    },
@@ -3632,7 +3639,7 @@ index f6c90bca..48f57e59 100644
      "message": "Iniciar sesión en Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/fr-FR/index.json b/apps/app-frontend/src/locales/fr-FR/index.json
-index 35cd5b84..0c0efcc1 100644
+index 1fc93da..29783fe 100644
 --- a/apps/app-frontend/src/locales/fr-FR/index.json
 +++ b/apps/app-frontend/src/locales/fr-FR/index.json
 @@ -200,6 +200,66 @@
@@ -4036,7 +4043,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.debug-export.canceling": {
      "message": "Annulation de l'exportation…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Gestionnaire de téléchargement"
    },
@@ -4067,7 +4074,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Ouvrir le dossier de sauvegardes"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Barre latérale"
    },
@@ -4086,7 +4093,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Appliquer ces paramètres partout où vous êtes connecté. Désactivez cette option pour conserver des paramètres distincts sur cet appareil."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synchroniser les fonctionnalités entre les appareils"
    },
@@ -4099,7 +4106,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.file-download.canceling": {
      "message": "Annulation du téléchargement..."
    },
-@@ -1250,6 +1679,36 @@
+@@ -1235,6 +1664,36 @@
    "app.library.title": {
      "message": "Bibliothèque"
    },
@@ -4136,7 +4143,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Contexte additionnel"
    },
-@@ -1373,9 +1832,15 @@
+@@ -1358,9 +1817,15 @@
    "app.nav.add-account": {
      "message": "Ajouter un compte"
    },
@@ -4152,7 +4159,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.nav.home": {
      "message": "Accueil"
    },
-@@ -1394,6 +1859,9 @@
+@@ -1379,6 +1844,9 @@
    "app.nav.screenshots": {
      "message": "Captures d'écran"
    },
@@ -4162,7 +4169,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Se connecter à Modrinth"
    },
-@@ -1412,12 +1880,30 @@
+@@ -1397,12 +1865,30 @@
    "app.navigation.go-forward": {
      "message": "Suivant"
    },
@@ -4193,7 +4200,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.news.title": {
      "message": "Nouveautés"
    },
-@@ -1427,6 +1913,24 @@
+@@ -1412,6 +1898,24 @@
    "app.notification.warning": {
      "message": "Avertissement"
    },
@@ -4218,7 +4225,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.project.actions.label": {
      "message": "Actions du projet"
    },
-@@ -1475,6 +1979,9 @@
+@@ -1460,6 +1964,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Actions de l'instance"
    },
@@ -4228,7 +4235,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Faites glisser pour montrer les instances récentes"
    },
-@@ -3119,6 +3626,9 @@
+@@ -3104,6 +3611,9 @@
    "app.settings.tabs.resources": {
      "message": "Ressources"
    },
@@ -4238,7 +4245,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.settings.tabs.syncing": {
      "message": "Synchronisation"
    },
-@@ -3161,6 +3671,30 @@
+@@ -3146,6 +3656,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Déploiement de la MàJ..."
    },
@@ -4269,7 +4276,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.sidebar.playing-as": {
      "message": "Joue en tant que"
    },
-@@ -3173,6 +3707,90 @@
+@@ -3158,6 +3692,90 @@
    "app.skins.apply-button": {
      "message": "Appliquer"
    },
@@ -4360,7 +4367,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.skins.delete-button": {
      "message": "Supprimer le skin"
    },
-@@ -3203,6 +3821,45 @@
+@@ -3188,6 +3806,45 @@
    "app.skins.edit-button": {
      "message": "Modifier le skin"
    },
@@ -4406,7 +4413,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.skins.modal.add-skin-button": {
      "message": "Ajouter un skin"
    },
-@@ -3224,6 +3881,9 @@
+@@ -3209,6 +3866,9 @@
    "app.skins.modal.cape-section": {
      "message": "Cape"
    },
@@ -4416,7 +4423,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Connectez-vous pour sauvegarder des skins."
    },
-@@ -3326,6 +3986,12 @@
+@@ -3311,6 +3971,12 @@
    "app.skins.sign-in.button": {
      "message": "Connectez-vous à Microsoft"
    },
@@ -4429,7 +4436,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.skins.title": {
      "message": "Sélecteur de skin"
    },
-@@ -3485,6 +4151,9 @@
+@@ -3425,6 +4091,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} est disponible. Utilisez votre gestionnaire de paquets pour profiter des dernières fonctionnalités et corrections !"
    },
@@ -4439,7 +4446,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} est disponible maintenant ! Puisque vous êtes sur un réseau métré, nous ne l'avons pas téléchargé automatiquement."
    },
-@@ -3497,6 +4166,9 @@
+@@ -3437,6 +4106,9 @@
    "app.update-popup.download-complete": {
      "message": "Téléchargement terminé"
    },
@@ -4449,7 +4456,7 @@ index 35cd5b84..0c0efcc1 100644
    "app.update-popup.reload": {
      "message": "Recharger pour mettre à jour"
    },
-@@ -3707,6 +4379,9 @@
+@@ -3632,6 +4304,9 @@
    "instance.action.open-folder": {
      "message": "Ouvrir le dossier"
    },
@@ -4459,7 +4466,7 @@ index 35cd5b84..0c0efcc1 100644
    "instance.action.repair": {
      "message": "Réparer"
    },
-@@ -3737,6 +4412,12 @@
+@@ -3662,6 +4337,12 @@
    "instance.add-server.title": {
      "message": "Ajouter un serveur"
    },
@@ -4472,7 +4479,7 @@ index 35cd5b84..0c0efcc1 100644
    "instance.edit-server.title": {
      "message": "Modifier le serveur"
    },
-@@ -4247,12 +4928,27 @@
+@@ -4151,12 +4832,27 @@
    "minecraft-account.add-account": {
      "message": "Ajouter un compte"
    },
@@ -4500,7 +4507,7 @@ index 35cd5b84..0c0efcc1 100644
    "minecraft-account.remove-account": {
      "message": "Retirer le compte"
    },
-@@ -4262,6 +4958,18 @@
+@@ -4166,6 +4862,18 @@
    "minecraft-account.sign-in": {
      "message": "Se connecter à Minecraft"
    },
@@ -4519,7 +4526,7 @@ index 35cd5b84..0c0efcc1 100644
    "minecraft-required.description": {
      "message": "Vous avez besoin d'un compte Microsoft qui possède Minecraft avant de jouer."
    },
-@@ -4280,6 +4988,9 @@
+@@ -4184,6 +4892,9 @@
    "minecraft-required.header": {
      "message": "Minecraft requis"
    },
@@ -4530,7 +4537,7 @@ index 35cd5b84..0c0efcc1 100644
      "message": "Se connecter à Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/hu-HU/index.json b/apps/app-frontend/src/locales/hu-HU/index.json
-index c5ff27b9..787b6034 100644
+index ce05d64..1bb2580 100644
 --- a/apps/app-frontend/src/locales/hu-HU/index.json
 +++ b/apps/app-frontend/src/locales/hu-HU/index.json
 @@ -200,6 +200,66 @@
@@ -4934,7 +4941,7 @@ index c5ff27b9..787b6034 100644
    "app.debug-export.canceling": {
      "message": "Exportálás megszakítása…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Letöltéskezelő"
    },
@@ -4965,7 +4972,7 @@ index c5ff27b9..787b6034 100644
    "app.error.state-init.open-backups-folder": {
      "message": "A biztonsági mentések mappájának megnyitása"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Oldalsáv"
    },
@@ -4984,7 +4991,7 @@ index c5ff27b9..787b6034 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Használd ezeket a funkcióbeállításokat minden olyan helyen, ahol be vagy jelentkezve. Kapcsold ki ezt, ha külön beállításokat szeretnél használni ezen az eszközön."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Funkciók szinkronizálása az eszközök között"
    },
@@ -4997,7 +5004,7 @@ index c5ff27b9..787b6034 100644
    "app.file-download.canceling": {
      "message": "Letöltés megszakítása..."
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Könyvtár"
    },
@@ -5034,7 +5041,7 @@ index c5ff27b9..787b6034 100644
    "app.modal.install-to-play.additional-context": {
      "message": "További kontextus"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Fiók hozzáadása"
    },
@@ -5050,7 +5057,7 @@ index c5ff27b9..787b6034 100644
    "app.nav.home": {
      "message": "Kezdőlap"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Képernyőképek"
    },
@@ -5060,7 +5067,7 @@ index c5ff27b9..787b6034 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Bejelentkezés a Modrinthba"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Előre"
    },
@@ -5091,7 +5098,7 @@ index c5ff27b9..787b6034 100644
    "app.news.title": {
      "message": "Hírek"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Figyelmeztetés"
    },
@@ -5116,7 +5123,7 @@ index c5ff27b9..787b6034 100644
    "app.project.actions.label": {
      "message": "Projektműveletek"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Példány-műveletek"
    },
@@ -5126,7 +5133,7 @@ index c5ff27b9..787b6034 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Húzd el a legutóbbi példányok megjelenítéséhez"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Erőforrások"
    },
@@ -5136,9 +5143,9 @@ index c5ff27b9..787b6034 100644
    "app.settings.tabs.syncing": {
      "message": "Szinkronizálás"
    },
-@@ -3146,6 +3656,30 @@
-   "app.settings.troubleshooting.report-ad.description": {
-     "message": "Nem megfelelő vagy sértő hirdetést láttál? Másold ki az adatait, amíg megjelenik, majd küldd el a <support>Modrinth ügyfélszolgálatának</support>. Ellenőrizzük, és eltávolítjuk."
+@@ -3149,6 +3659,30 @@
+   "app.shared-instance-publish.uploading": {
+     "message": "Frissítés közzététele…"
    },
 +  "app.sidebar-settings.description": {
 +    "message": "A bal oldalsávban a példányok fölötti gombok. Ha jobb gombbal kattintasz valamelyikre, az is elrejti."
@@ -5167,7 +5174,7 @@ index c5ff27b9..787b6034 100644
    "app.sidebar.playing-as": {
      "message": "Játékfiók"
    },
-@@ -3158,6 +3692,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Alkalmaz"
    },
@@ -5258,7 +5265,7 @@ index c5ff27b9..787b6034 100644
    "app.skins.delete-button": {
      "message": "Kinézet törlése"
    },
-@@ -3188,6 +3806,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Kinézet szerkesztése"
    },
@@ -5304,7 +5311,7 @@ index c5ff27b9..787b6034 100644
    "app.skins.modal.add-skin-button": {
      "message": "Kinézet hozzáadása"
    },
-@@ -3209,6 +3866,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Köpeny"
    },
@@ -5314,7 +5321,7 @@ index c5ff27b9..787b6034 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Jelentkezz be a kinézetek mentéséhez."
    },
-@@ -3311,6 +3971,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Bejelentkezés Microsofttal"
    },
@@ -5327,7 +5334,7 @@ index c5ff27b9..787b6034 100644
    "app.skins.title": {
      "message": "Kinézetváltó"
    },
-@@ -3470,6 +4136,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "A Modrinth App v{version} elérhető. A legújabb funkciókért és javításokért frissíts a csomagkezelőddel!"
    },
@@ -5337,7 +5344,7 @@ index c5ff27b9..787b6034 100644
    "app.update-popup.body.metered": {
      "message": "A Modrinth App v{version} már elérhető! Mivel korlátozott adatforgalmú hálózaton vagy, nem töltöttük le automatikusan."
    },
-@@ -3482,6 +4151,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Letöltés befejezve"
    },
@@ -5347,7 +5354,7 @@ index c5ff27b9..787b6034 100644
    "app.update-popup.reload": {
      "message": "Frissítés"
    },
-@@ -3692,6 +4364,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Mappa megnyitása"
    },
@@ -5357,7 +5364,7 @@ index c5ff27b9..787b6034 100644
    "instance.action.repair": {
      "message": "Javítás"
    },
-@@ -3722,6 +4397,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Szerver hozzáadása"
    },
@@ -5370,7 +5377,7 @@ index c5ff27b9..787b6034 100644
    "instance.edit-server.title": {
      "message": "Szerver módosítása"
    },
-@@ -4238,12 +4919,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Fiók hozzáadása"
    },
@@ -5398,7 +5405,7 @@ index c5ff27b9..787b6034 100644
    "minecraft-account.remove-account": {
      "message": "Fiók eltávolítása"
    },
-@@ -4253,6 +4949,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "Bejelentkezés a Minecraftba"
    },
@@ -5417,7 +5424,7 @@ index c5ff27b9..787b6034 100644
    "minecraft-required.description": {
      "message": "A játék indítása és használata előtt rendelkezned kell egy Microsoft-fiókkal, amelyhez Minecraft tartozik."
    },
-@@ -4271,6 +4979,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft szükséges"
    },
@@ -5428,7 +5435,7 @@ index c5ff27b9..787b6034 100644
      "message": "Bejelentkezés a Microsft-ba"
    },
 diff --git a/apps/app-frontend/src/locales/it-IT/index.json b/apps/app-frontend/src/locales/it-IT/index.json
-index 77bb73b9..8cecda0e 100644
+index 655ba55..6023707 100644
 --- a/apps/app-frontend/src/locales/it-IT/index.json
 +++ b/apps/app-frontend/src/locales/it-IT/index.json
 @@ -200,6 +200,66 @@
@@ -5498,7 +5505,7 @@ index 77bb73b9..8cecda0e 100644
    "app.behavior-settings.confirmations.title": {
      "message": "Conferme"
    },
-@@ -302,6 +362,333 @@
+@@ -317,6 +377,333 @@
    "app.content.sync-resource-packs-disabled": {
      "message": "Attiva prima la sincronizzazione dei pacchetti di risorse nelle impostazioni."
    },
@@ -5832,7 +5839,7 @@ index 77bb73b9..8cecda0e 100644
    "app.debug-export.canceling": {
      "message": "Annullamento esportazione…"
    },
-@@ -395,6 +782,30 @@
+@@ -401,6 +788,30 @@
    "app.download-manager.title": {
      "message": "Gestore di download"
    },
@@ -5863,7 +5870,7 @@ index 77bb73b9..8cecda0e 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Apri la cartella dei backup"
    },
-@@ -467,6 +878,18 @@
+@@ -473,6 +884,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Barra laterale"
    },
@@ -5882,7 +5889,7 @@ index 77bb73b9..8cecda0e 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Usa queste impostazioni su tutti i dispositivi. Se disattivata, le impostazioni su questo resteranno separate."
    },
-@@ -476,6 +899,12 @@
+@@ -482,6 +905,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Sincronizza tra i dispositivi"
    },
@@ -5895,9 +5902,9 @@ index 77bb73b9..8cecda0e 100644
    "app.file-download.canceling": {
      "message": "Annullamento del download…"
    },
-@@ -1253,6 +1682,36 @@
-   "app.library.title": {
-     "message": "Libreria"
+@@ -1310,6 +1739,36 @@
+   "app.library.unpublish-shared-instance.modal.header": {
+     "message": "{count, plural, one {Ritira istanza condivisa} other {Ritira # istanze condivise}}"
    },
 +  "app.microsoft-login.code-label": {
 +    "message": "Se Microsoft chiede un codice, inserisci"
@@ -5932,7 +5939,7 @@ index 77bb73b9..8cecda0e 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Contesto aggiuntivo"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1433,9 +1892,15 @@
    "app.nav.add-account": {
      "message": "Aggiungi account"
    },
@@ -5948,7 +5955,7 @@ index 77bb73b9..8cecda0e 100644
    "app.nav.home": {
      "message": "Home"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1454,6 +1919,9 @@
    "app.nav.screenshots": {
      "message": "Schermate"
    },
@@ -5958,7 +5965,7 @@ index 77bb73b9..8cecda0e 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Accedi a Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1472,12 +1940,30 @@
    "app.navigation.go-forward": {
      "message": "Vai avanti"
    },
@@ -5989,7 +5996,7 @@ index 77bb73b9..8cecda0e 100644
    "app.news.title": {
      "message": "Notizie"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1487,6 +1973,24 @@
    "app.notification.warning": {
      "message": "Avviso"
    },
@@ -6014,7 +6021,7 @@ index 77bb73b9..8cecda0e 100644
    "app.project.actions.label": {
      "message": "Azioni sul progetto"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1535,6 +2039,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Azioni sull'istanza"
    },
@@ -6024,7 +6031,7 @@ index 77bb73b9..8cecda0e 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Espandi per mostrare le istanze recenti"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3179,6 +3686,9 @@
    "app.settings.tabs.resources": {
      "message": "Risorse"
    },
@@ -6034,7 +6041,7 @@ index 77bb73b9..8cecda0e 100644
    "app.settings.tabs.syncing": {
      "message": "Sincronizzazione"
    },
-@@ -3161,6 +3671,30 @@
+@@ -3218,6 +3728,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Invio aggiornamento…"
    },
@@ -6065,7 +6072,7 @@ index 77bb73b9..8cecda0e 100644
    "app.sidebar.playing-as": {
      "message": "Accesso effettuato come"
    },
-@@ -3173,6 +3707,90 @@
+@@ -3230,6 +3764,90 @@
    "app.skins.apply-button": {
      "message": "Applica"
    },
@@ -6156,7 +6163,7 @@ index 77bb73b9..8cecda0e 100644
    "app.skins.delete-button": {
      "message": "Elimina"
    },
-@@ -3203,6 +3821,45 @@
+@@ -3260,6 +3878,45 @@
    "app.skins.edit-button": {
      "message": "Modifica"
    },
@@ -6202,7 +6209,7 @@ index 77bb73b9..8cecda0e 100644
    "app.skins.modal.add-skin-button": {
      "message": "Aggiungi"
    },
-@@ -3224,6 +3881,9 @@
+@@ -3281,6 +3938,9 @@
    "app.skins.modal.cape-section": {
      "message": "Mantello"
    },
@@ -6212,7 +6219,7 @@ index 77bb73b9..8cecda0e 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Accedi per salvare le skin."
    },
-@@ -3326,6 +3986,12 @@
+@@ -3383,6 +4043,12 @@
    "app.skins.sign-in.button": {
      "message": "Accedi a Microsoft"
    },
@@ -6225,7 +6232,7 @@ index 77bb73b9..8cecda0e 100644
    "app.skins.title": {
      "message": "Seleziona una skin"
    },
-@@ -3485,6 +4151,9 @@
+@@ -3497,6 +4163,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} è disponibile. Usa il tuo gestore di pacchetti per aggiornare e ricevere le novità più recenti!"
    },
@@ -6235,7 +6242,7 @@ index 77bb73b9..8cecda0e 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} è ora disponibile! Poiché sei su una rete a consumo, non l'abbiamo scaricata automaticamente."
    },
-@@ -3497,6 +4166,9 @@
+@@ -3509,6 +4178,9 @@
    "app.update-popup.download-complete": {
      "message": "Download completato"
    },
@@ -6245,7 +6252,7 @@ index 77bb73b9..8cecda0e 100644
    "app.update-popup.reload": {
      "message": "Riavvia"
    },
-@@ -3707,6 +4379,9 @@
+@@ -3704,6 +4376,9 @@
    "instance.action.open-folder": {
      "message": "Apri cartella"
    },
@@ -6255,7 +6262,7 @@ index 77bb73b9..8cecda0e 100644
    "instance.action.repair": {
      "message": "Ripara"
    },
-@@ -3737,6 +4412,12 @@
+@@ -3734,6 +4409,12 @@
    "instance.add-server.title": {
      "message": "Aggiungi server"
    },
@@ -6268,7 +6275,7 @@ index 77bb73b9..8cecda0e 100644
    "instance.edit-server.title": {
      "message": "Modifica server"
    },
-@@ -4304,12 +4985,27 @@
+@@ -4223,12 +4904,27 @@
    "minecraft-account.add-account": {
      "message": "Aggiungi account"
    },
@@ -6296,7 +6303,7 @@ index 77bb73b9..8cecda0e 100644
    "minecraft-account.remove-account": {
      "message": "Rimuovi account"
    },
-@@ -4319,6 +5015,18 @@
+@@ -4238,6 +4934,18 @@
    "minecraft-account.sign-in": {
      "message": "Accedi a Minecraft"
    },
@@ -6315,7 +6322,7 @@ index 77bb73b9..8cecda0e 100644
    "minecraft-required.description": {
      "message": "Devi disporre di una copia di Minecraft da un account Microsoft prima di poter giocare."
    },
-@@ -4337,6 +5045,9 @@
+@@ -4256,6 +4964,9 @@
    "minecraft-required.header": {
      "message": "Minecraft richiesto"
    },
@@ -6326,7 +6333,7 @@ index 77bb73b9..8cecda0e 100644
      "message": "Accedi a Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ja-JP/index.json b/apps/app-frontend/src/locales/ja-JP/index.json
-index a63939f7..b6a5dd78 100644
+index 1b58b42..886b966 100644
 --- a/apps/app-frontend/src/locales/ja-JP/index.json
 +++ b/apps/app-frontend/src/locales/ja-JP/index.json
 @@ -200,6 +200,66 @@
@@ -6730,7 +6737,7 @@ index a63939f7..b6a5dd78 100644
    "app.debug-export.canceling": {
      "message": "エクスポートを取り消しています"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "ダウンロードマネージャー"
    },
@@ -6761,7 +6768,7 @@ index a63939f7..b6a5dd78 100644
    "app.error.state-init.open-backups-folder": {
      "message": "バックアップフォルダーを開く"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "サイドバー"
    },
@@ -6780,7 +6787,7 @@ index a63939f7..b6a5dd78 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "サインインされているすべてのデバイスでこれらの機能はすべて共有されます。デバイスごとに設定した場合はこの機能をオフにしてください。"
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "デバイス間での同期機能を同期する"
    },
@@ -6793,7 +6800,7 @@ index a63939f7..b6a5dd78 100644
    "app.file-download.canceling": {
      "message": "ダウンロードをキャンセル中…"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "ライブラリ"
    },
@@ -6830,7 +6837,7 @@ index a63939f7..b6a5dd78 100644
    "app.modal.install-to-play.additional-context": {
      "message": "追加のコンテンツ"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "アカウントを追加"
    },
@@ -6846,7 +6853,7 @@ index a63939f7..b6a5dd78 100644
    "app.nav.home": {
      "message": "ホーム"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "スクリーンショット"
    },
@@ -6856,7 +6863,7 @@ index a63939f7..b6a5dd78 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Modrinthへサインイン"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "進む"
    },
@@ -6887,7 +6894,7 @@ index a63939f7..b6a5dd78 100644
    "app.news.title": {
      "message": "ニュース"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "警告"
    },
@@ -6912,7 +6919,7 @@ index a63939f7..b6a5dd78 100644
    "app.project.actions.label": {
      "message": "プロジェクトの操作"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "インスタンスの操作"
    },
@@ -6922,7 +6929,7 @@ index a63939f7..b6a5dd78 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "ドラッグして最近のインスタンスを表示"
    },
-@@ -2438,6 +2945,33 @@
+@@ -2423,6 +2930,33 @@
    "app.settings.tabs.privacy": {
      "message": "プライバシー設定"
    },
@@ -6956,7 +6963,7 @@ index a63939f7..b6a5dd78 100644
    "app.sidebar.playing-as": {
      "message": "プレイ中のアカウント"
    },
-@@ -2450,6 +2984,90 @@
+@@ -2435,6 +2969,90 @@
    "app.skins.apply-button": {
      "message": "適用"
    },
@@ -7047,7 +7054,7 @@ index a63939f7..b6a5dd78 100644
    "app.skins.delete-button": {
      "message": "スキンを削除"
    },
-@@ -2480,6 +3098,45 @@
+@@ -2465,6 +3083,45 @@
    "app.skins.edit-button": {
      "message": "スキンを編集"
    },
@@ -7093,7 +7100,7 @@ index a63939f7..b6a5dd78 100644
    "app.skins.modal.add-skin-button": {
      "message": "スキンを追加"
    },
-@@ -2501,6 +3158,9 @@
+@@ -2486,6 +3143,9 @@
    "app.skins.modal.cape-section": {
      "message": "マント"
    },
@@ -7103,7 +7110,7 @@ index a63939f7..b6a5dd78 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "スキンを保存するにはサインインしてください。"
    },
-@@ -2594,6 +3254,12 @@
+@@ -2579,6 +3239,12 @@
    "app.skins.sign-in.button": {
      "message": "Microsoftにサインイン"
    },
@@ -7116,7 +7123,7 @@ index a63939f7..b6a5dd78 100644
    "app.skins.title": {
      "message": "スキンセレクター"
    },
-@@ -2627,6 +3293,9 @@
+@@ -2609,6 +3275,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} が利用可能です。最新の機能と修正プログラムを入手するには、パッケージマネージャーを使用して更新してください！"
    },
@@ -7126,7 +7133,7 @@ index a63939f7..b6a5dd78 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} が利用可能になりました！お使いのネットワークが従量制のため、自動ダウンロードは行っておりません。"
    },
-@@ -2639,6 +3308,9 @@
+@@ -2621,6 +3290,9 @@
    "app.update-popup.download-complete": {
      "message": "ダウンロード完了"
    },
@@ -7136,7 +7143,7 @@ index a63939f7..b6a5dd78 100644
    "app.update-popup.reload": {
      "message": "再読み込みして更新"
    },
-@@ -2849,6 +3521,9 @@
+@@ -2816,6 +3488,9 @@
    "instance.action.open-folder": {
      "message": "フォルダーを開く"
    },
@@ -7146,7 +7153,7 @@ index a63939f7..b6a5dd78 100644
    "instance.action.repair": {
      "message": "修復"
    },
-@@ -2879,6 +3554,12 @@
+@@ -2846,6 +3521,12 @@
    "instance.add-server.title": {
      "message": "サーバーの追加"
    },
@@ -7159,7 +7166,7 @@ index a63939f7..b6a5dd78 100644
    "instance.edit-server.title": {
      "message": "サーバーを編集する"
    },
-@@ -3344,12 +4025,27 @@
+@@ -3260,12 +3941,27 @@
    "minecraft-account.add-account": {
      "message": "アカウントを追加"
    },
@@ -7187,7 +7194,7 @@ index a63939f7..b6a5dd78 100644
    "minecraft-account.remove-account": {
      "message": "アカウントを一覧から削除"
    },
-@@ -3359,6 +4055,18 @@
+@@ -3275,6 +3971,18 @@
    "minecraft-account.sign-in": {
      "message": "Minecraftにサインイン"
    },
@@ -7206,7 +7213,7 @@ index a63939f7..b6a5dd78 100644
    "minecraft-required.description": {
      "message": "Minecraftを起動してプレイするには、Minecraftを所有しているMicrosoftアカウントが必要です。"
    },
-@@ -3377,6 +4085,9 @@
+@@ -3293,6 +4001,9 @@
    "minecraft-required.header": {
      "message": "Minecraftが必要です"
    },
@@ -7217,7 +7224,7 @@ index a63939f7..b6a5dd78 100644
      "message": "Microsoftにサインイン"
    },
 diff --git a/apps/app-frontend/src/locales/nl-NL/index.json b/apps/app-frontend/src/locales/nl-NL/index.json
-index bc194e76..3e7fbf38 100644
+index a3dac7a..85ac2d1 100644
 --- a/apps/app-frontend/src/locales/nl-NL/index.json
 +++ b/apps/app-frontend/src/locales/nl-NL/index.json
 @@ -200,6 +200,66 @@
@@ -7621,7 +7628,7 @@ index bc194e76..3e7fbf38 100644
    "app.debug-export.canceling": {
      "message": "Exporteren annuleren…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Downloadbeheerder"
    },
@@ -7652,7 +7659,7 @@ index bc194e76..3e7fbf38 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Open back-up-map"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Zijbalk"
    },
@@ -7671,7 +7678,7 @@ index bc194e76..3e7fbf38 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Gebruik deze instellingen overal waar je ingelogd bent. Zet dit uit om je instellingen apart te houden op dit apparaat."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synchroniseer instellingen tussen apparaten"
    },
@@ -7684,7 +7691,7 @@ index bc194e76..3e7fbf38 100644
    "app.file-download.canceling": {
      "message": "Download annuleren..."
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Bibliotheek"
    },
@@ -7721,7 +7728,7 @@ index bc194e76..3e7fbf38 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Aanvullende context"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Account toevoegen"
    },
@@ -7737,7 +7744,7 @@ index bc194e76..3e7fbf38 100644
    "app.nav.home": {
      "message": "Start"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Schermafbeeldingen"
    },
@@ -7747,7 +7754,7 @@ index bc194e76..3e7fbf38 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Log in bij Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Volgende"
    },
@@ -7778,7 +7785,7 @@ index bc194e76..3e7fbf38 100644
    "app.news.title": {
      "message": "Nieuws"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Waarschuwing"
    },
@@ -7803,7 +7810,7 @@ index bc194e76..3e7fbf38 100644
    "app.project.actions.label": {
      "message": "Projectacties"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Instellingen voor instantie"
    },
@@ -7813,7 +7820,7 @@ index bc194e76..3e7fbf38 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Sleep om recente instanties weer te geven"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Bronnen"
    },
@@ -7823,7 +7830,7 @@ index bc194e76..3e7fbf38 100644
    "app.settings.tabs.syncing": {
      "message": "Syncen"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Update pushen..."
    },
@@ -7854,7 +7861,7 @@ index bc194e76..3e7fbf38 100644
    "app.sidebar.playing-as": {
      "message": "Spelen als"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Toepassen"
    },
@@ -7945,7 +7952,7 @@ index bc194e76..3e7fbf38 100644
    "app.skins.delete-button": {
      "message": "Skin verwijderen"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Skin aanpassen"
    },
@@ -7991,7 +7998,7 @@ index bc194e76..3e7fbf38 100644
    "app.skins.modal.add-skin-button": {
      "message": "Skin toevoegen"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Cape"
    },
@@ -8001,7 +8008,7 @@ index bc194e76..3e7fbf38 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Log in om skins toe te passen."
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Aanmelden bij Microsoft"
    },
@@ -8014,7 +8021,7 @@ index bc194e76..3e7fbf38 100644
    "app.skins.title": {
      "message": "Skinkiezer"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "De Modrinth-app v{version} is beschikbaar. Gebruik je pakketbeheerder om bij te werken en zo de nieuwste functies en verbeteringen te krijgen!"
    },
@@ -8024,7 +8031,7 @@ index bc194e76..3e7fbf38 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} is nu beschikbaar! Omdat je nu op een netwerk met datalimiet zit, is de download niet automatisch gestart."
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Downloaden voltooid"
    },
@@ -8034,7 +8041,7 @@ index bc194e76..3e7fbf38 100644
    "app.update-popup.reload": {
      "message": "Herladen om te updaten"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Map openen"
    },
@@ -8044,7 +8051,7 @@ index bc194e76..3e7fbf38 100644
    "instance.action.repair": {
      "message": "Herstellen"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Voeg een server toe"
    },
@@ -8057,7 +8064,7 @@ index bc194e76..3e7fbf38 100644
    "instance.edit-server.title": {
      "message": "Server bewerken"
    },
-@@ -4307,12 +4988,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Voeg account toe"
    },
@@ -8085,7 +8092,7 @@ index bc194e76..3e7fbf38 100644
    "minecraft-account.remove-account": {
      "message": "Verwijder account"
    },
-@@ -4322,6 +5018,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "Meld je aan bij Minecraft"
    },
@@ -8104,7 +8111,7 @@ index bc194e76..3e7fbf38 100644
    "minecraft-required.description": {
      "message": "Je hebt een Microsoft-account nodig waarop Minecraft is geregistreerd voordat je het spel kunt starten en spelen."
    },
-@@ -4340,6 +5048,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft vereist"
    },
@@ -8115,7 +8122,7 @@ index bc194e76..3e7fbf38 100644
      "message": "Aanmelden bij Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pl-PL/index.json b/apps/app-frontend/src/locales/pl-PL/index.json
-index 6b3be915..06e62269 100644
+index 8c56920..7048984 100644
 --- a/apps/app-frontend/src/locales/pl-PL/index.json
 +++ b/apps/app-frontend/src/locales/pl-PL/index.json
 @@ -200,6 +200,66 @@
@@ -8519,7 +8526,7 @@ index 6b3be915..06e62269 100644
    "app.debug-export.canceling": {
      "message": "Anulowanie eksportu…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Menedżer pobierania"
    },
@@ -8550,7 +8557,7 @@ index 6b3be915..06e62269 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Otwórz folder kopii zapasowych"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Pasek boczny"
    },
@@ -8569,7 +8576,7 @@ index 6b3be915..06e62269 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Używaj tych ustawień funkcji na wszystkich urządzeniach, na których się logujesz. Wyłącz tę opcję, aby zachować osobne ustawienia na tym urządzeniu."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synchronizuj funkcje między urządzeniami"
    },
@@ -8582,7 +8589,7 @@ index 6b3be915..06e62269 100644
    "app.file-download.canceling": {
      "message": "Anulowanie pobierania…"
    },
-@@ -1241,6 +1670,36 @@
+@@ -1226,6 +1655,36 @@
    "app.library.title": {
      "message": "Biblioteka"
    },
@@ -8619,7 +8626,7 @@ index 6b3be915..06e62269 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Dodatkowy kontekst"
    },
-@@ -1364,9 +1823,15 @@
+@@ -1349,9 +1808,15 @@
    "app.nav.add-account": {
      "message": "Dodaj konto"
    },
@@ -8635,7 +8642,7 @@ index 6b3be915..06e62269 100644
    "app.nav.home": {
      "message": "Strona główna"
    },
-@@ -1385,6 +1850,9 @@
+@@ -1370,6 +1835,9 @@
    "app.nav.screenshots": {
      "message": "Zrzuty ekranu"
    },
@@ -8645,7 +8652,7 @@ index 6b3be915..06e62269 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Zaloguj się do Modrinth"
    },
-@@ -1403,12 +1871,30 @@
+@@ -1388,12 +1856,30 @@
    "app.navigation.go-forward": {
      "message": "Przejdź dalej"
    },
@@ -8676,7 +8683,7 @@ index 6b3be915..06e62269 100644
    "app.news.title": {
      "message": "Aktualności"
    },
-@@ -1418,6 +1904,24 @@
+@@ -1403,6 +1889,24 @@
    "app.notification.warning": {
      "message": "Ostrzeżenie"
    },
@@ -8701,7 +8708,7 @@ index 6b3be915..06e62269 100644
    "app.project.actions.label": {
      "message": "Akcje projektu"
    },
-@@ -1466,6 +1970,9 @@
+@@ -1451,6 +1955,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Opcje instancji"
    },
@@ -8711,7 +8718,7 @@ index 6b3be915..06e62269 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Przeciągnij, aby wyświetlić ostatnie instancje"
    },
-@@ -3110,6 +3617,9 @@
+@@ -3095,6 +3602,9 @@
    "app.settings.tabs.resources": {
      "message": "Zasoby"
    },
@@ -8721,9 +8728,9 @@ index 6b3be915..06e62269 100644
    "app.settings.tabs.syncing": {
      "message": "Synchronizacja"
    },
-@@ -3143,6 +3653,30 @@
-   "app.settings.troubleshooting.report-ad.title": {
-     "message": "Zgłoś reklamę"
+@@ -3131,6 +3641,30 @@
+   "app.shared-instance-publish.preparing": {
+     "message": "Przygotowywanie aktualizacji..."
    },
 +  "app.sidebar-settings.description": {
 +    "message": "Przyciski nad instancjami w lewym pasku bocznym. Kliknięcie jednego prawym przyciskiem też go ukrywa."
@@ -8752,7 +8759,7 @@ index 6b3be915..06e62269 100644
    "app.sidebar.playing-as": {
      "message": "Graj jako"
    },
-@@ -3155,6 +3689,90 @@
+@@ -3143,6 +3677,90 @@
    "app.skins.apply-button": {
      "message": "Zastosuj"
    },
@@ -8843,7 +8850,7 @@ index 6b3be915..06e62269 100644
    "app.skins.delete-button": {
      "message": "Usuń skórkę"
    },
-@@ -3185,6 +3803,45 @@
+@@ -3173,6 +3791,45 @@
    "app.skins.edit-button": {
      "message": "Edytuj skórkę"
    },
@@ -8889,7 +8896,7 @@ index 6b3be915..06e62269 100644
    "app.skins.modal.add-skin-button": {
      "message": "Dodaj skórkę"
    },
-@@ -3206,6 +3863,9 @@
+@@ -3194,6 +3851,9 @@
    "app.skins.modal.cape-section": {
      "message": "Peleryny"
    },
@@ -8899,7 +8906,7 @@ index 6b3be915..06e62269 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Zaloguj się, by móc zapisać skórki."
    },
-@@ -3308,6 +3968,12 @@
+@@ -3296,6 +3956,12 @@
    "app.skins.sign-in.button": {
      "message": "Zaloguj się do Microsoft"
    },
@@ -8912,7 +8919,7 @@ index 6b3be915..06e62269 100644
    "app.skins.title": {
      "message": "Wybór skórki"
    },
-@@ -3467,6 +4133,9 @@
+@@ -3410,6 +4076,9 @@
    "app.update-popup.body.linux": {
      "message": "Wersja Modrinth App v{version} jest dostępna. Pobierz aktualizację poprzez menedżer pakietów, by uzyskać najnowsze funkcje i poprawki!"
    },
@@ -8922,7 +8929,7 @@ index 6b3be915..06e62269 100644
    "app.update-popup.body.metered": {
      "message": "Wersja Modrinth App v{version} jest dostępna! Skoro korzystasz z sieci taryfowej, nie pobraliśmy jej automatycznie."
    },
-@@ -3479,6 +4148,9 @@
+@@ -3422,6 +4091,9 @@
    "app.update-popup.download-complete": {
      "message": "Pobieranie ukończone"
    },
@@ -8932,7 +8939,7 @@ index 6b3be915..06e62269 100644
    "app.update-popup.reload": {
      "message": "Załaduj ponownie, by zaktualizować"
    },
-@@ -3689,6 +4361,9 @@
+@@ -3617,6 +4289,9 @@
    "instance.action.open-folder": {
      "message": "Otwórz folder"
    },
@@ -8942,7 +8949,7 @@ index 6b3be915..06e62269 100644
    "instance.action.repair": {
      "message": "Napraw"
    },
-@@ -3719,6 +4394,12 @@
+@@ -3647,6 +4322,12 @@
    "instance.add-server.title": {
      "message": "Dodaj serwer"
    },
@@ -8955,7 +8962,7 @@ index 6b3be915..06e62269 100644
    "instance.edit-server.title": {
      "message": "Edytuj serwer"
    },
-@@ -4256,12 +4937,27 @@
+@@ -4136,12 +4817,27 @@
    "minecraft-account.add-account": {
      "message": "Dodaj konto"
    },
@@ -8983,7 +8990,7 @@ index 6b3be915..06e62269 100644
    "minecraft-account.remove-account": {
      "message": "Usuń konto"
    },
-@@ -4271,6 +4967,18 @@
+@@ -4151,6 +4847,18 @@
    "minecraft-account.sign-in": {
      "message": "Zaloguj się do Minecraft"
    },
@@ -9002,7 +9009,7 @@ index 6b3be915..06e62269 100644
    "minecraft-required.description": {
      "message": "Potrzebujesz konto Microsoft, które posiada Minecraft, zanim będziesz mógł włączyć i zacząć grać."
    },
-@@ -4289,6 +4997,9 @@
+@@ -4169,6 +4877,9 @@
    "minecraft-required.header": {
      "message": "Minecraft wymagany"
    },
@@ -9013,7 +9020,7 @@ index 6b3be915..06e62269 100644
      "message": "Zaloguj się do Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/pt-BR/index.json b/apps/app-frontend/src/locales/pt-BR/index.json
-index 9bd938ae..c423d26a 100644
+index dcc5146..4a7e3f5 100644
 --- a/apps/app-frontend/src/locales/pt-BR/index.json
 +++ b/apps/app-frontend/src/locales/pt-BR/index.json
 @@ -200,6 +200,66 @@
@@ -9417,7 +9424,7 @@ index 9bd938ae..c423d26a 100644
    "app.debug-export.canceling": {
      "message": "Cancelando exportação…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Gerenciador de Downloads"
    },
@@ -9448,7 +9455,7 @@ index 9bd938ae..c423d26a 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Abrir pasta das cópias de segurança"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Barra Lateral"
    },
@@ -9467,7 +9474,7 @@ index 9bd938ae..c423d26a 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Use essas configurações de recursos em todo lugar conectado. Desligue para manter as configurações separadas nesse dispositivo."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Sincronizar recursos entre dispositivos"
    },
@@ -9480,7 +9487,7 @@ index 9bd938ae..c423d26a 100644
    "app.file-download.canceling": {
      "message": "Cancelando o download..."
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Biblioteca"
    },
@@ -9517,7 +9524,7 @@ index 9bd938ae..c423d26a 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Contexto adicional"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Adicionar conta"
    },
@@ -9533,7 +9540,7 @@ index 9bd938ae..c423d26a 100644
    "app.nav.home": {
      "message": "Início"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Capturas de tela"
    },
@@ -9543,7 +9550,7 @@ index 9bd938ae..c423d26a 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Conecte-se ao Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "Avançar"
    },
@@ -9574,7 +9581,7 @@ index 9bd938ae..c423d26a 100644
    "app.news.title": {
      "message": "Notícias"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Aviso"
    },
@@ -9599,7 +9606,7 @@ index 9bd938ae..c423d26a 100644
    "app.project.actions.label": {
      "message": "Ações do projeto"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Ações de instância"
    },
@@ -9609,7 +9616,7 @@ index 9bd938ae..c423d26a 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Arraste para exibir instâncias recentes"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "Recursos"
    },
@@ -9619,7 +9626,7 @@ index 9bd938ae..c423d26a 100644
    "app.settings.tabs.syncing": {
      "message": "Sincronização"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Enviando atualização…"
    },
@@ -9650,7 +9657,7 @@ index 9bd938ae..c423d26a 100644
    "app.sidebar.playing-as": {
      "message": "Jogando como"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "Aplicar"
    },
@@ -9741,7 +9748,7 @@ index 9bd938ae..c423d26a 100644
    "app.skins.delete-button": {
      "message": "Excluir skin"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "Editar skin"
    },
@@ -9787,7 +9794,7 @@ index 9bd938ae..c423d26a 100644
    "app.skins.modal.add-skin-button": {
      "message": "Adicionar skin"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "Capas"
    },
@@ -9797,7 +9804,7 @@ index 9bd938ae..c423d26a 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Conecte-se para salvar skins."
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "Conecte-se à Microsoft"
    },
@@ -9810,7 +9817,7 @@ index 9bd938ae..c423d26a 100644
    "app.skins.title": {
      "message": "Seletor de skins"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "O Modrinth App v{version} está disponível. Use o gerenciador de pacotes para atualizar para obter novos recursos e correções!"
    },
@@ -9820,7 +9827,7 @@ index 9bd938ae..c423d26a 100644
    "app.update-popup.body.metered": {
      "message": "O Modrinth App v{version} já está disponível! Já que sua rede é limitada, não a instalamos automaticamente."
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "Instalação concluída"
    },
@@ -9830,7 +9837,7 @@ index 9bd938ae..c423d26a 100644
    "app.update-popup.reload": {
      "message": "Recarregar para atualizar"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "Abrir pasta"
    },
@@ -9840,7 +9847,7 @@ index 9bd938ae..c423d26a 100644
    "instance.action.repair": {
      "message": "Reparar"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "Adicionar um servidor"
    },
@@ -9853,7 +9860,7 @@ index 9bd938ae..c423d26a 100644
    "instance.edit-server.title": {
      "message": "Editar servidor"
    },
-@@ -4307,12 +4988,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "Adicionar conta"
    },
@@ -9881,7 +9888,7 @@ index 9bd938ae..c423d26a 100644
    "minecraft-account.remove-account": {
      "message": "Remover conta"
    },
-@@ -4322,6 +5018,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "Conecte-se no Minecraft"
    },
@@ -9900,7 +9907,7 @@ index 9bd938ae..c423d26a 100644
    "minecraft-required.description": {
      "message": "Você precisa de uma conta Microsoft que possui o Minecraft antes de iniciar e jogar."
    },
-@@ -4340,6 +5048,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "Minecraft necessário"
    },
@@ -9911,7 +9918,7 @@ index 9bd938ae..c423d26a 100644
      "message": "Entrar na Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/ru-RU/index.json b/apps/app-frontend/src/locales/ru-RU/index.json
-index b11b652b..849e025d 100644
+index 9df5d73..106a71b 100644
 --- a/apps/app-frontend/src/locales/ru-RU/index.json
 +++ b/apps/app-frontend/src/locales/ru-RU/index.json
 @@ -200,6 +200,66 @@
@@ -10315,7 +10322,7 @@ index b11b652b..849e025d 100644
    "app.debug-export.canceling": {
      "message": "Отмена экспорта..."
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Управление загрузками"
    },
@@ -10346,7 +10353,7 @@ index b11b652b..849e025d 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Открыть папку резервных копий"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Боковая панель"
    },
@@ -10365,7 +10372,7 @@ index b11b652b..849e025d 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Используйте эти настройки везде, где вы вошли в систему. Отключите эту опцию, чтобы сохранить отдельные настройки на этом устройстве."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Синхронизировать настройки между устройствами"
    },
@@ -10378,7 +10385,7 @@ index b11b652b..849e025d 100644
    "app.file-download.canceling": {
      "message": "Отмена скачивания..."
    },
-@@ -1235,6 +1664,36 @@
+@@ -1220,6 +1649,36 @@
    "app.library.title": {
      "message": "Библиотека"
    },
@@ -10415,7 +10422,7 @@ index b11b652b..849e025d 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Подробности"
    },
-@@ -1358,9 +1817,15 @@
+@@ -1343,9 +1802,15 @@
    "app.nav.add-account": {
      "message": "Добавить аккаунт"
    },
@@ -10431,7 +10438,7 @@ index b11b652b..849e025d 100644
    "app.nav.home": {
      "message": "Главная"
    },
-@@ -1379,6 +1844,9 @@
+@@ -1364,6 +1829,9 @@
    "app.nav.screenshots": {
      "message": "Скриншоты"
    },
@@ -10441,7 +10448,7 @@ index b11b652b..849e025d 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Вход в Modrinth"
    },
-@@ -1397,12 +1865,30 @@
+@@ -1382,12 +1850,30 @@
    "app.navigation.go-forward": {
      "message": "Вперёд"
    },
@@ -10472,7 +10479,7 @@ index b11b652b..849e025d 100644
    "app.news.title": {
      "message": "Новости"
    },
-@@ -1412,6 +1898,24 @@
+@@ -1397,6 +1883,24 @@
    "app.notification.warning": {
      "message": "Внимание"
    },
@@ -10497,7 +10504,7 @@ index b11b652b..849e025d 100644
    "app.project.actions.label": {
      "message": "Действия с проектом"
    },
-@@ -1460,6 +1964,9 @@
+@@ -1445,6 +1949,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Действия со сборкой"
    },
@@ -10507,7 +10514,7 @@ index b11b652b..849e025d 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Потяните для показа недавних сборок"
    },
-@@ -3101,6 +3608,9 @@
+@@ -3086,6 +3593,9 @@
    "app.settings.tabs.resources": {
      "message": "Ресурсы"
    },
@@ -10517,7 +10524,7 @@ index b11b652b..849e025d 100644
    "app.settings.tabs.syncing": {
      "message": "Синхронизация"
    },
-@@ -3143,6 +3653,30 @@
+@@ -3128,6 +3638,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Отправка изменений..."
    },
@@ -10548,7 +10555,7 @@ index b11b652b..849e025d 100644
    "app.sidebar.playing-as": {
      "message": "Сейчас играет"
    },
-@@ -3155,6 +3689,90 @@
+@@ -3140,6 +3674,90 @@
    "app.skins.apply-button": {
      "message": "Применить"
    },
@@ -10639,7 +10646,7 @@ index b11b652b..849e025d 100644
    "app.skins.delete-button": {
      "message": "Удалить скин"
    },
-@@ -3185,6 +3803,45 @@
+@@ -3170,6 +3788,45 @@
    "app.skins.edit-button": {
      "message": "Изменить скин"
    },
@@ -10685,7 +10692,7 @@ index b11b652b..849e025d 100644
    "app.skins.modal.add-skin-button": {
      "message": "Добавить скин"
    },
-@@ -3206,6 +3863,9 @@
+@@ -3191,6 +3848,9 @@
    "app.skins.modal.cape-section": {
      "message": "Плащ"
    },
@@ -10695,7 +10702,7 @@ index b11b652b..849e025d 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Войдите, чтобы сохранять скины."
    },
-@@ -3308,6 +3968,12 @@
+@@ -3293,6 +3953,12 @@
    "app.skins.sign-in.button": {
      "message": "Войти в Microsoft"
    },
@@ -10708,7 +10715,7 @@ index b11b652b..849e025d 100644
    "app.skins.title": {
      "message": "Выбор скина"
    },
-@@ -3467,6 +4133,9 @@
+@@ -3407,6 +4073,9 @@
    "app.update-popup.body.linux": {
      "message": "Доступна версия Modrinth App {version}. Обновите приложение через менеджер пакетов, чтобы получить последние улучшения и исправления!"
    },
@@ -10718,7 +10725,7 @@ index b11b652b..849e025d 100644
    "app.update-popup.body.metered": {
      "message": "Версия Modrinth App {version} доступна для скачивания! Используется сеть с лимитным тарифным планом, поэтому скачивание не началось автоматически."
    },
-@@ -3479,6 +4148,9 @@
+@@ -3419,6 +4088,9 @@
    "app.update-popup.download-complete": {
      "message": "Скачивание завершено"
    },
@@ -10728,7 +10735,7 @@ index b11b652b..849e025d 100644
    "app.update-popup.reload": {
      "message": "Перезапустить"
    },
-@@ -3689,6 +4361,9 @@
+@@ -3614,6 +4286,9 @@
    "instance.action.open-folder": {
      "message": "Открыть папку"
    },
@@ -10738,7 +10745,7 @@ index b11b652b..849e025d 100644
    "instance.action.repair": {
      "message": "Исправить"
    },
-@@ -3719,6 +4394,12 @@
+@@ -3644,6 +4319,12 @@
    "instance.add-server.title": {
      "message": "Добавление сервера"
    },
@@ -10751,7 +10758,7 @@ index b11b652b..849e025d 100644
    "instance.edit-server.title": {
      "message": "Настройка сервера"
    },
-@@ -4283,12 +4964,27 @@
+@@ -4130,12 +4811,27 @@
    "minecraft-account.add-account": {
      "message": "Добавить аккаунт"
    },
@@ -10779,7 +10786,7 @@ index b11b652b..849e025d 100644
    "minecraft-account.remove-account": {
      "message": "Удалить аккаунт"
    },
-@@ -4298,6 +4994,18 @@
+@@ -4145,6 +4841,18 @@
    "minecraft-account.sign-in": {
      "message": "Войти в Minecraft"
    },
@@ -10798,7 +10805,7 @@ index b11b652b..849e025d 100644
    "minecraft-required.description": {
      "message": "Для запуска и игры требуется аккаунт Microsoft с приобретённым Minecraft."
    },
-@@ -4316,6 +5024,9 @@
+@@ -4163,6 +4871,9 @@
    "minecraft-required.header": {
      "message": "Требуется Minecraft"
    },
@@ -10809,7 +10816,7 @@ index b11b652b..849e025d 100644
      "message": "Войти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/sv-SE/index.json b/apps/app-frontend/src/locales/sv-SE/index.json
-index a6e0967a..87cef34d 100644
+index 6356d13..fcf9e0c 100644
 --- a/apps/app-frontend/src/locales/sv-SE/index.json
 +++ b/apps/app-frontend/src/locales/sv-SE/index.json
 @@ -200,6 +200,66 @@
@@ -11213,7 +11220,7 @@ index a6e0967a..87cef34d 100644
    "app.debug-export.canceling": {
      "message": "Avbryter exportering…"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "Hämtningshanterare"
    },
@@ -11244,7 +11251,7 @@ index a6e0967a..87cef34d 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Öppna mappen för säkerhetskopior"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Sidofält"
    },
@@ -11263,7 +11270,7 @@ index a6e0967a..87cef34d 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Använd dessa funktions inställningar överallt du är inloggad. Stäng av detta för att hålla inställningar separerade för denna enhet."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Synka funktioner mellan enheter"
    },
@@ -11276,7 +11283,7 @@ index a6e0967a..87cef34d 100644
    "app.file-download.canceling": {
      "message": "Avbryter nedladdning…"
    },
-@@ -1250,6 +1679,36 @@
+@@ -1235,6 +1664,36 @@
    "app.library.title": {
      "message": "Bibliotek"
    },
@@ -11313,7 +11320,7 @@ index a6e0967a..87cef34d 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Ytterligare sammanhang"
    },
-@@ -1370,9 +1829,15 @@
+@@ -1355,9 +1814,15 @@
    "app.nav.add-account": {
      "message": "Lägg till konto"
    },
@@ -11329,7 +11336,7 @@ index a6e0967a..87cef34d 100644
    "app.nav.home": {
      "message": "Hem"
    },
-@@ -1391,6 +1856,9 @@
+@@ -1376,6 +1841,9 @@
    "app.nav.screenshots": {
      "message": "Skärmdumpar"
    },
@@ -11339,7 +11346,7 @@ index a6e0967a..87cef34d 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Logga in på Modrinth"
    },
-@@ -1409,12 +1877,30 @@
+@@ -1394,12 +1862,30 @@
    "app.navigation.go-forward": {
      "message": "Gå framåt"
    },
@@ -11370,7 +11377,7 @@ index a6e0967a..87cef34d 100644
    "app.news.title": {
      "message": "Nyheter"
    },
-@@ -1424,6 +1910,24 @@
+@@ -1409,6 +1895,24 @@
    "app.notification.warning": {
      "message": "Varning"
    },
@@ -11395,7 +11402,7 @@ index a6e0967a..87cef34d 100644
    "app.project.actions.label": {
      "message": "Projektåtgärder"
    },
-@@ -1472,6 +1976,9 @@
+@@ -1457,6 +1961,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Instansåtgärder"
    },
@@ -11405,7 +11412,7 @@ index a6e0967a..87cef34d 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Dra för att visa de senaste instanserna"
    },
-@@ -2846,6 +3353,9 @@
+@@ -2831,6 +3338,9 @@
    "app.settings.tabs.resources": {
      "message": "Resurser"
    },
@@ -11415,7 +11422,7 @@ index a6e0967a..87cef34d 100644
    "app.settings.tabs.syncing": {
      "message": "Synkronisering"
    },
-@@ -2885,6 +3395,30 @@
+@@ -2870,6 +3380,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "Skickar ut uppdatering…"
    },
@@ -11446,7 +11453,7 @@ index a6e0967a..87cef34d 100644
    "app.sidebar.playing-as": {
      "message": "Spelar som"
    },
-@@ -2897,6 +3431,90 @@
+@@ -2882,6 +3416,90 @@
    "app.skins.apply-button": {
      "message": "Tillämpa"
    },
@@ -11537,7 +11544,7 @@ index a6e0967a..87cef34d 100644
    "app.skins.delete-button": {
      "message": "Ta bort utseende"
    },
-@@ -2927,6 +3545,45 @@
+@@ -2912,6 +3530,45 @@
    "app.skins.edit-button": {
      "message": "Ändra utseende"
    },
@@ -11583,7 +11590,7 @@ index a6e0967a..87cef34d 100644
    "app.skins.modal.add-skin-button": {
      "message": "Lägg till utseende"
    },
-@@ -2948,6 +3605,9 @@
+@@ -2933,6 +3590,9 @@
    "app.skins.modal.cape-section": {
      "message": "Mantel"
    },
@@ -11593,7 +11600,7 @@ index a6e0967a..87cef34d 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Logga in för att spara utseenden."
    },
-@@ -3041,6 +3701,12 @@
+@@ -3026,6 +3686,12 @@
    "app.skins.sign-in.button": {
      "message": "Logga in på Microsoft"
    },
@@ -11606,7 +11613,7 @@ index a6e0967a..87cef34d 100644
    "app.skins.title": {
      "message": "Byt utseende"
    },
-@@ -3167,6 +3833,9 @@
+@@ -3116,6 +3782,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} är tillgänglig. Använd din pakethanterare för att uppdatera och få tillgång till de senaste funktionerna och buggfixarna!"
    },
@@ -11616,7 +11623,7 @@ index a6e0967a..87cef34d 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} är nu tillgänglig! Eftersom du använder ett nätverk med datatrafikbegränsningar har vi inte laddat ner det automatiskt."
    },
-@@ -3179,6 +3848,9 @@
+@@ -3128,6 +3797,9 @@
    "app.update-popup.download-complete": {
      "message": "Nedladdning slutförd"
    },
@@ -11626,7 +11633,7 @@ index a6e0967a..87cef34d 100644
    "app.update-popup.reload": {
      "message": "Ladda om för att uppdatera"
    },
-@@ -3377,6 +4049,9 @@
+@@ -3311,6 +3983,9 @@
    "instance.action.open-folder": {
      "message": "Öppna mapp"
    },
@@ -11636,7 +11643,7 @@ index a6e0967a..87cef34d 100644
    "instance.action.repair": {
      "message": "Reparera"
    },
-@@ -3407,6 +4082,12 @@
+@@ -3341,6 +4016,12 @@
    "instance.add-server.title": {
      "message": "Lägg till en server"
    },
@@ -11649,7 +11656,7 @@ index a6e0967a..87cef34d 100644
    "instance.edit-server.title": {
      "message": "Redigera server"
    },
-@@ -3872,12 +4553,27 @@
+@@ -3755,12 +4436,27 @@
    "minecraft-account.add-account": {
      "message": "Lägg till konto"
    },
@@ -11677,7 +11684,7 @@ index a6e0967a..87cef34d 100644
    "minecraft-account.remove-account": {
      "message": "Ta bort konto"
    },
-@@ -3887,6 +4583,18 @@
+@@ -3770,6 +4466,18 @@
    "minecraft-account.sign-in": {
      "message": "Logga in till Minecraft"
    },
@@ -11696,7 +11703,7 @@ index a6e0967a..87cef34d 100644
    "minecraft-required.description": {
      "message": "Du behöver ett Microsoft-konto som äger Minecraft innan du kan köra och spela."
    },
-@@ -3905,6 +4613,9 @@
+@@ -3788,6 +4496,9 @@
    "minecraft-required.header": {
      "message": "Minecraft krävs"
    },
@@ -11707,7 +11714,7 @@ index a6e0967a..87cef34d 100644
      "message": "Logga in på Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/tr-TR/index.json b/apps/app-frontend/src/locales/tr-TR/index.json
-index 297e1524..0ee7cb7c 100644
+index 6d8e08f..0286221 100644
 --- a/apps/app-frontend/src/locales/tr-TR/index.json
 +++ b/apps/app-frontend/src/locales/tr-TR/index.json
 @@ -200,6 +200,66 @@
@@ -12111,7 +12118,7 @@ index 297e1524..0ee7cb7c 100644
    "app.debug-export.canceling": {
      "message": "Dışa aktarma iptal ediliyor..."
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "İndirilenler"
    },
@@ -12142,7 +12149,7 @@ index 297e1524..0ee7cb7c 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Yedekler klasörünü aç"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Yan Menü"
    },
@@ -12161,7 +12168,7 @@ index 297e1524..0ee7cb7c 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Bu özellik ayarlarını oturumunuzun açık olduğu her yerde kullanın. Bu cihazda farklı ayarlar tutmak için bu özelliği kapatın."
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Cihazlar arası özellikleri eşitle"
    },
@@ -12174,7 +12181,7 @@ index 297e1524..0ee7cb7c 100644
    "app.file-download.canceling": {
      "message": "İndirme İptal Ediliyor"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "Kütüphane"
    },
@@ -12211,7 +12218,7 @@ index 297e1524..0ee7cb7c 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Ek bağlam"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "Hesap ekle"
    },
@@ -12227,7 +12234,7 @@ index 297e1524..0ee7cb7c 100644
    "app.nav.home": {
      "message": "Ana Sayfa"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "Ekran görüntüleri"
    },
@@ -12237,7 +12244,7 @@ index 297e1524..0ee7cb7c 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Modrinth'e giriş yapın"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "İleri git"
    },
@@ -12268,7 +12275,7 @@ index 297e1524..0ee7cb7c 100644
    "app.news.title": {
      "message": "Haberler"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "Uyarı"
    },
@@ -12293,7 +12300,7 @@ index 297e1524..0ee7cb7c 100644
    "app.project.actions.label": {
      "message": "Proje eylemleri"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Kurulum eylemleri"
    },
@@ -12303,7 +12310,7 @@ index 297e1524..0ee7cb7c 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Güncel örnekleri görmek için sürükle"
    },
-@@ -2663,6 +3170,33 @@
+@@ -2810,6 +3317,33 @@
    "app.settings.tabs.privacy": {
      "message": "Gizlilik"
    },
@@ -12337,7 +12344,7 @@ index 297e1524..0ee7cb7c 100644
    "app.sidebar.playing-as": {
      "message": "Şu olarak oynuyor"
    },
-@@ -2675,6 +3209,90 @@
+@@ -2822,6 +3356,90 @@
    "app.skins.apply-button": {
      "message": "Uygula"
    },
@@ -12428,7 +12435,7 @@ index 297e1524..0ee7cb7c 100644
    "app.skins.delete-button": {
      "message": "Dış görünümü sil"
    },
-@@ -2705,6 +3323,45 @@
+@@ -2852,6 +3470,45 @@
    "app.skins.edit-button": {
      "message": "Dış görünümü düzenle"
    },
@@ -12474,7 +12481,7 @@ index 297e1524..0ee7cb7c 100644
    "app.skins.modal.add-skin-button": {
      "message": "Dış görünüm ekle"
    },
-@@ -2726,6 +3383,9 @@
+@@ -2873,6 +3530,9 @@
    "app.skins.modal.cape-section": {
      "message": "Pelerin"
    },
@@ -12484,7 +12491,7 @@ index 297e1524..0ee7cb7c 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Dış görünüşünü kaydetmek için giriş yap."
    },
-@@ -2819,6 +3479,12 @@
+@@ -2966,6 +3626,12 @@
    "app.skins.sign-in.button": {
      "message": "Microsoft'a giriş yap"
    },
@@ -12497,7 +12504,7 @@ index 297e1524..0ee7cb7c 100644
    "app.skins.title": {
      "message": "Dış görünüm seçici"
    },
-@@ -2852,6 +3518,9 @@
+@@ -2996,6 +3662,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} yayımlandı. En yeni özellikler ve hata düzeltmeleri için paket yöneticin üzerinden güncelle!"
    },
@@ -12507,7 +12514,7 @@ index 297e1524..0ee7cb7c 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} mevcut! Kısıtlı bağlantıda olduğunuzdan otomatik olarak indirmedik."
    },
-@@ -2864,6 +3533,9 @@
+@@ -3008,6 +3677,9 @@
    "app.update-popup.download-complete": {
      "message": "İndirme tamamlandı"
    },
@@ -12517,7 +12524,7 @@ index 297e1524..0ee7cb7c 100644
    "app.update-popup.reload": {
      "message": "Güncellemek için yeniden yükle"
    },
-@@ -3074,6 +3746,9 @@
+@@ -3203,6 +3875,9 @@
    "instance.action.open-folder": {
      "message": "Klasörü aç"
    },
@@ -12527,7 +12534,7 @@ index 297e1524..0ee7cb7c 100644
    "instance.action.repair": {
      "message": "Onar"
    },
-@@ -3104,6 +3779,12 @@
+@@ -3233,6 +3908,12 @@
    "instance.add-server.title": {
      "message": "Sunucu ekle"
    },
@@ -12540,7 +12547,7 @@ index 297e1524..0ee7cb7c 100644
    "instance.edit-server.title": {
      "message": "Sunucuyu düzenle"
    },
-@@ -3569,12 +4250,27 @@
+@@ -3647,12 +4328,27 @@
    "minecraft-account.add-account": {
      "message": "Hesap ekle"
    },
@@ -12568,7 +12575,7 @@ index 297e1524..0ee7cb7c 100644
    "minecraft-account.remove-account": {
      "message": "Hesabı kaldır"
    },
-@@ -3584,6 +4280,18 @@
+@@ -3662,6 +4358,18 @@
    "minecraft-account.sign-in": {
      "message": "Minecraft'a giriş yapın"
    },
@@ -12587,7 +12594,7 @@ index 297e1524..0ee7cb7c 100644
    "minecraft-required.description": {
      "message": "Oyunu başlatmak ve oynamak için Minecraft'a sahip olan bir Microsoft hesabına ihtiyaç vardır."
    },
-@@ -3602,6 +4310,9 @@
+@@ -3680,6 +4388,9 @@
    "minecraft-required.header": {
      "message": "Minecraft gereklidir"
    },
@@ -12598,7 +12605,7 @@ index 297e1524..0ee7cb7c 100644
      "message": "Microsoft'a giriş yap"
    },
 diff --git a/apps/app-frontend/src/locales/uk-UA/index.json b/apps/app-frontend/src/locales/uk-UA/index.json
-index 113715a3..b344ed6b 100644
+index 5a09417..c48b39e 100644
 --- a/apps/app-frontend/src/locales/uk-UA/index.json
 +++ b/apps/app-frontend/src/locales/uk-UA/index.json
 @@ -200,6 +200,66 @@
@@ -12668,7 +12675,7 @@ index 113715a3..b344ed6b 100644
    "app.behavior-settings.confirmations.title": {
      "message": "Підтвердження"
    },
-@@ -302,6 +362,333 @@
+@@ -305,6 +365,333 @@
    "app.content.sync-resource-packs-disabled": {
      "message": "Спершу ввімкніть синхронізацію пакетів ресурсів у налаштуваннях застосунку."
    },
@@ -13002,7 +13009,7 @@ index 113715a3..b344ed6b 100644
    "app.debug-export.canceling": {
      "message": "Скасування експорту…"
    },
-@@ -395,6 +782,30 @@
+@@ -389,6 +776,30 @@
    "app.download-manager.title": {
      "message": "Менеджер завантажень"
    },
@@ -13033,7 +13040,7 @@ index 113715a3..b344ed6b 100644
    "app.error.state-init.open-backups-folder": {
      "message": "Відкрити теку резервних копій"
    },
-@@ -467,6 +878,18 @@
+@@ -461,6 +872,18 @@
    "app.features-settings.sidebar.title": {
      "message": "Бічна панель"
    },
@@ -13052,7 +13059,7 @@ index 113715a3..b344ed6b 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "Використовуватиме ці особливості всюди, де ви ввійшли. Вимкніть це, щоб зберегти окремі налаштування на цьому пристрої."
    },
-@@ -476,6 +899,12 @@
+@@ -470,6 +893,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "Синхронізувати особливості між пристроями"
    },
@@ -13065,9 +13072,9 @@ index 113715a3..b344ed6b 100644
    "app.file-download.canceling": {
      "message": "Скасування завантаження…"
    },
-@@ -1244,6 +1673,36 @@
-   "app.library.title": {
-     "message": "Бібліотека"
+@@ -1268,6 +1697,36 @@
+   "app.library.unpublish-shared-instance.modal.admonition-body": {
+     "message": "{count, plural, one {Це видалить вибраний спільний примірник із серверів Modrinth. Люди, які його використовують, більше не отримуватимуть оновлення, і його буде видалено з вашої бібліотеки.} other {Це видалить вибрані спільні примірники із серверів Modrinth. Люди, які їх використовують, більше не отримуватимуть оновлення, і їх буде видалено з вашої бібліотеки.}}"
    },
 +  "app.microsoft-login.code-label": {
 +    "message": "Якщо Microsoft попросить код, введіть"
@@ -13102,7 +13109,7 @@ index 113715a3..b344ed6b 100644
    "app.modal.install-to-play.additional-context": {
      "message": "Додатковий контекст"
    },
-@@ -1367,9 +1826,15 @@
+@@ -1394,9 +1853,15 @@
    "app.nav.add-account": {
      "message": "Додати обліковий запис"
    },
@@ -13118,7 +13125,7 @@ index 113715a3..b344ed6b 100644
    "app.nav.home": {
      "message": "Головна"
    },
-@@ -1388,6 +1853,9 @@
+@@ -1415,6 +1880,9 @@
    "app.nav.screenshots": {
      "message": "Знімки екрана"
    },
@@ -13128,7 +13135,7 @@ index 113715a3..b344ed6b 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "Увійти до Modrinth"
    },
-@@ -1406,12 +1874,30 @@
+@@ -1433,12 +1901,30 @@
    "app.navigation.go-forward": {
      "message": "Перейти далі"
    },
@@ -13159,7 +13166,7 @@ index 113715a3..b344ed6b 100644
    "app.news.title": {
      "message": "Новини"
    },
-@@ -1421,6 +1907,24 @@
+@@ -1448,6 +1934,24 @@
    "app.notification.warning": {
      "message": "Попередження"
    },
@@ -13184,7 +13191,7 @@ index 113715a3..b344ed6b 100644
    "app.project.actions.label": {
      "message": "Дії з проєктом"
    },
-@@ -1469,6 +1973,9 @@
+@@ -1496,6 +2000,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "Дії з примірником"
    },
@@ -13194,7 +13201,7 @@ index 113715a3..b344ed6b 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "Перетягніть, щоб показати нещодавні примірники"
    },
-@@ -3113,6 +3620,9 @@
+@@ -3140,6 +3647,9 @@
    "app.settings.tabs.resources": {
      "message": "Ресурси"
    },
@@ -13204,9 +13211,9 @@ index 113715a3..b344ed6b 100644
    "app.settings.tabs.syncing": {
      "message": "Синхронізація"
    },
-@@ -3149,6 +3659,30 @@
-   "app.shared-instance-publish.preparing": {
-     "message": "Підготовка оновлення…"
+@@ -3182,6 +3692,30 @@
+   "app.shared-instance-publish.uploading": {
+     "message": "Публікуємо оновлення…"
    },
 +  "app.sidebar-settings.description": {
 +    "message": "Кнопки над примірниками в лівій бічній панелі. Правий клік по одній з них також її ховає."
@@ -13235,7 +13242,7 @@ index 113715a3..b344ed6b 100644
    "app.sidebar.playing-as": {
      "message": "Ігровий профіль"
    },
-@@ -3161,6 +3695,90 @@
+@@ -3194,6 +3728,90 @@
    "app.skins.apply-button": {
      "message": "Застосувати"
    },
@@ -13326,7 +13333,7 @@ index 113715a3..b344ed6b 100644
    "app.skins.delete-button": {
      "message": "Видалити скін"
    },
-@@ -3191,6 +3809,45 @@
+@@ -3224,6 +3842,45 @@
    "app.skins.edit-button": {
      "message": "Редагувати скін"
    },
@@ -13372,7 +13379,7 @@ index 113715a3..b344ed6b 100644
    "app.skins.modal.add-skin-button": {
      "message": "Додати скін"
    },
-@@ -3212,6 +3869,9 @@
+@@ -3245,6 +3902,9 @@
    "app.skins.modal.cape-section": {
      "message": "Плащ"
    },
@@ -13382,7 +13389,7 @@ index 113715a3..b344ed6b 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "Увійдіть, щоб зберігати скіни."
    },
-@@ -3314,6 +3974,12 @@
+@@ -3347,6 +4007,12 @@
    "app.skins.sign-in.button": {
      "message": "Увійти в Microsoft"
    },
@@ -13395,7 +13402,7 @@ index 113715a3..b344ed6b 100644
    "app.skins.title": {
      "message": "Вибір скіна"
    },
-@@ -3473,6 +4139,9 @@
+@@ -3461,6 +4127,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} вже доступно. Скористайтеся менеджером пакетів, щоб отримати найновіші функції та виправлення!"
    },
@@ -13405,7 +13412,7 @@ index 113715a3..b344ed6b 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} вже доступно! Оскільки ви використовуєте лімітне підключення, ми не завантажили його автоматично."
    },
-@@ -3485,6 +4154,9 @@
+@@ -3473,6 +4142,9 @@
    "app.update-popup.download-complete": {
      "message": "Завантаження завершено"
    },
@@ -13415,7 +13422,7 @@ index 113715a3..b344ed6b 100644
    "app.update-popup.reload": {
      "message": "Перезавантаження для оновлення"
    },
-@@ -3695,6 +4367,9 @@
+@@ -3668,6 +4340,9 @@
    "instance.action.open-folder": {
      "message": "Відкрити теку"
    },
@@ -13425,7 +13432,7 @@ index 113715a3..b344ed6b 100644
    "instance.action.repair": {
      "message": "Виправити"
    },
-@@ -3725,6 +4400,12 @@
+@@ -3698,6 +4373,12 @@
    "instance.add-server.title": {
      "message": "Додавання сервера"
    },
@@ -13438,7 +13445,7 @@ index 113715a3..b344ed6b 100644
    "instance.edit-server.title": {
      "message": "Редагувати сервер"
    },
-@@ -4259,12 +4940,27 @@
+@@ -4187,12 +4868,27 @@
    "minecraft-account.add-account": {
      "message": "Додати обліковий запис"
    },
@@ -13466,7 +13473,7 @@ index 113715a3..b344ed6b 100644
    "minecraft-account.remove-account": {
      "message": "Видалити обліковий запис"
    },
-@@ -4274,6 +4970,18 @@
+@@ -4202,6 +4898,18 @@
    "minecraft-account.sign-in": {
      "message": "Увійти в Minecraft"
    },
@@ -13485,7 +13492,7 @@ index 113715a3..b344ed6b 100644
    "minecraft-required.description": {
      "message": "Ви повинні мати обліковий запис Microsoft із придбаним Minecraft, перш ніж запускати ігри."
    },
-@@ -4292,6 +5000,9 @@
+@@ -4220,6 +4928,9 @@
    "minecraft-required.header": {
      "message": "Потрібний Minecraft"
    },
@@ -13496,7 +13503,7 @@ index 113715a3..b344ed6b 100644
      "message": "Увійти в Microsoft"
    },
 diff --git a/apps/app-frontend/src/locales/zh-CN/index.json b/apps/app-frontend/src/locales/zh-CN/index.json
-index e7901019..23ead9be 100644
+index 4e420b8..95d6d34 100644
 --- a/apps/app-frontend/src/locales/zh-CN/index.json
 +++ b/apps/app-frontend/src/locales/zh-CN/index.json
 @@ -200,6 +200,66 @@
@@ -13900,7 +13907,7 @@ index e7901019..23ead9be 100644
    "app.debug-export.canceling": {
      "message": "正在取消导出……"
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "下载管理"
    },
@@ -13931,7 +13938,7 @@ index e7901019..23ead9be 100644
    "app.error.state-init.open-backups-folder": {
      "message": "打开备份文件夹"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "侧边栏"
    },
@@ -13950,7 +13957,7 @@ index e7901019..23ead9be 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "在你登录的所有设备上使用这些行为设置。关闭它后可以在设备上单独设置。"
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "跨设备同步功能"
    },
@@ -13963,7 +13970,7 @@ index e7901019..23ead9be 100644
    "app.file-download.canceling": {
      "message": "正在取消下载……"
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "实例库"
    },
@@ -14000,7 +14007,7 @@ index e7901019..23ead9be 100644
    "app.modal.install-to-play.additional-context": {
      "message": "补充说明"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "添加账户"
    },
@@ -14016,7 +14023,7 @@ index e7901019..23ead9be 100644
    "app.nav.home": {
      "message": "首页"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "截图"
    },
@@ -14026,7 +14033,7 @@ index e7901019..23ead9be 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "登录到 Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "前进"
    },
@@ -14057,7 +14064,7 @@ index e7901019..23ead9be 100644
    "app.news.title": {
      "message": "新闻"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "警告"
    },
@@ -14082,7 +14089,7 @@ index e7901019..23ead9be 100644
    "app.project.actions.label": {
      "message": "项目操作"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "实例操作"
    },
@@ -14092,7 +14099,7 @@ index e7901019..23ead9be 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "拖动以显示最近的实例"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "资源"
    },
@@ -14102,7 +14109,7 @@ index e7901019..23ead9be 100644
    "app.settings.tabs.syncing": {
      "message": "同步"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "推送更新…"
    },
@@ -14133,7 +14140,7 @@ index e7901019..23ead9be 100644
    "app.sidebar.playing-as": {
      "message": "游玩账户"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "应用"
    },
@@ -14224,7 +14231,7 @@ index e7901019..23ead9be 100644
    "app.skins.delete-button": {
      "message": "删除皮肤"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "编辑皮肤"
    },
@@ -14270,7 +14277,7 @@ index e7901019..23ead9be 100644
    "app.skins.modal.add-skin-button": {
      "message": "添加皮肤"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "披风"
    },
@@ -14280,7 +14287,7 @@ index e7901019..23ead9be 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "登录后才能保存皮肤。"
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "登录 Minecraft"
    },
@@ -14293,7 +14300,7 @@ index e7901019..23ead9be 100644
    "app.skins.title": {
      "message": "皮肤选择器"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} 现已发布。请使用你的软件包管理器进行更新，获取最新功能与修复！"
    },
@@ -14303,7 +14310,7 @@ index e7901019..23ead9be 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} 现已发布！由于你正在使用按流量计费的网络，该更新未自动下载。"
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "下载完成"
    },
@@ -14313,7 +14320,7 @@ index e7901019..23ead9be 100644
    "app.update-popup.reload": {
      "message": "重新加载以更新"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "打开文件夹"
    },
@@ -14323,7 +14330,7 @@ index e7901019..23ead9be 100644
    "instance.action.repair": {
      "message": "修复"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "添加服务器"
    },
@@ -14336,7 +14343,7 @@ index e7901019..23ead9be 100644
    "instance.edit-server.title": {
      "message": "编辑服务器"
    },
-@@ -4307,12 +4988,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "添加账户"
    },
@@ -14364,7 +14371,7 @@ index e7901019..23ead9be 100644
    "minecraft-account.remove-account": {
      "message": "移除账户"
    },
-@@ -4322,6 +5018,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "登录 Minecraft"
    },
@@ -14383,7 +14390,7 @@ index e7901019..23ead9be 100644
    "minecraft-required.description": {
      "message": "你需要先登录拥有 Minecraft 的 Microsoft 账户，然后才能启动游戏。"
    },
-@@ -4340,6 +5048,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -14394,7 +14401,7 @@ index e7901019..23ead9be 100644
      "message": "登录 Microsoft 账户"
    },
 diff --git a/apps/app-frontend/src/locales/zh-TW/index.json b/apps/app-frontend/src/locales/zh-TW/index.json
-index bf29409d..c33e1bd6 100644
+index 600a4bb..4e0f453 100644
 --- a/apps/app-frontend/src/locales/zh-TW/index.json
 +++ b/apps/app-frontend/src/locales/zh-TW/index.json
 @@ -200,6 +200,66 @@
@@ -14798,7 +14805,7 @@ index bf29409d..c33e1bd6 100644
    "app.debug-export.canceling": {
      "message": "正在取消匯出..."
    },
-@@ -395,6 +782,30 @@
+@@ -386,6 +773,30 @@
    "app.download-manager.title": {
      "message": "下載管理器"
    },
@@ -14829,7 +14836,7 @@ index bf29409d..c33e1bd6 100644
    "app.error.state-init.open-backups-folder": {
      "message": "開啟備份資料夾"
    },
-@@ -467,6 +878,18 @@
+@@ -458,6 +869,18 @@
    "app.features-settings.sidebar.title": {
      "message": "側邊欄"
    },
@@ -14848,7 +14855,7 @@ index bf29409d..c33e1bd6 100644
    "app.features-settings.sync-across-devices.description": {
      "message": "在你登入的所有裝置套用這些功能設定。如果要在這個裝置上單獨設定，請關閉這個選項。"
    },
-@@ -476,6 +899,12 @@
+@@ -467,6 +890,12 @@
    "app.features-settings.sync-across-devices.title": {
      "message": "同步所有裝置的功能"
    },
@@ -14861,7 +14868,7 @@ index bf29409d..c33e1bd6 100644
    "app.file-download.canceling": {
      "message": "正在取消下載..."
    },
-@@ -1253,6 +1682,36 @@
+@@ -1238,6 +1667,36 @@
    "app.library.title": {
      "message": "遊戲庫"
    },
@@ -14898,7 +14905,7 @@ index bf29409d..c33e1bd6 100644
    "app.modal.install-to-play.additional-context": {
      "message": "補充說明"
    },
-@@ -1376,9 +1835,15 @@
+@@ -1361,9 +1820,15 @@
    "app.nav.add-account": {
      "message": "新增帳號"
    },
@@ -14914,7 +14921,7 @@ index bf29409d..c33e1bd6 100644
    "app.nav.home": {
      "message": "首頁"
    },
-@@ -1397,6 +1862,9 @@
+@@ -1382,6 +1847,9 @@
    "app.nav.screenshots": {
      "message": "螢幕擷取畫面"
    },
@@ -14924,7 +14931,7 @@ index bf29409d..c33e1bd6 100644
    "app.nav.sign-in-to-modrinth-account": {
      "message": "登入 Modrinth"
    },
-@@ -1415,12 +1883,30 @@
+@@ -1400,12 +1868,30 @@
    "app.navigation.go-forward": {
      "message": "下一頁"
    },
@@ -14955,7 +14962,7 @@ index bf29409d..c33e1bd6 100644
    "app.news.title": {
      "message": "新聞"
    },
-@@ -1430,6 +1916,24 @@
+@@ -1415,6 +1901,24 @@
    "app.notification.warning": {
      "message": "警告"
    },
@@ -14980,7 +14987,7 @@ index bf29409d..c33e1bd6 100644
    "app.project.actions.label": {
      "message": "專案動作"
    },
-@@ -1478,6 +1982,9 @@
+@@ -1463,6 +1967,9 @@
    "app.quick-instance-switcher.actions.label": {
      "message": "實例動作"
    },
@@ -14990,7 +14997,7 @@ index bf29409d..c33e1bd6 100644
    "app.quick-instance-switcher.drag-show-tooltip": {
      "message": "拖曳顯示最近遊玩的實例"
    },
-@@ -3122,6 +3629,9 @@
+@@ -3107,6 +3614,9 @@
    "app.settings.tabs.resources": {
      "message": "資源"
    },
@@ -15000,7 +15007,7 @@ index bf29409d..c33e1bd6 100644
    "app.settings.tabs.syncing": {
      "message": "同步"
    },
-@@ -3164,6 +3674,30 @@
+@@ -3149,6 +3659,30 @@
    "app.shared-instance-publish.uploading": {
      "message": "正在推送更新…"
    },
@@ -15031,7 +15038,7 @@ index bf29409d..c33e1bd6 100644
    "app.sidebar.playing-as": {
      "message": "目前遊玩帳號"
    },
-@@ -3176,6 +3710,90 @@
+@@ -3161,6 +3695,90 @@
    "app.skins.apply-button": {
      "message": "套用"
    },
@@ -15122,7 +15129,7 @@ index bf29409d..c33e1bd6 100644
    "app.skins.delete-button": {
      "message": "刪除外觀"
    },
-@@ -3206,6 +3824,45 @@
+@@ -3191,6 +3809,45 @@
    "app.skins.edit-button": {
      "message": "編輯外觀"
    },
@@ -15168,7 +15175,7 @@ index bf29409d..c33e1bd6 100644
    "app.skins.modal.add-skin-button": {
      "message": "新增外觀"
    },
-@@ -3227,6 +3884,9 @@
+@@ -3212,6 +3869,9 @@
    "app.skins.modal.cape-section": {
      "message": "披風"
    },
@@ -15178,7 +15185,7 @@ index bf29409d..c33e1bd6 100644
    "app.skins.modal.demo-save-tooltip": {
      "message": "登入即可儲存外觀。"
    },
-@@ -3329,6 +3989,12 @@
+@@ -3314,6 +3974,12 @@
    "app.skins.sign-in.button": {
      "message": "登入 Microsoft"
    },
@@ -15191,7 +15198,7 @@ index bf29409d..c33e1bd6 100644
    "app.skins.title": {
      "message": "外觀選擇工具"
    },
-@@ -3488,6 +4154,9 @@
+@@ -3428,6 +4094,9 @@
    "app.update-popup.body.linux": {
      "message": "Modrinth App v{version} 現已推出。請使用軟體包管理員進行更新，以取得最新的功能與修正！"
    },
@@ -15201,7 +15208,7 @@ index bf29409d..c33e1bd6 100644
    "app.update-popup.body.metered": {
      "message": "Modrinth App v{version} 現已推出！由於你目前使用的是計量付費網路，我們並未自動下載更新。"
    },
-@@ -3500,6 +4169,9 @@
+@@ -3440,6 +4109,9 @@
    "app.update-popup.download-complete": {
      "message": "下載完成"
    },
@@ -15211,7 +15218,7 @@ index bf29409d..c33e1bd6 100644
    "app.update-popup.reload": {
      "message": "重新載入即可更新"
    },
-@@ -3710,6 +4382,9 @@
+@@ -3635,6 +4307,9 @@
    "instance.action.open-folder": {
      "message": "開啟資料夾"
    },
@@ -15221,7 +15228,7 @@ index bf29409d..c33e1bd6 100644
    "instance.action.repair": {
      "message": "修復"
    },
-@@ -3740,6 +4415,12 @@
+@@ -3665,6 +4340,12 @@
    "instance.add-server.title": {
      "message": "新增伺服器"
    },
@@ -15234,7 +15241,7 @@ index bf29409d..c33e1bd6 100644
    "instance.edit-server.title": {
      "message": "編輯伺服器"
    },
-@@ -4298,12 +4979,27 @@
+@@ -4154,12 +4835,27 @@
    "minecraft-account.add-account": {
      "message": "新增帳號"
    },
@@ -15262,7 +15269,7 @@ index bf29409d..c33e1bd6 100644
    "minecraft-account.remove-account": {
      "message": "移除帳號"
    },
-@@ -4313,6 +5009,18 @@
+@@ -4169,6 +4865,18 @@
    "minecraft-account.sign-in": {
      "message": "登入 Minecraft"
    },
@@ -15281,7 +15288,7 @@ index bf29409d..c33e1bd6 100644
    "minecraft-required.description": {
      "message": "你需要登入擁有 Minecraft 的 Microsoft 帳號才能啟動遊戲。"
    },
-@@ -4331,6 +5039,9 @@
+@@ -4187,6 +4895,9 @@
    "minecraft-required.header": {
      "message": "需要 Minecraft"
    },
@@ -15292,10 +15299,10 @@ index bf29409d..c33e1bd6 100644
      "message": "登入 Microsoft"
    },
 diff --git a/packages/ui/src/locales/de-CH/index.json b/packages/ui/src/locales/de-CH/index.json
-index 6d178fbd..a0c38cb8 100644
+index cf49016..4c72a6e 100644
 --- a/packages/ui/src/locales/de-CH/index.json
 +++ b/packages/ui/src/locales/de-CH/index.json
-@@ -983,6 +983,12 @@
+@@ -1010,6 +1010,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Keine Instanzen gefunden"
    },
@@ -15309,10 +15316,10 @@ index 6d178fbd..a0c38cb8 100644
      "defaultMessage": "Instanznamen suchen"
    },
 diff --git a/packages/ui/src/locales/de-DE/index.json b/packages/ui/src/locales/de-DE/index.json
-index 04e17b8b..8bf16404 100644
+index 85e9a8c..8819f63 100644
 --- a/packages/ui/src/locales/de-DE/index.json
 +++ b/packages/ui/src/locales/de-DE/index.json
-@@ -983,6 +983,12 @@
+@@ -1010,6 +1010,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Keine Instanzen gefunden"
    },
@@ -15326,10 +15333,10 @@ index 04e17b8b..8bf16404 100644
      "defaultMessage": "Instanznamen suchen"
    },
 diff --git a/packages/ui/src/locales/es-419/index.json b/packages/ui/src/locales/es-419/index.json
-index 1edded44..53320e67 100644
+index da99e82..ee2413f 100644
 --- a/packages/ui/src/locales/es-419/index.json
 +++ b/packages/ui/src/locales/es-419/index.json
-@@ -983,6 +983,12 @@
+@@ -968,6 +968,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "No se encontraron instancias"
    },
@@ -15343,10 +15350,10 @@ index 1edded44..53320e67 100644
      "defaultMessage": "Buscar nombre de instancia"
    },
 diff --git a/packages/ui/src/locales/es-ES/index.json b/packages/ui/src/locales/es-ES/index.json
-index 0003400d..a56908d7 100644
+index 12582eb..39a3337 100644
 --- a/packages/ui/src/locales/es-ES/index.json
 +++ b/packages/ui/src/locales/es-ES/index.json
-@@ -971,6 +971,12 @@
+@@ -950,6 +950,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Ninguna instancia encontrada"
    },
@@ -15360,10 +15367,10 @@ index 0003400d..a56908d7 100644
      "defaultMessage": "Buscar instancia por nombre"
    },
 diff --git a/packages/ui/src/locales/fr-FR/index.json b/packages/ui/src/locales/fr-FR/index.json
-index 9cd7ee2d..82dfb864 100644
+index 93da781..f471204 100644
 --- a/packages/ui/src/locales/fr-FR/index.json
 +++ b/packages/ui/src/locales/fr-FR/index.json
-@@ -968,6 +968,12 @@
+@@ -986,6 +986,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Aucune instance trouvée"
    },
@@ -15377,10 +15384,10 @@ index 9cd7ee2d..82dfb864 100644
      "defaultMessage": "Rechercher le nom de l'instance"
    },
 diff --git a/packages/ui/src/locales/hu-HU/index.json b/packages/ui/src/locales/hu-HU/index.json
-index b8a60ab1..fe89fb6a 100644
+index de78f53..6b0122e 100644
 --- a/packages/ui/src/locales/hu-HU/index.json
 +++ b/packages/ui/src/locales/hu-HU/index.json
-@@ -953,6 +953,12 @@
+@@ -992,6 +992,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Nem találhatóak példányok"
    },
@@ -15394,10 +15401,10 @@ index b8a60ab1..fe89fb6a 100644
      "defaultMessage": "Példánynév keresése"
    },
 diff --git a/packages/ui/src/locales/it-IT/index.json b/packages/ui/src/locales/it-IT/index.json
-index f028273c..04430153 100644
+index 2b07902..80ba6d8 100644
 --- a/packages/ui/src/locales/it-IT/index.json
 +++ b/packages/ui/src/locales/it-IT/index.json
-@@ -983,6 +983,12 @@
+@@ -1010,6 +1010,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Nessuna istanza trovata"
    },
@@ -15411,10 +15418,10 @@ index f028273c..04430153 100644
      "defaultMessage": "Cerca nome istanza"
    },
 diff --git a/packages/ui/src/locales/ja-JP/index.json b/packages/ui/src/locales/ja-JP/index.json
-index 29531c2d..1e83ffc9 100644
+index 17f38ed..944f934 100644
 --- a/packages/ui/src/locales/ja-JP/index.json
 +++ b/packages/ui/src/locales/ja-JP/index.json
-@@ -965,6 +965,12 @@
+@@ -947,6 +947,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "インスタンスは見つかりませんでした"
    },
@@ -15428,10 +15435,10 @@ index 29531c2d..1e83ffc9 100644
      "defaultMessage": "インスタンス名を検索"
    },
 diff --git a/packages/ui/src/locales/nl-NL/index.json b/packages/ui/src/locales/nl-NL/index.json
-index 0660b6d2..1ad0df82 100644
+index 19500a7..53a26f7 100644
 --- a/packages/ui/src/locales/nl-NL/index.json
 +++ b/packages/ui/src/locales/nl-NL/index.json
-@@ -971,6 +971,12 @@
+@@ -950,6 +950,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Geen instanties gevonden"
    },
@@ -15445,10 +15452,10 @@ index 0660b6d2..1ad0df82 100644
      "defaultMessage": "Op naam van instantie zoeken"
    },
 diff --git a/packages/ui/src/locales/pl-PL/index.json b/packages/ui/src/locales/pl-PL/index.json
-index 5dc8ce68..5e589e8c 100644
+index 79ad5e4..308d737 100644
 --- a/packages/ui/src/locales/pl-PL/index.json
 +++ b/packages/ui/src/locales/pl-PL/index.json
-@@ -971,6 +971,12 @@
+@@ -983,6 +983,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Nie znaleziono żadnych instancji"
    },
@@ -15462,10 +15469,10 @@ index 5dc8ce68..5e589e8c 100644
      "defaultMessage": "Szukaj nazwy instancji"
    },
 diff --git a/packages/ui/src/locales/pt-BR/index.json b/packages/ui/src/locales/pt-BR/index.json
-index 25f08d44..89b77be8 100644
+index 1a7754d..3896721 100644
 --- a/packages/ui/src/locales/pt-BR/index.json
 +++ b/packages/ui/src/locales/pt-BR/index.json
-@@ -983,6 +983,12 @@
+@@ -1010,6 +1010,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Nenhuma instância encontrada"
    },
@@ -15479,10 +15486,10 @@ index 25f08d44..89b77be8 100644
      "defaultMessage": "Buscar nome da instância"
    },
 diff --git a/packages/ui/src/locales/ru-RU/index.json b/packages/ui/src/locales/ru-RU/index.json
-index b17e016a..3cd77051 100644
+index 1477f59..7876f6a 100644
 --- a/packages/ui/src/locales/ru-RU/index.json
 +++ b/packages/ui/src/locales/ru-RU/index.json
-@@ -917,6 +917,12 @@
+@@ -953,6 +953,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Сборки не найдены"
    },
@@ -15496,10 +15503,10 @@ index b17e016a..3cd77051 100644
      "defaultMessage": "Поиск сборки по названию"
    },
 diff --git a/packages/ui/src/locales/sv-SE/index.json b/packages/ui/src/locales/sv-SE/index.json
-index f3941fd8..2b76c0bb 100644
+index 2b5a220..c2bdd6b 100644
 --- a/packages/ui/src/locales/sv-SE/index.json
 +++ b/packages/ui/src/locales/sv-SE/index.json
-@@ -926,6 +926,12 @@
+@@ -908,6 +908,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Inga instanser hittades"
    },
@@ -15513,10 +15520,10 @@ index f3941fd8..2b76c0bb 100644
      "defaultMessage": "Sök instansnamn"
    },
 diff --git a/packages/ui/src/locales/tr-TR/index.json b/packages/ui/src/locales/tr-TR/index.json
-index 63a7f68e..150f5356 100644
+index 26c3fd5..b42e3e1 100644
 --- a/packages/ui/src/locales/tr-TR/index.json
 +++ b/packages/ui/src/locales/tr-TR/index.json
-@@ -968,6 +968,12 @@
+@@ -980,6 +980,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Herhangi bir kurulum bulunamadı"
    },
@@ -15530,10 +15537,10 @@ index 63a7f68e..150f5356 100644
      "defaultMessage": "Kurulum adını ara"
    },
 diff --git a/packages/ui/src/locales/uk-UA/index.json b/packages/ui/src/locales/uk-UA/index.json
-index 8e6f8f28..9573d0ff 100644
+index 2565589..5e599d9 100644
 --- a/packages/ui/src/locales/uk-UA/index.json
 +++ b/packages/ui/src/locales/uk-UA/index.json
-@@ -926,6 +926,12 @@
+@@ -941,6 +941,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "Примірників не знайдено"
    },
@@ -15547,10 +15554,10 @@ index 8e6f8f28..9573d0ff 100644
      "defaultMessage": "Пошук за назвою примірника"
    },
 diff --git a/packages/ui/src/locales/zh-CN/index.json b/packages/ui/src/locales/zh-CN/index.json
-index 69e0c1b7..a36f1bb4 100644
+index e220270..550bbe4 100644
 --- a/packages/ui/src/locales/zh-CN/index.json
 +++ b/packages/ui/src/locales/zh-CN/index.json
-@@ -983,6 +983,12 @@
+@@ -1007,6 +1007,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "未找到实例"
    },
@@ -15564,10 +15571,10 @@ index 69e0c1b7..a36f1bb4 100644
      "defaultMessage": "搜索实例名称"
    },
 diff --git a/packages/ui/src/locales/zh-TW/index.json b/packages/ui/src/locales/zh-TW/index.json
-index a6b5c59e..938bc2fd 100644
+index dad317f..210efca 100644
 --- a/packages/ui/src/locales/zh-TW/index.json
 +++ b/packages/ui/src/locales/zh-TW/index.json
-@@ -971,6 +971,12 @@
+@@ -1007,6 +1007,12 @@
    "creation-flow.modal.import-instance.notification.no-instances-found.title": {
      "defaultMessage": "找不到實例"
    },

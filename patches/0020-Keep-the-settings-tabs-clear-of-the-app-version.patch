@@ -13,7 +13,7 @@ the content beside it already does.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/packages/ui/src/components/modal/TabbedModal.vue b/packages/ui/src/components/modal/TabbedModal.vue
-index c3a876e9..e24e058a 100644
+index c3a876e..e24e058 100644
 --- a/packages/ui/src/components/modal/TabbedModal.vue
 +++ b/packages/ui/src/components/modal/TabbedModal.vue
 @@ -183,7 +183,7 @@ defineExpose({ show, hide, selectedTab, setTab })

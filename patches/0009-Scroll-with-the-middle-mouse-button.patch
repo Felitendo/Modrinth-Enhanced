@@ -11,10 +11,10 @@ Subject: [PATCH] Scroll with the middle mouse button
  create mode 100644 apps/app-frontend/src/helpers/autoscroll.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 26d5eb56..7e660eba 100644
+index ef34740..f93376d 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -107,6 +107,7 @@ import {
+@@ -122,6 +122,7 @@ import {
  } from '@/helpers/ads.js'
  import { debugAnalytics, initAnalytics, trackEvent } from '@/helpers/analytics'
  import { check_reachable } from '@/helpers/auth.js'
@@ -22,7 +22,7 @@ index 26d5eb56..7e660eba 100644
  import { get_user, get_user_many, get_version } from '@/helpers/cache.js'
  import { gameSettingsQueryOptions } from '@/helpers/game-options'
  import { install_create_modpack_instance, install_get_modpack_preview } from '@/helpers/install'
-@@ -525,11 +526,18 @@ onMounted(async () => {
+@@ -554,11 +555,18 @@ onMounted(async () => {
  	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
  	document.querySelector('body').addEventListener('contextmenu', handleContextMenu)
  	document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -42,7 +42,7 @@ index 26d5eb56..7e660eba 100644
  	document.querySelector('body').removeEventListener('auxclick', handleAuxClick)
  	document.querySelector('body').removeEventListener('contextmenu', handleContextMenu)
 diff --git a/apps/app-frontend/src/assets/stylesheets/global.scss b/apps/app-frontend/src/assets/stylesheets/global.scss
-index ba4da08e..c5129acf 100644
+index ba4da08..c5129ac 100644
 --- a/apps/app-frontend/src/assets/stylesheets/global.scss
 +++ b/apps/app-frontend/src/assets/stylesheets/global.scss
 @@ -83,6 +83,56 @@ html.rounded-window #app {
@@ -104,7 +104,7 @@ index ba4da08e..c5129acf 100644
  }
 diff --git a/apps/app-frontend/src/helpers/autoscroll.ts b/apps/app-frontend/src/helpers/autoscroll.ts
 new file mode 100644
-index 00000000..82e17906
+index 0000000..82e1790
 --- /dev/null
 +++ b/apps/app-frontend/src/helpers/autoscroll.ts
 @@ -0,0 +1,290 @@

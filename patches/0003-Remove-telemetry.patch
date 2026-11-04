@@ -40,7 +40,7 @@ for them.
  8 files changed, 34 insertions(+), 153 deletions(-)
 
 diff --git a/apps/app-frontend/index.html b/apps/app-frontend/index.html
-index 63677884..9738bbcd 100644
+index 6367788..9738bbc 100644
 --- a/apps/app-frontend/index.html
 +++ b/apps/app-frontend/index.html
 @@ -11,7 +11,6 @@
@@ -52,7 +52,7 @@ index 63677884..9738bbcd 100644
  	</body>
  </html>
 diff --git a/apps/app-frontend/src/components/ui/SurveyPopup.vue b/apps/app-frontend/src/components/ui/SurveyPopup.vue
-index 7c2f4069..6d63e0a8 100644
+index 7c2f406..6d63e0a 100644
 --- a/apps/app-frontend/src/components/ui/SurveyPopup.vue
 +++ b/apps/app-frontend/src/components/ui/SurveyPopup.vue
 @@ -2,7 +2,6 @@
@@ -82,7 +82,7 @@ index 7c2f4069..6d63e0a8 100644
  	const surveyToShow = surveys.find(
  		(survey) =>
 diff --git a/apps/app-frontend/src/features/settings/account/privacy-settings.vue b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
-index 8773f8f6..d31e8c5b 100644
+index 8773f8f..d31e8c5 100644
 --- a/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 +++ b/apps/app-frontend/src/features/settings/account/privacy-settings.vue
 @@ -40,7 +40,7 @@ const messages = defineMessages({
@@ -103,7 +103,7 @@ index 8773f8f6..d31e8c5b 100644
  
  	<div class="mt-4 flex items-center justify-between gap-4">
 diff --git a/apps/app-frontend/src/helpers/error-reporting.ts b/apps/app-frontend/src/helpers/error-reporting.ts
-index bb20aa9c..46a97499 100644
+index bb20aa9..46a9749 100644
 --- a/apps/app-frontend/src/helpers/error-reporting.ts
 +++ b/apps/app-frontend/src/helpers/error-reporting.ts
 @@ -1,66 +1,16 @@
@@ -185,10 +185,10 @@ index bb20aa9c..46a97499 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 4b5c22d6..9aabc45c 100644
+index 8c1d8d8..928add2 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2760,7 +2760,7 @@
+@@ -2931,7 +2931,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {
@@ -198,15 +198,15 @@ index 4b5c22d6..9aabc45c 100644
    "app.settings.privacy.telemetry.title": {
      "message": "Telemetry"
 diff --git a/apps/app/tauri.conf.json b/apps/app/tauri.conf.json
-index ae3af5dc..e5bbabef 100644
+index b09e2aa..b204c07 100644
 --- a/apps/app/tauri.conf.json
 +++ b/apps/app/tauri.conf.json
 @@ -102,12 +102,12 @@
  			"capabilities": ["ads", "core", "plugins"],
  			"csp": {
  				"default-src": "'self' customprotocol: asset:",
--				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
-+				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
+-				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://*.sentry.io https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com https://app.getsentry.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://kyros-test3.tail029726.ts.net wss://kyros-test3.tail029726.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
++				"connect-src": "ipc: http://ipc.localhost https://modrinth.com https://*.modrinth.com https://*.nodes.modrinth.com https://api.mclo.gs http://textures.minecraft.net https://textures.minecraft.net https://js.stripe.com https://*.stripe.com wss://*.stripe.com https://*.intercom.io wss://*.intercom.io https://*.intercomcdn.com https://www.intercom-reporting.com wss://*.nodes.modrinth.com https://*.taila228c5.ts.net https://*.taila228c5.ts.net wss://*.taila228c5.ts.net https://kyros-test3.tail029726.ts.net wss://kyros-test3.tail029726.ts.net https://fill.papermc.io https://api.purpurmc.org 'self' data: blob:",
  				"font-src": ["https://cdn.modrinth.com/fonts/", "https://js.intercomcdn.com"],
  				"img-src": "https: 'unsafe-inline' 'self' asset: http://asset.localhost http://textures.minecraft.net blob: data:",
  				"style-src": "'unsafe-inline' 'self'",
@@ -214,11 +214,11 @@ index ae3af5dc..e5bbabef 100644
 -				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://tally.so/popup/ https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
 +				"script-src": "https://js.stripe.com https://widget.intercom.io https://js.intercomcdn.com 'self'",
 +				"frame-src": "https://www.youtube.com https://www.youtube-nocookie.com https://discord.com https://js.stripe.com https://hooks.stripe.com https://*.intercom.io https://intercom-sheets.com https://www.intercom-reporting.com https://app.intercom.com 'self'",
- 				"media-src": "https://*.githubusercontent.com"
+ 				"media-src": "'self' https://*.githubusercontent.com"
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 1164a5e3..07787523 100644
+index 1164a5e..0778752 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -5,14 +5,11 @@ use crate::state::{
@@ -338,10 +338,10 @@ index 1164a5e3..07787523 100644
          Ok(())
      };
 diff --git a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-index d96c14d4..b69ee853 100644
+index fb4ad5d..4e1da45 100644
 --- a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
 +++ b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-@@ -965,11 +965,9 @@ function showSurvey() {
+@@ -1013,11 +1013,9 @@ function showSurvey() {
  }
  
  function loadTallyScript() {

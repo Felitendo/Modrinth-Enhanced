@@ -43,7 +43,7 @@ account list shows which server an account is on.
  create mode 100644 apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 
 diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
-index 7036d6b4..1164b119 100644
+index 7036d6b..1164b11 100644
 --- a/apps/app-frontend/src/app/shell/sidebar/index.vue
 +++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
 @@ -62,6 +62,7 @@ const minecraftAccounts = computed<MinecraftAccountsActions | null>(() => {
@@ -55,7 +55,7 @@ index 7036d6b4..1164b119 100644
  		setEquippedSkin: card.setEquippedSkin,
  		setLoginDisabled: card.setLoginDisabled,
 diff --git a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
-index 4eea008e..3d5d1737 100644
+index 4eea008..3d5d173 100644
 --- a/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 +++ b/apps/app-frontend/src/app/shell/title-bar/account-switcher.vue
 @@ -22,7 +22,7 @@
@@ -188,7 +188,7 @@ index 4eea008e..3d5d1737 100644
  		id: 'minecraft-account.remove-account',
 diff --git a/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 new file mode 100644
-index 00000000..a2873fe6
+index 0000000..a2873fe
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/AuthlibAccountModal.vue
 @@ -0,0 +1,334 @@
@@ -528,7 +528,7 @@ index 00000000..a2873fe6
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/MicrosoftLogo.vue b/apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 new file mode 100644
-index 00000000..6d1fd756
+index 0000000..6d1fd75
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/MicrosoftLogo.vue
 @@ -0,0 +1,8 @@
@@ -541,7 +541,7 @@ index 00000000..6d1fd756
 +	</svg>
 +</template>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index 262311e4..fc2cbf5b 100644
+index 262311e..fc2cbf5 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -45,11 +45,15 @@
@@ -606,7 +606,7 @@ index 262311e4..fc2cbf5b 100644
  	show,
  })
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 632483ef..03a61f26 100644
+index 632483e..03a61f2 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -9,14 +9,23 @@
@@ -824,7 +824,7 @@ index 632483ef..03a61f26 100644
  	removeAccount: {
  		id: 'minecraft-account.remove-account',
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
-index fa9623e4..5fa4bac9 100644
+index fa9623e..5fa4bac 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
 +++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
 @@ -7,6 +7,7 @@ export interface MinecraftAccountsActions {
@@ -836,7 +836,7 @@ index fa9623e4..5fa4bac9 100644
  	setEquippedSkin: (skin: Skin) => Promise<void>
  	setLoginDisabled: (disabled: boolean) => void
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index 9b2408e3..f4d24a10 100644
+index 9b2408e..f4d24a1 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
 @@ -84,6 +84,32 @@ export async function login_ely(username, password) {
@@ -873,7 +873,7 @@ index 9b2408e3..f4d24a10 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index ab845751..7e31d8e5 100644
+index d849f05..28eead5 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -18,6 +18,8 @@ fn main() {
@@ -886,7 +886,7 @@ index ab845751..7e31d8e5 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 8e6ce978..349e7358 100644
+index 8e6ce97..349e735 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -15,6 +15,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
@@ -931,7 +931,7 @@ index 8e6ce978..349e7358 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index c16e7cc4..3aadc9b8 100644
+index c16e7cc..3aadc9b 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
 @@ -4,9 +4,13 @@ use anyhow::Context;
@@ -1037,7 +1037,7 @@ index c16e7cc4..3aadc9b8 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 564e79d0..ffc80cd0 100644
+index 564e79d..ffc80cd 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -1198,10 +1198,11 @@ pub async fn launch_minecraft(
@@ -1066,7 +1066,7 @@ index 564e79d0..ffc80cd0 100644
      }
  
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 1ef1929c..c494f71b 100644
+index 1ef1929..c494f71 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -347,62 +347,145 @@ pub fn offline_uuid(username: &str) -> Uuid {
@@ -1577,7 +1577,7 @@ index 1ef1929c..c494f71b 100644
      }
  }
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
-index 98930d6b..15421437 100644
+index 98930d6..1542143 100644
 --- a/packages/app-lib/src/util/authlib_injector.rs
 +++ b/packages/app-lib/src/util/authlib_injector.rs
 @@ -1,16 +1,134 @@

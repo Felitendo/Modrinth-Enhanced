@@ -44,7 +44,7 @@ Modrinth Enhanced yet.
  create mode 100644 packages/app-lib/src/util/authlib_injector.rs
 
 diff --git a/apps/app-frontend/src/app/shell/sidebar/index.vue b/apps/app-frontend/src/app/shell/sidebar/index.vue
-index bd7e1593..8ffadbc9 100644
+index bd7e159..8ffadbc 100644
 --- a/apps/app-frontend/src/app/shell/sidebar/index.vue
 +++ b/apps/app-frontend/src/app/shell/sidebar/index.vue
 @@ -61,6 +61,7 @@ const minecraftAccounts = computed<MinecraftAccountsActions | null>(() => {
@@ -57,7 +57,7 @@ index bd7e1593..8ffadbc9 100644
  		setLoginDisabled: card.setLoginDisabled,
 diff --git a/apps/app-frontend/src/components/ui/ElyAccountModal.vue b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 new file mode 100644
-index 00000000..c5893756
+index 0000000..c589375
 --- /dev/null
 +++ b/apps/app-frontend/src/components/ui/ElyAccountModal.vue
 @@ -0,0 +1,168 @@
@@ -230,7 +230,7 @@ index 00000000..c5893756
 +})
 +</script>
 diff --git a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
-index bfbb1b22..cf7c3ba0 100644
+index bfbb1b2..cf7c3ba 100644
 --- a/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 +++ b/apps/app-frontend/src/components/ui/minecraft-required-modal/MinecraftRequiredModal.vue
 @@ -47,10 +47,16 @@
@@ -294,7 +294,7 @@ index bfbb1b22..cf7c3ba0 100644
  	show,
  })
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index ebc92c16..35c21fac 100644
+index ebc92c1..35c21fa 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -9,6 +9,10 @@
@@ -391,7 +391,7 @@ index ebc92c16..35c21fac 100644
  		id: 'minecraft-account.remove-account',
  		defaultMessage: 'Remove account',
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/context.ts b/apps/app-frontend/src/features/minecraft-accounts/context.ts
-index 22abc8d5..0d147e79 100644
+index 22abc8d..0d147e7 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/context.ts
 +++ b/apps/app-frontend/src/features/minecraft-accounts/context.ts
 @@ -6,6 +6,7 @@ import type { Skin } from '@/helpers/skins'
@@ -403,7 +403,7 @@ index 22abc8d5..0d147e79 100644
  	setEquippedSkin: (skin: Skin) => Promise<void>
  	setLoginDisabled: (disabled: boolean) => void
 diff --git a/apps/app-frontend/src/helpers/auth.js b/apps/app-frontend/src/helpers/auth.js
-index cb7319a8..57580ff5 100644
+index cb7319a..57580ff 100644
 --- a/apps/app-frontend/src/helpers/auth.js
 +++ b/apps/app-frontend/src/helpers/auth.js
 @@ -46,6 +46,21 @@ export async function login_offline(username) {
@@ -429,7 +429,7 @@ index cb7319a8..57580ff5 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 76c82c6b..894db3f3 100644
+index 18b6927..93afc06 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {
@@ -441,7 +441,7 @@ index 76c82c6b..894db3f3 100644
                          "get_default_user",
                          "set_default_user",
 diff --git a/apps/app/src/api/auth.rs b/apps/app/src/api/auth.rs
-index 03753c4d..42f88b00 100644
+index 03753c4..42f88b0 100644
 --- a/apps/app/src/api/auth.rs
 +++ b/apps/app/src/api/auth.rs
 @@ -11,6 +11,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
@@ -469,7 +469,7 @@ index 03753c4d..42f88b00 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/src/api/minecraft_auth.rs b/packages/app-lib/src/api/minecraft_auth.rs
-index b735a6c8..dffcbb84 100644
+index b735a6c..dffcbb8 100644
 --- a/packages/app-lib/src/api/minecraft_auth.rs
 +++ b/packages/app-lib/src/api/minecraft_auth.rs
 @@ -87,6 +87,40 @@ pub async fn login_offline(username: &str) -> crate::Result<Credentials> {
@@ -514,7 +514,7 @@ index b735a6c8..dffcbb84 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 11625c80..a7488f8f 100644
+index 11625c8..a7488f8 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -1168,6 +1168,22 @@ pub async fn launch_minecraft(
@@ -541,7 +541,7 @@ index 11625c80..a7488f8f 100644
          .arg("com.modrinth.theseus.MinecraftLaunch")
          .arg(version_info.main_class.clone())
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index 9eb49050..bce98344 100644
+index 9eb4905..bce9834 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -310,6 +310,66 @@ pub fn offline_uuid(username: &str) -> Uuid {
@@ -782,7 +782,7 @@ index 9eb49050..bce98344 100644
  
 diff --git a/packages/app-lib/src/util/authlib_injector.rs b/packages/app-lib/src/util/authlib_injector.rs
 new file mode 100644
-index 00000000..98930d6b
+index 0000000..98930d6
 --- /dev/null
 +++ b/packages/app-lib/src/util/authlib_injector.rs
 @@ -0,0 +1,75 @@
@@ -862,7 +862,7 @@ index 00000000..98930d6b
 +    Ok(jar)
 +}
 diff --git a/packages/app-lib/src/util/mod.rs b/packages/app-lib/src/util/mod.rs
-index 1962d6c4..395d7f1c 100644
+index 1962d6c..395d7f1 100644
 --- a/packages/app-lib/src/util/mod.rs
 +++ b/packages/app-lib/src/util/mod.rs
 @@ -1,4 +1,5 @@

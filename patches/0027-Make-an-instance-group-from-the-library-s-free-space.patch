@@ -12,18 +12,18 @@ The same menu now offers it, and opens the dialog that button does.
  2 files changed, 18 insertions(+), 2 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/library/index.vue b/apps/app-frontend/src/components/ui/library/index.vue
-index 5c77fbb1..67c05ddc 100644
+index 1fd672c..825f54c 100644
 --- a/apps/app-frontend/src/components/ui/library/index.vue
 +++ b/apps/app-frontend/src/components/ui/library/index.vue
-@@ -53,6 +53,7 @@ const {
- 	currentDeleteInstances,
+@@ -46,6 +46,7 @@ const {
+ 	reorderGroups,
+ 	instanceOptions,
  	clearLibraryInstanceSelection,
- 	deleteInstance,
 +	openNewGroupModal,
- 	handleInstanceIconSaved,
  	selectedLibraryInstances,
  	setSelectedLibraryInstances,
-@@ -260,6 +261,9 @@ watch(selectedLibraryInstances, (selectedInstances) => {
+ 	toggleLibraryInstanceSelection,
+@@ -246,6 +247,9 @@ watch(selectedLibraryInstances, (selectedInstances) => {
  		anchorInstance.value = null
  	}
  })
@@ -34,25 +34,25 @@ index 5c77fbb1..67c05ddc 100644
  
  <template>
 diff --git a/apps/app-frontend/src/pages/Index.vue b/apps/app-frontend/src/pages/Index.vue
-index eb9496e9..3fd7ea7a 100644
+index 1c51891..ad7c135 100644
 --- a/apps/app-frontend/src/pages/Index.vue
 +++ b/apps/app-frontend/src/pages/Index.vue
 @@ -1,5 +1,5 @@
  <script setup lang="ts">
 -import { PlayIcon, PlusIcon } from '@modrinth/assets'
 +import { PlayIcon, PlusIcon, SquarePlusIcon } from '@modrinth/assets'
- import { ContextMenu, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
- import { useQuery } from '@tanstack/vue-query'
- import dayjs from 'dayjs'
-@@ -25,6 +25,7 @@ const { handleError } = injectNotificationManager()
+ import {
+ 	ContextMenu,
+ 	defineMessages,
+@@ -35,6 +35,7 @@ const { handleError } = injectNotificationManager()
  const { hasCreatedInstance, isReady } = injectOnboardingChecklist()
  const showCreationModal = inject<() => void>('showCreationModal')
  const pageOptions = ref<InstanceType<typeof ContextMenu>>()
 +const librarySection = ref<InstanceType<typeof LibrarySection>>()
  const appSettings = useAppSettings()
- onBeforeRouteLeave(() => {
- 	libraryScrollTop.value = document.querySelector('.app-viewport')?.scrollTop ?? 0
-@@ -39,6 +40,11 @@ const messages = defineMessages({
+ const { hiddenIds: hiddenInstanceIds } = useHiddenInstances()
+ const auth = injectAuth()
+@@ -53,6 +54,11 @@ const messages = defineMessages({
  		id: 'app.library.context-menu.create-instance',
  		defaultMessage: 'New instance',
  	},
@@ -64,7 +64,7 @@ index eb9496e9..3fd7ea7a 100644
  	libraryActionsLabel: {
  		id: 'app.library.actions.label',
  		defaultMessage: 'Library actions',
-@@ -84,6 +90,12 @@ function openPageContextMenu(event: MouseEvent) {
+@@ -113,6 +119,12 @@ function openPageContextMenu(event: MouseEvent) {
  			icon: PlusIcon,
  			action: () => showCreationModal?.(),
  		},
@@ -77,7 +77,7 @@ index eb9496e9..3fd7ea7a 100644
  	])
  }
  </script>
-@@ -100,7 +112,7 @@ function openPageContextMenu(event: MouseEvent) {
+@@ -129,7 +141,7 @@ function openPageContextMenu(event: MouseEvent) {
  			v-if="recentInstances?.length > 0 && appSettings.showJumpIn"
  			:recent-instances="recentInstances"
  		/>

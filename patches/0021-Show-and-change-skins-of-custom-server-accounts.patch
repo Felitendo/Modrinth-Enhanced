@@ -30,7 +30,7 @@ Ely.by one.
  6 files changed, 319 insertions(+), 28 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-index ee32e2e9..7d9b78d2 100644
+index ee32e2e..7d9b78d 100644
 --- a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
 +++ b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
 @@ -47,7 +47,11 @@
@@ -77,7 +77,7 @@ index ee32e2e9..7d9b78d2 100644
  	await loadPreviewSkin()
  
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 03a61f26..364aef0f 100644
+index 03a61f2..364aef0 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -185,11 +185,14 @@ type MinecraftCredential = {
@@ -159,10 +159,10 @@ index 03a61f26..364aef0f 100644
  
  async function setAccount(account: MinecraftCredential) {
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 38fdcacb..761bd83f 100644
+index 75d9e7c..d813d0a 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
-@@ -1465,6 +1465,7 @@ await loadAccountSkins()
+@@ -1472,6 +1472,7 @@ await loadAccountSkins()
  	<EditSkinModal
  		ref="editSkinModal"
  		:capes="capes"
@@ -171,7 +171,7 @@ index 38fdcacb..761bd83f 100644
  		@saved="onSkinSaved"
  		@deleted="() => loadSkins()"
 diff --git a/packages/app-lib/src/api/minecraft_skins.rs b/packages/app-lib/src/api/minecraft_skins.rs
-index 6e44ede1..107585ab 100644
+index 6e44ede..107585a 100644
 --- a/packages/app-lib/src/api/minecraft_skins.rs
 +++ b/packages/app-lib/src/api/minecraft_skins.rs
 @@ -82,7 +82,7 @@ mod assets {
@@ -193,7 +193,7 @@ index 6e44ede1..107585ab 100644
          .iter()
          .find(|skin| {
 diff --git a/packages/app-lib/src/state/minecraft_auth.rs b/packages/app-lib/src/state/minecraft_auth.rs
-index c494f71b..e6710b90 100644
+index c494f71..e6710b9 100644
 --- a/packages/app-lib/src/state/minecraft_auth.rs
 +++ b/packages/app-lib/src/state/minecraft_auth.rs
 @@ -361,6 +361,10 @@ const AUTHLIB_REFRESH_TOKEN_PREFIX: &str = "modrinth-enhanced:authlib:";
@@ -470,7 +470,7 @@ index c494f71b..e6710b90 100644
  async fn minecraft_profile(
      token: &str,
 diff --git a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
-index f50a2761..cb85960c 100644
+index f50a276..cb85960 100644
 --- a/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
 +++ b/packages/app-lib/src/state/minecraft_skins/mojang_api.rs
 @@ -25,6 +25,12 @@ impl MinecraftCapeOperation {
