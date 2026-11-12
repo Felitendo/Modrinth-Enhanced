@@ -845,7 +845,7 @@ index b10ea60..988dcf0 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 4a955b9..fc8ecea 100644
+index 7ad354c..a83e821 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -873,10 +873,10 @@ index 4a955b9..fc8ecea 100644
                  "cache",
                  InlinedPlugin::new()
 diff --git a/apps/app/capabilities/plugins.json b/apps/app/capabilities/plugins.json
-index dac1f1e..3fb0c9e 100644
+index 0c4acc3..7e849dc 100644
 --- a/apps/app/capabilities/plugins.json
 +++ b/apps/app/capabilities/plugins.json
-@@ -107,6 +107,7 @@
+@@ -113,6 +113,7 @@
  		"utils:default",
  		"ads:default",
  		"friends:default",
@@ -1270,7 +1270,7 @@ index 90b0f62..998045a 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 78ead22..f560cf9 100644
+index 5347d24..66f0530 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -308,6 +308,7 @@ fn main() {

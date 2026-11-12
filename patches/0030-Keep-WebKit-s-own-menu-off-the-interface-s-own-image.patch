@@ -9,10 +9,10 @@ Subject: [PATCH] Keep WebKit's own menu off the interface's own images
  2 files changed, 11 insertions(+), 2 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 1f452db..13eba3a 100644
+index 99abd1b..8410bba 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2101,7 +2101,16 @@ function handleAuxClick(e) {
+@@ -2107,7 +2107,16 @@ function handleAuxClick(e) {
  function handleContextMenu(event) {
  	const target = event.target
  	if (target instanceof Element) {

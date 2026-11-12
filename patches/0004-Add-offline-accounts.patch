@@ -53,22 +53,22 @@ which offered Microsoft and nothing else:
  create mode 100644 apps/app-frontend/src/components/ui/OfflineAccountModal.vue
 
 diff --git a/Cargo.lock b/Cargo.lock
-index eb8dfae..a28019c 100644
+index ffaf74a..ffd0376 100644
 --- a/Cargo.lock
 +++ b/Cargo.lock
-@@ -13802,6 +13802,7 @@ dependencies = [
-  "infer 0.22.0",
+@@ -13837,6 +13837,7 @@ dependencies = [
   "itertools 0.15.0",
   "json5",
+  "libc",
 + "md5",
   "minecraft-meta-manifest",
   "modrinth-content-management",
   "notify",
 diff --git a/Cargo.toml b/Cargo.toml
-index a01116a..0046924 100644
+index ca462e9..2c078ec 100644
 --- a/Cargo.toml
 +++ b/Cargo.toml
-@@ -141,6 +141,7 @@ lz4_flex = { version = "0.14.0", default-features = false, features = [
+@@ -148,6 +148,7 @@ lz4_flex = { version = "0.14.0", default-features = false, features = [
    "std",
  ] }
  maxminddb = "0.32.0"
@@ -77,10 +77,10 @@ index a01116a..0046924 100644
  minecraft-meta-model = { path = "packages/minecraft-meta-model" }
  modrinth-content-management = { path = "packages/modrinth-content-management" }
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 64cca3e..43b8d09 100644
+index 0d0c525..3d00b6e 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -2214,6 +2214,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2220,6 +2220,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
  			@create-instance="installationModal?.show()"
@@ -491,7 +491,7 @@ index 94bd13e..cb7319a 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 1fd2fb7..18b6927 100644
+index 5413d1b..fa8a650 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,7 @@ fn main() {
@@ -528,7 +528,7 @@ index 1a59db1..03753c4 100644
  pub async fn remove_user(user: uuid::Uuid) -> Result<()> {
      Ok(minecraft_auth::remove_user(user).await?)
 diff --git a/packages/app-lib/Cargo.toml b/packages/app-lib/Cargo.toml
-index 305f785..8a155a6 100644
+index 1d7a866..a1216ff 100644
 --- a/packages/app-lib/Cargo.toml
 +++ b/packages/app-lib/Cargo.toml
 @@ -46,6 +46,7 @@ indicatif = { workspace = true, optional = true }

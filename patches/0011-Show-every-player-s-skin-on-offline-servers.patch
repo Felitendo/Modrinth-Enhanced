@@ -214,10 +214,10 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index fc8ecea..20f585b 100644
+index a83e821..b729cb4 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -416,6 +416,7 @@ fn main() {
+@@ -422,6 +422,7 @@ fn main() {
                          "show_app_db_backups_folder",
                          "export_debug_info",
                          "cancel_debug_info_export",
@@ -2490,10 +2490,10 @@ index 3906ad2..e0e0151 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index a7488f8..3ea7d8c 100644
+index 6443da6..b39bfa8 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1127,6 +1127,28 @@ pub async fn launch_minecraft(
+@@ -1131,6 +1131,28 @@ pub async fn launch_minecraft(
  
      let rpc_server = RpcServerBuilder::new().launch().await?;
  
@@ -2522,7 +2522,7 @@ index a7488f8..3ea7d8c 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1153,6 +1175,7 @@ pub async fn launch_minecraft(
+@@ -1157,6 +1179,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),
@@ -2531,10 +2531,10 @@ index a7488f8..3ea7d8c 100644
          .into_iter(),
      );
 diff --git a/packages/app-lib/src/state/dirs.rs b/packages/app-lib/src/state/dirs.rs
-index 8e348b5..446fa72 100644
+index 99f5aae..5ff0b15 100644
 --- a/packages/app-lib/src/state/dirs.rs
 +++ b/packages/app-lib/src/state/dirs.rs
-@@ -14,6 +14,7 @@ pub const INSTANCES_FOLDER_NAME: &str = "profiles";
+@@ -13,6 +13,7 @@ pub const INSTANCES_FOLDER_NAME: &str = "profiles";
  pub const METADATA_FOLDER_NAME: &str = "meta";
  pub const SYNCED_OPTIONS_FOLDER_NAME: &str = "synced-options";
  pub const STORE_FOLDER_NAME: &str = "store";
@@ -2542,7 +2542,7 @@ index 8e348b5..446fa72 100644
  
  #[derive(Clone, Debug)]
  pub struct DirectoryInfo {
-@@ -176,6 +177,13 @@ impl DirectoryInfo {
+@@ -175,6 +176,13 @@ impl DirectoryInfo {
          self.config_dir.join(SYNCED_OPTIONS_FOLDER_NAME)
      }
  
@@ -2557,12 +2557,12 @@ index 8e348b5..446fa72 100644
      #[inline]
      pub fn instance_logs_dir(&self, instance_path: &str) -> PathBuf {
 diff --git a/packages/app-lib/src/state/dirs/move_app_directory.rs b/packages/app-lib/src/state/dirs/move_app_directory.rs
-index a4efb81..befd5c4 100644
+index b7abaa1..a5ff79a 100644
 --- a/packages/app-lib/src/state/dirs/move_app_directory.rs
 +++ b/packages/app-lib/src/state/dirs/move_app_directory.rs
-@@ -13,13 +13,14 @@ use sqlx::SqlitePool;
- use std::path::{Path, PathBuf};
- use tokio::fs;
+@@ -78,13 +78,14 @@ const PROTECTED_TARGETS_KEY: &str = "store_directory_move_protected";
+ const PRESERVED_CACHE_ENTRIES: [&str; 2] = ["icons", "game-locales"];
+ const COPY_PROGRESS_LIMIT: f64 = 0.99;
  
 -const MOVED_APP_DIRECTORIES: [&str; 6] = [
 +const MOVED_APP_DIRECTORIES: [&str; 7] = [

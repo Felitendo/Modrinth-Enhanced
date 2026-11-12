@@ -26,7 +26,7 @@ where they belong; only the number of instances stays there.
  create mode 100644 apps/app-frontend/src/features/settings/display/sidebar-settings.vue
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 0da9dc2..5145c62 100644
+index eb6991e..5555ae9 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -4,6 +4,7 @@ import {
@@ -45,7 +45,7 @@ index 0da9dc2..5145c62 100644
  	createServerInviteHandoff,
  	createServerOnboardingFlow,
  	CreationFlowModal,
-@@ -97,6 +99,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
+@@ -98,6 +100,7 @@ import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { useError } from '@/composables/use-error.js'
  import { useInstanceMetadataRefresh } from '@/composables/use-instance-metadata-refresh'
  import { useQuickInstanceLimit } from '@/composables/use-quick-instance-limit.ts'
@@ -53,7 +53,7 @@ index 0da9dc2..5145c62 100644
  import { isDarkTheme, useTheme } from '@/composables/use-theme.ts'
  import { config } from '@/config'
  import ServerPlayHandler from '@/features/hosting/play-handler.vue'
-@@ -240,6 +243,73 @@ const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
+@@ -242,6 +245,73 @@ const INTERCOM_BUBBLE_DEFAULT_PADDING = 20
  const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
@@ -127,7 +127,7 @@ index 0da9dc2..5145c62 100644
  const sidebarToggled = ref(true)
  // Whether the right sidebar is folded away, remembered across restarts in the
  // feature flags. The title bar's fold button is the only thing that sets it:
-@@ -653,6 +723,18 @@ const messages = defineMessages({
+@@ -655,6 +725,18 @@ const messages = defineMessages({
  		id: 'app.nav.screenshots',
  		defaultMessage: 'Screenshots',
  	},
@@ -146,7 +146,7 @@ index 0da9dc2..5145c62 100644
  	createNewInstance: {
  		id: 'app.nav.create-new-instance',
  		defaultMessage: 'Create new instance',
-@@ -2096,52 +2178,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2102,52 +2184,15 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  			class="app-grid-navbar bg-bg-raised flex flex-col p-[0.5rem] pt-0 gap-[0.25rem] w-[--left-bar-width]"
  		>
  			<NavButton
@@ -207,7 +207,7 @@ index 0da9dc2..5145c62 100644
  			</NavButton>
  			<suspense>
  				<QuickInstanceSwitcher>
-@@ -2225,6 +2270,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2231,6 +2276,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<LogInIcon class="text-brand" />
  			</NavButton>
  		</div>
@@ -294,7 +294,7 @@ index 0000000..7225c21
 +	return { order, hidden, isHidden, setHidden, move, setOrder, reset }
 +}
 diff --git a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
-index 4a00474..c72b757 100644
+index 2c44ccf..192ba44 100644
 --- a/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 +++ b/apps/app-frontend/src/features/settings/app-settings-modal/index.vue
 @@ -6,6 +6,7 @@ import {
@@ -313,7 +313,7 @@ index 4a00474..c72b757 100644
  import JavaAndMemorySettings from '@/features/settings/instance-defaults/java-and-memory-settings/index.vue'
  import LaunchHooksSettings from '@/features/settings/instance-defaults/launch-hooks-settings.vue'
  import WindowSettings from '@/features/settings/instance-defaults/window-settings.vue'
-@@ -105,6 +107,15 @@ const tabs = [
+@@ -106,6 +108,15 @@ const tabs = [
  		icon: LightBulbIcon,
  		content: FeaturesSettings,
  	},
@@ -329,8 +329,8 @@ index 4a00474..c72b757 100644
  	{
  		name: defineMessage({
  			id: 'app.settings.tabs.behavior',
-@@ -283,6 +294,15 @@ function showFeatureFlags(): void {
- 	modal.value?.show()
+@@ -251,6 +262,15 @@ function showFeatureFlags(): void {
+ 	modal.value?.show(undefined, featureFlagsTabIndex >= 0 ? featureFlagsTabIndex : undefined)
  }
  
 +/** Opens the settings at the sidebar tab, for the menu on a sidebar button. */
@@ -345,8 +345,8 @@ index 4a00474..c72b757 100644
  function showSyncedOptions(): void {
  	const syncedOptionsTabIndex = availableTabs.value.findIndex(
  		(tab) => tab.content === SyncingSettings,
-@@ -306,7 +326,14 @@ function showInstanceDefaults(tab: InstanceDefaultsTab): void {
- 	modal.value?.show()
+@@ -268,7 +288,14 @@ function showInstanceDefaults(tab: InstanceDefaultsTab): void {
+ 	modal.value?.show(undefined, tabIndex >= 0 ? tabIndex : undefined)
  }
  
 -defineExpose({ show, showProfile, showFeatureFlags, showSyncedOptions, showInstanceDefaults })

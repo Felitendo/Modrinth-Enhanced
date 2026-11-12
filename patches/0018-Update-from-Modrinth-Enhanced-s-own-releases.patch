@@ -19,10 +19,10 @@ get a notice with a button to the release on GitHub.
  3 files changed, 76 insertions(+), 21 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 2281cc6..0da9dc2 100644
+index fc5c0db..eb6991e 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -1645,9 +1645,13 @@ const updatePopupMessages = defineMessages({
+@@ -1651,9 +1651,13 @@ const updatePopupMessages = defineMessages({
  		defaultMessage: `Modrinth App v{version} has finished downloading. Reload to update now, or automatically when you close Modrinth App.`,
  	},
  	linuxBody: {
@@ -38,7 +38,7 @@ index 2281cc6..0da9dc2 100644
  	},
  	reload: {
  		id: 'app.update-popup.reload',
-@@ -1822,28 +1826,47 @@ async function checkUpdates() {
+@@ -1828,28 +1832,47 @@ async function checkUpdates() {
  	)
  }
  
@@ -105,7 +105,7 @@ index 2281cc6..0da9dc2 100644
  	} catch (e) {
  		console.error('Failed to check for updates:', e)
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 7dedc61..ffde627 100644
+index 9818507..bd1abf8 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
 @@ -78,6 +78,25 @@ fn is_dev() -> bool {

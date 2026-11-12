@@ -429,7 +429,7 @@ index cb7319a..57580ff 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 18b6927..93afc06 100644
+index fa8a650..0185856 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {
@@ -514,10 +514,10 @@ index b735a6c..dffcbb8 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 11625c8..a7488f8 100644
+index 229bb37..6443da6 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1168,6 +1168,22 @@ pub async fn launch_minecraft(
+@@ -1172,6 +1172,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  

@@ -40,7 +40,7 @@ bar button - so nothing there promises anything.
  7 files changed, 231 insertions(+), 42 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 43b8d09..1c5597d 100644
+index 3d00b6e..e0e78af 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -2,6 +2,7 @@
@@ -67,7 +67,7 @@ index 43b8d09..1c5597d 100644
  	NotificationPanel,
  	PopupNotificationPanel,
  	provideFileDownload,
-@@ -237,12 +240,42 @@ const credentials = ref()
+@@ -239,12 +242,42 @@ const credentials = ref()
  const storedModrinthAccounts = ref([])
  let credentialsRefreshId = 0
  const sidebarToggled = ref(true)
@@ -113,7 +113,7 @@ index 43b8d09..1c5597d 100644
  const forceSidebar = computed(
  	() =>
  		route.path.startsWith('/browse') ||
-@@ -535,6 +568,19 @@ const formatBytes = useFormatBytes()
+@@ -537,6 +570,19 @@ const formatBytes = useFormatBytes()
  
  const messages = defineMessages({
  	warning: { id: 'app.notification.warning', defaultMessage: 'Warning' },
@@ -133,7 +133,7 @@ index 43b8d09..1c5597d 100644
  	updateDownloadMissingVersion: {
  		id: 'app.update.download-error.missing-version',
  		defaultMessage: 'Failed to download update: no version available',
-@@ -2044,6 +2090,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2050,6 +2096,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  				<ImageIcon />
  			</NavButton>
  			<NavButton
@@ -141,7 +141,7 @@ index 43b8d09..1c5597d 100644
  				v-tooltip.right="formatMessage(messages.modrinthHosting)"
  				to="/hosting/manage"
  				:is-primary="(r) => r.path === '/hosting/manage' || r.path === '/hosting/manage/'"
-@@ -2140,9 +2187,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2146,9 +2193,11 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppTitleBar
  			:can-navigate-back="canNavigateBack"
  			:can-navigate-forward="canNavigateForward"
@@ -155,7 +155,7 @@ index 43b8d09..1c5597d 100644
  		/>
  	</div>
  	<div
-@@ -2221,6 +2270,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2227,6 +2276,21 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  	<I18nDebugPanel />
  	<NotificationPanel :has-sidebar="sidebarVisible" />
  	<PopupNotificationPanel :has-sidebar="sidebarVisible" />

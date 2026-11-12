@@ -16,10 +16,10 @@ and never over a language that was picked in the settings.
  create mode 100644 apps/app-frontend/src/helpers/system-locale.ts
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 5145c62..1f452db 100644
+index 5555ae9..99abd1b 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
-@@ -161,6 +161,7 @@ import {
+@@ -163,6 +163,7 @@ import {
  	syncedServersQueryOptions,
  } from '@/helpers/synced-options'
  import { syncedPackQueryOptions } from '@/helpers/synced-packs'
@@ -27,7 +27,7 @@ index 5145c62..1f452db 100644
  import { get_user_preferences } from '@/helpers/user-preferences.ts'
  import { parse_modrinth_user_link } from '@/helpers/users'
  import {
-@@ -864,9 +865,19 @@ async function setupApp() {
+@@ -866,9 +867,19 @@ async function setupApp() {
  		pending_update_toast_for_version,
  	} = await traceStartupStep('Read startup settings', getSettings)
  

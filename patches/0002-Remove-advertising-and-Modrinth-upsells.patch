@@ -29,7 +29,7 @@ ads and these prompts were shown, and nothing more.
  3 files changed, 27 insertions(+), 111 deletions(-)
 
 diff --git a/apps/app-frontend/src/App.vue b/apps/app-frontend/src/App.vue
-index 59328b6..64cca3e 100644
+index 0844b05..0d0c525 100644
 --- a/apps/app-frontend/src/App.vue
 +++ b/apps/app-frontend/src/App.vue
 @@ -1,7 +1,6 @@
@@ -40,7 +40,7 @@ index 59328b6..64cca3e 100644
  	ArrowLeftRightIcon,
  	CompassIcon,
  	ImageIcon,
-@@ -155,7 +154,6 @@ import {
+@@ -157,7 +156,6 @@ import {
  	syncedServersQueryOptions,
  } from '@/helpers/synced-options'
  import { syncedPackQueryOptions } from '@/helpers/synced-packs'
@@ -48,7 +48,7 @@ index 59328b6..64cca3e 100644
  import { get_user_preferences } from '@/helpers/user-preferences.ts'
  import { parse_modrinth_user_link } from '@/helpers/users'
  import {
-@@ -316,12 +314,6 @@ const serverPlay = {
+@@ -318,12 +316,6 @@ const serverPlay = {
  	},
  }
  provideServerPlay(serverPlay)
@@ -61,7 +61,7 @@ index 59328b6..64cca3e 100644
  useQuery({
  	queryKey: computed(() => instanceKeys.sharedEligibility(credentials.value?.user?.id)),
  	queryFn: can_current_user_use_shared_instances,
-@@ -332,16 +324,10 @@ useQuery({
+@@ -334,16 +326,10 @@ useQuery({
  	refetchOnWindowFocus: false,
  	refetchOnReconnect: false,
  })
@@ -82,7 +82,7 @@ index 59328b6..64cca3e 100644
  providePageContext({
  	hierarchicalSidebarAvailable: ref(true),
  	showAds: showAd,
-@@ -643,10 +629,6 @@ const messages = defineMessages({
+@@ -645,10 +631,6 @@ const messages = defineMessages({
  		id: 'app.restarting',
  		defaultMessage: 'Restarting...',
  	},
@@ -93,7 +93,7 @@ index 59328b6..64cca3e 100644
  })
  
  function handleAdsConsentRequired(required) {
-@@ -1314,16 +1296,6 @@ const modrinthAccountMenuOptions = computed(() => [
+@@ -1318,16 +1300,6 @@ const modrinthAccountMenuOptions = computed(() => [
  		icon: UserIcon,
  		action: () => router.push(`/user/${encodeURIComponent(credentials.value.user.username)}`),
  	},
@@ -110,7 +110,7 @@ index 59328b6..64cca3e 100644
  	{
  		id: 'add-friend',
  		label: formatMessage(messages.addFriend),
-@@ -2237,7 +2209,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
+@@ -2243,7 +2215,7 @@ provideAppUpdateDownloadProgress(appUpdateDownload)
  		<AppSidebar
  			ref="sidebar"
  			:credentials="credentials"
@@ -120,10 +120,10 @@ index 59328b6..64cca3e 100644
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
 diff --git a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
-index 6c34d2d..7e930f6 100644
+index c9bdf68..8f3ff62 100644
 --- a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
 +++ b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
-@@ -277,39 +277,6 @@ async function handleCopyAdDetails() {
+@@ -281,39 +281,6 @@ async function handleCopyAdDetails() {
  				{{ formatMessage(messages.debugInfoDescription) }}
  			</p>
  		</div>
@@ -134,7 +134,7 @@ index 6c34d2d..7e930f6 100644
 -			<Button
 -				id="copy-ad-details"
 -				class="w-fit"
--				:disabled="copyingAdDetails || copiedAdDetails"
+-				:disabled="copyingAdDetails || copiedAdDetails || !adConsentAvailable"
 -				@click="handleCopyAdDetails"
 -			>
 -				<LoaderCircleIcon

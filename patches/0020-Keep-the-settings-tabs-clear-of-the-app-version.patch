@@ -9,19 +9,37 @@ height. The list then ran on over the app version at the bottom of the
 column instead of scrolling. It fills its column absolutely now, the way
 the content beside it already does.
 ---
- packages/ui/src/components/modal/TabbedModal.vue | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ packages/ui/src/components/modal/TabbedModal.vue | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/packages/ui/src/components/modal/TabbedModal.vue b/packages/ui/src/components/modal/TabbedModal.vue
-index c3a876e..e24e058 100644
+index 689a898..0220702 100644
 --- a/packages/ui/src/components/modal/TabbedModal.vue
 +++ b/packages/ui/src/components/modal/TabbedModal.vue
-@@ -183,7 +183,7 @@ defineExpose({ show, hide, selectedTab, setTab })
- 
- 					<div
+@@ -505,7 +505,7 @@ defineExpose({ show, hide, selectedTab, setTab })
+ 					<nav
+ 						v-if="layout === 'rail'"
  						ref="sidebarScrollContainer"
--						class="tabbed-modal-scrollbar -mr-3 flex h-full flex-col gap-1 overflow-y-auto overscroll-contain pr-3"
-+						class="tabbed-modal-scrollbar absolute inset-0 -mr-3 flex flex-col gap-1 overflow-y-auto overscroll-contain pr-3"
+-						class="tabbed-modal-scrollbar flex h-full flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-2"
++						class="tabbed-modal-scrollbar absolute inset-0 flex flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-2"
+ 						@scroll="checkSidebarScrollState"
+ 					>
+ 						<template v-for="(tab, index) in visibleTabs" :key="index">
+@@ -567,7 +567,7 @@ defineExpose({ show, hide, selectedTab, setTab })
+ 					<nav
+ 						v-else-if="isMobile"
+ 						ref="sidebarScrollContainer"
+-						class="tabbed-modal-scrollbar flex h-full flex-col gap-4 overflow-y-auto overscroll-contain"
++						class="tabbed-modal-scrollbar absolute inset-0 flex flex-col gap-4 overflow-y-auto overscroll-contain"
+ 						:style="{ paddingBottom: floatingActionBarShown ? contentBottomPadding : undefined }"
+ 						@scroll="checkSidebarScrollState"
+ 					>
+@@ -623,7 +623,7 @@ defineExpose({ show, hide, selectedTab, setTab })
+ 					<div
+ 						v-else
+ 						ref="sidebarScrollContainer"
+-						class="tabbed-modal-scrollbar -mr-3 flex h-full flex-col gap-1 overflow-y-auto overscroll-contain pb-4 pr-3"
++						class="tabbed-modal-scrollbar absolute inset-0 -mr-3 flex flex-col gap-1 overflow-y-auto overscroll-contain pb-4 pr-3"
  						@scroll="checkSidebarScrollState"
  					>
  						<template v-for="(tab, index) in visibleTabs" :key="index">

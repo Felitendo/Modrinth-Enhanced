@@ -231,10 +231,10 @@ index bc27690..82ba8cc 100644
      };
  }
 diff --git a/apps/app-frontend/src/helpers/instance.ts b/apps/app-frontend/src/helpers/instance.ts
-index e136a2c..8d0e0de 100644
+index 2e3ed49..3165b09 100644
 --- a/apps/app-frontend/src/helpers/instance.ts
 +++ b/apps/app-frontend/src/helpers/instance.ts
-@@ -600,11 +600,13 @@ export async function get_pack_export_candidates(
+@@ -590,11 +590,13 @@ export async function get_pack_export_candidates(
  
  // Run Minecraft using an instance
  // Returns PID of child
@@ -268,10 +268,10 @@ index 843e572..44d07d5 100644
 +	return await invoke('plugin:logs|logs_clear_live_log_buffer_for_process', { processUuid })
 +}
 diff --git a/apps/app-frontend/src/pages/instance/components/page-header/index.vue b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
-index 98a67c7..d24ac46 100644
+index ea68317..a44ac3e 100644
 --- a/apps/app-frontend/src/pages/instance/components/page-header/index.vue
 +++ b/apps/app-frontend/src/pages/instance/components/page-header/index.vue
-@@ -145,6 +145,19 @@
+@@ -148,6 +148,19 @@
  					formatMessage(messages.starting)
  				}}</Button>
  
@@ -291,7 +291,7 @@ index 98a67c7..d24ac46 100644
  				<IconButton
  					v-tooltip="formatMessage(messages.instanceSettings)"
  					size="xl"
-@@ -260,6 +273,10 @@ const messages = defineMessages({
+@@ -263,6 +276,10 @@ const messages = defineMessages({
  		id: 'instance.action.stopping',
  		defaultMessage: 'Stopping...',
  	},
@@ -302,7 +302,7 @@ index 98a67c7..d24ac46 100644
  	sharedInstanceTooltip: {
  		id: 'instance.shared-instance.tooltip',
  		defaultMessage: "This instance's content is being managed by someone else.",
-@@ -312,6 +329,7 @@ const emit = defineEmits<{
+@@ -315,6 +332,7 @@ const emit = defineEmits<{
  	repair: []
  	stop: []
  	play: []
@@ -311,7 +311,7 @@ index 98a67c7..d24ac46 100644
  	settings: []
  	openFolder: []
 diff --git a/apps/app-frontend/src/pages/instance/layout.vue b/apps/app-frontend/src/pages/instance/layout.vue
-index 478f8bb..b77103e 100644
+index 5456b22..1954237 100644
 --- a/apps/app-frontend/src/pages/instance/layout.vue
 +++ b/apps/app-frontend/src/pages/instance/layout.vue
 @@ -59,6 +59,7 @@
@@ -322,7 +322,7 @@ index 478f8bb..b77103e 100644
  				@play-server="() => handlePlayServer()"
  				@settings="() => settingsModal?.show()"
  				@open-folder="() => instance && showInstanceInFolder(instance.id)"
-@@ -649,6 +650,30 @@ const launchInstance = async (context: string, address?: string) => {
+@@ -651,6 +652,30 @@ const launchInstance = async (context: string, address?: string) => {
  	})
  }
  
@@ -440,7 +440,7 @@ index 0294be9..12c6008 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 20f585b..b747d8b 100644
+index b729cb4..4d9704f 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,8 +110,10 @@ fn main() {
@@ -455,10 +455,10 @@ index 20f585b..b747d8b 100644
                      .default_permission(
                          DefaultPermissionRule::AllowAllCommands,
 diff --git a/apps/app/src/api/instance.rs b/apps/app/src/api/instance.rs
-index d9da776..fade975 100644
+index 56eb01e..bdccff4 100644
 --- a/apps/app/src/api/instance.rs
 +++ b/apps/app/src/api/instance.rs
-@@ -1325,12 +1325,19 @@ pub async fn instance_get_pack_export_candidates(
+@@ -1341,12 +1341,19 @@ pub async fn instance_get_pack_export_candidates(
  pub async fn instance_run(
      instance_id: &str,
      server_address: Option<String>,
@@ -522,7 +522,7 @@ index 8104b3e..a956d17 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index 6314a25..84edce6 100644
+index 03b0bda..1e60177 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
 @@ -62,7 +62,8 @@ pub use self::projects::{
@@ -536,10 +536,10 @@ index 6314a25..84edce6 100644
  pub use self::screenshot_groups::{
      ScreenshotGroup, ScreenshotGroupImport, ScreenshotGroupMembershipUpdate,
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 0778752..712be03 100644
+index bd51823..5863647 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
-@@ -22,6 +22,25 @@ pub enum QuickPlayType {
+@@ -38,6 +38,25 @@ async fn ensure_launch_allowed(
  pub async fn run(
      instance_id: &str,
      quick_play_type: QuickPlayType,
@@ -564,8 +564,8 @@ index 0778752..712be03 100644
 +    additional: bool,
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
-     if crate::state::instances::adapters::sqlite::instance_rows::is_instance_quarantined(
-@@ -44,7 +63,8 @@ pub async fn run(
+     super::shared::check_shared_instance_availability_before_launch(
+@@ -51,7 +70,8 @@ pub async fn run(
          .await?
          .ok_or(ErrorKind::NotLoggedIn)?;
  
@@ -575,7 +575,7 @@ index 0778752..712be03 100644
  }
  
  #[tracing::instrument(skip(credentials))]
-@@ -52,6 +72,7 @@ async fn run_credentials(
+@@ -59,6 +79,7 @@ async fn run_credentials(
      instance_id: &str,
      credentials: &Credentials,
      quick_play_type: QuickPlayType,
@@ -583,7 +583,7 @@ index 0778752..712be03 100644
  ) -> crate::Result<ProcessMetadata> {
      let state = State::get().await?;
      let settings = Settings::get(&state.pool).await?;
-@@ -242,6 +263,7 @@ async fn run_credentials(
+@@ -240,6 +261,7 @@ async fn run_credentials(
          &context,
          quick_play_type,
          &state,
@@ -651,10 +651,10 @@ index 4e8eb05..6ba09bb 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 3ea7d8c..564e79d 100644
+index b39bfa8..aa2d585 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -912,6 +912,9 @@ pub async fn launch_minecraft(
+@@ -916,6 +916,9 @@ pub async fn launch_minecraft(
      context: &InstanceLaunchContext,
      mut quick_play_type: QuickPlayType,
      state: &Arc<State>,
@@ -664,7 +664,7 @@ index 3ea7d8c..564e79d 100644
  ) -> crate::Result<ProcessMetadata> {
      let instance = &context.instance;
      let content_set = &context.applied_content_set;
-@@ -1045,8 +1048,12 @@ pub async fn launch_minecraft(
+@@ -1049,8 +1052,12 @@ pub async fn launch_minecraft(
  
      let env_args = Vec::from(env_args);
  
@@ -679,7 +679,7 @@ index 3ea7d8c..564e79d 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1295,7 +1302,10 @@ pub async fn launch_minecraft(
+@@ -1299,7 +1306,10 @@ pub async fn launch_minecraft(
          .recover(Some(&instance.id))
          .await
          .context("recovering interrupted content changes")?;
@@ -691,7 +691,7 @@ index 3ea7d8c..564e79d 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1343,6 +1353,8 @@ pub async fn launch_minecraft(
+@@ -1347,6 +1357,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,

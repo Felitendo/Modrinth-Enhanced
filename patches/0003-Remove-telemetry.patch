@@ -185,10 +185,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 8c1d8d8..928add2 100644
+index 73e86ed..1cc52fa 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2931,7 +2931,7 @@
+@@ -2952,7 +2952,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {
@@ -218,7 +218,7 @@ index b09e2aa..b204c07 100644
  			}
  		}
 diff --git a/packages/app-lib/src/api/instance/run.rs b/packages/app-lib/src/api/instance/run.rs
-index 1164a5e..0778752 100644
+index d5c3f30..bd51823 100644
 --- a/packages/app-lib/src/api/instance/run.rs
 +++ b/packages/app-lib/src/api/instance/run.rs
 @@ -5,14 +5,11 @@ use crate::state::{
@@ -236,7 +236,7 @@ index 1164a5e..0778752 100644
  
  #[derive(Debug, Clone)]
  pub enum QuickPlayType {
-@@ -227,54 +224,10 @@ async fn run_credentials(
+@@ -225,54 +222,10 @@ async fn run_credentials(
          mc_set_options.push(("fullscreen".to_string(), "true".to_string()));
      }
  
@@ -295,7 +295,7 @@ index 1164a5e..0778752 100644
  
      crate::minecraft_skins::flush_pending_skin_change().await?;
      crate::launcher::launch_minecraft(
-@@ -293,21 +246,6 @@ async fn run_credentials(
+@@ -291,21 +244,6 @@ async fn run_credentials(
      .await
  }
  
@@ -317,7 +317,7 @@ index 1164a5e..0778752 100644
  pub async fn kill(instance_id: &str) -> crate::Result<()> {
      let state = State::get().await?;
      let processes =
-@@ -367,13 +305,12 @@ pub async fn try_update_playtime_by_instance_id(
+@@ -365,13 +303,12 @@ pub async fn try_update_playtime_by_instance_id(
              }
          }
  
@@ -338,10 +338,10 @@ index 1164a5e..0778752 100644
          Ok(())
      };
 diff --git a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-index fb4ad5d..4e1da45 100644
+index 9689c31..a2c9406 100644
 --- a/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
 +++ b/packages/ui/src/layouts/wrapped/hosting/manage/root.vue
-@@ -1013,11 +1013,9 @@ function showSurvey() {
+@@ -1015,11 +1015,9 @@ function showSurvey() {
  }
  
  function loadTallyScript() {

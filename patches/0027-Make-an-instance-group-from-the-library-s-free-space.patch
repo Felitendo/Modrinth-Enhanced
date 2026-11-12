@@ -34,7 +34,7 @@ index 1fd672c..825f54c 100644
  
  <template>
 diff --git a/apps/app-frontend/src/pages/Index.vue b/apps/app-frontend/src/pages/Index.vue
-index 1c51891..ad7c135 100644
+index 45bbc6e..8934e57 100644
 --- a/apps/app-frontend/src/pages/Index.vue
 +++ b/apps/app-frontend/src/pages/Index.vue
 @@ -1,5 +1,5 @@
