@@ -33,6 +33,13 @@ Fedora:
 sudo dnf install "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-Enhanced/releases/latest | grep -o 'https://[^"]*\.x86_64\.rpm"' | tr -d '"')"
 ```
 
+Flatpak:
+
+```bash
+curl -fLo /tmp/modrinth-enhanced.flatpak "$(curl -fsSL https://api.github.com/repos/Felitendo/Modrinth-Enhanced/releases/latest | grep -o 'https://[^"]*\.flatpak"' | tr -d '"')"
+flatpak install --user /tmp/modrinth-enhanced.flatpak
+```
+
 ## What changes
 
 | Patch                                     | What it does                                                                                                                                    |
@@ -225,8 +232,9 @@ for no practical gain.
 The app updates itself from this project's releases on GitHub: on Windows, on macOS, and as an
 AppImage on Linux. Updates are signed with this project's own key, whose public half is
 `updater.pub`, and Modrinth is no longer asked, since its update would be the official app.
-Installs from the AUR, a `.deb` or a `.rpm` are updated like any other package; the app shows a
-notice with a button to the release when there is a new one.
+Installs from the AUR, a `.deb` or a `.rpm` are updated like any other package, and a Flatpak by
+installing the new release's `.flatpak` the same way; the app shows a notice with a button to the
+release when there is a new one.
 
 ## Relationship to the official app
 
@@ -238,6 +246,11 @@ The flip side: do not run both at once, and on Windows the two installers share 
 If you would rather have them fully separated, change `identifier` in
 `apps/app/tauri.conf.json` — it is one line in `0001-Rename-the-app-to-Modrinth-Enhanced.patch`.
 
+The Flatpak uses that directory too, `~/.local/share/ModrinthApp`, not one in `~/.var/app`. Its
+sandbox reaches that directory, the folders of the launchers it imports from, and Downloads, so an
+app directory moved elsewhere in the settings needs
+`flatpak override --user --filesystem=<folder> io.github.felitendo.ModrinthEnhanced`.
+
 ## Building it yourself
 
 You need git, Node (the version in the upstream `.nvmrc`), pnpm via Corepack, a Rust toolchain,
@@ -247,7 +260,11 @@ JDK 17, and on Linux `libwebkit2gtk-4.1-dev`, `libayatana-appindicator3-dev` and
 scripts/prepare.sh   # check out the pinned upstream tag and apply every patch
 scripts/check.sh     # assert the patches still do what they claim
 scripts/build.sh     # build installers into build/artifacts
+scripts/flatpak.sh   # on Linux, bundle the .deb from there as a .flatpak
 ```
+
+`scripts/flatpak.sh` needs `flatpak-builder`, or `org.flatpak.Builder` from Flathub, and fetches
+the GNOME runtime it builds on.
 
 `FAST=1 scripts/build.sh` builds with thin link-time optimization instead of the full one, which
 roughly halves the Rust build at the cost of a few megabytes. Releases are built without it.
@@ -289,7 +306,7 @@ scripts/prepare.sh
 
 - **Build** (`.github/workflows/build.yml`) runs on every push and pull request, and is also the
   reusable workflow the release job calls. It applies the patches, checks them, and builds on
-  Linux, Windows and macOS.
+  Linux, Windows and macOS, and the Flatpak from the Linux build.
 - **Upstream release** (`.github/workflows/upstream-release.yml`) runs daily. If Modrinth has
   published a newer release than `upstream.txt`, it rebases the patches onto it, rebuilds and — only if every
   platform built and every check passed — commits the bump, tags it with the upstream version and

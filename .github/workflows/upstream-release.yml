@@ -71,7 +71,7 @@ jobs:
             last_tag="${last#* }"
             git fetch --no-tags --depth=1 origin "refs/tags/$last_tag:refs/tags/$last_tag"
             # Only what goes into the build counts, not docs or CI.
-            if git diff --quiet "$last_tag" HEAD -- patches scripts updater.pub; then
+            if git diff --quiet "$last_tag" HEAD -- patches scripts flatpak updater.pub; then
               echo "$last_tag already ships the current patches; nothing to do."
               echo "proceed=false" >> "$GITHUB_OUTPUT"
               exit 0

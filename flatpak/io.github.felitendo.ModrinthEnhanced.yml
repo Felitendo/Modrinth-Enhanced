@@ -1,0 +1,120 @@
+# Repackages the .deb from scripts/build.sh on the GNOME runtime, which has the
+# WebKitGTK and GTK it links against. scripts/flatpak.sh puts the .deb next to
+# this file as modrinth-enhanced.deb and builds the bundle.
+id: io.github.felitendo.ModrinthEnhanced
+
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+
+command: modrinth-enhanced
+finish-args:
+  - --share=ipc
+  - --share=network
+  # Minecraft runs under X11, the launcher under either.
+  - --socket=x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  # The GPU, NVIDIA's included, and controllers.
+  - --device=all
+  # The data directory every other install uses, so instances, settings and
+  # accounts carry over. The wrapper points XDG_DATA_HOME back at the host's.
+  - --filesystem=xdg-data/ModrinthApp:create
+  # The launchers instances are imported from.
+  - --filesystem=xdg-data/PrismLauncher:ro
+  - --filesystem=xdg-data/PolyMC:ro
+  - --filesystem=xdg-data/multimc:ro
+  - --filesystem=xdg-data/MultiMC:ro
+  - --filesystem=xdg-data/ATLauncher:ro
+  - --filesystem=xdg-data/gdlauncher_next:ro
+  - --filesystem=~/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher:ro
+  - --filesystem=~/.var/app/org.polymc.PolyMC/data/PolyMC:ro
+  - --filesystem=~/curseforge/minecraft:ro
+  - --filesystem=xdg-documents/curseforge/minecraft:ro
+  # Dropping files in from Downloads.
+  - --filesystem=xdg-download:ro
+  # Discord rich presence, with Discord installed natively or as a Flatpak.
+  - --filesystem=xdg-run/discord-ipc-0
+  - --filesystem=xdg-run/app/com.discordapp.Discord:create
+  # A second start hands its link or file to the running app over this name.
+  - --own-name=org.ModrinthApp.SingleInstance
+  # "Show in folder".
+  - --talk-name=org.freedesktop.FileManager1
+  # The updater cannot replace a Flatpak, so the app only says when a new
+  # release is out.
+  - --env=MODRINTH_EXTERNAL_UPDATE_PROVIDER=1
+
+modules:
+  # Minecraft 1.12.2 and older ask xrandr for the screen modes.
+  - name: xrandr
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://xorg.freedesktop.org/archive/individual/app/xrandr-1.5.4.tar.xz
+        sha256: 2cafccb2aaf2491a4068676117a0d4f90ab307724b96fffc54cd1da953779400
+    cleanup:
+      - /share/man
+      - /bin/xkeystone
+
+  # LWJGL's file dialogs.
+  - name: xprop
+    buildsystem: autotools
+    sources:
+      - type: archive
+        url: https://xorg.freedesktop.org/archive/individual/app/xprop-1.2.8.tar.gz
+        sha256: a8394338c99775160d733d54d73cdcdc5c9c80a0dc8cffd5be1b7c977254b745
+    cleanup:
+      - /share/man
+
+  # The in-game narrator.
+  - name: flite
+    buildsystem: autotools
+    config-opts:
+      - --enable-shared
+      - --with-audio=pulseaudio
+    no-parallel-make: true
+    sources:
+      - type: git
+        url: https://github.com/festvox/flite.git
+        tag: v2.2
+        commit: e9e2e37c329dbe98bfeb27a1828ef9a71fa84f88
+    cleanup:
+      - /bin
+      - /include
+      - /lib/*.a
+
+  # For an instance's wrapper command on laptops with a second GPU.
+  - name: prime-run
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 prime-run "$FLATPAK_DEST/bin/prime-run"
+    sources:
+      - type: file
+        path: prime-run
+
+  - name: modrinth-enhanced
+    buildsystem: simple
+    build-commands:
+      - ar x modrinth-enhanced.deb
+      - tar -xf data.tar.*
+      - install -Dm755 usr/bin/ModrinthEnhanced "$FLATPAK_DEST/bin/ModrinthEnhanced"
+      - install -Dm755 modrinth-enhanced.sh "$FLATPAK_DEST/bin/modrinth-enhanced"
+      - |
+        desktop-file-edit \
+          --set-key=Exec --set-value="modrinth-enhanced %u" \
+          --set-icon="$FLATPAK_ID" \
+          --set-key=StartupWMClass --set-value="$FLATPAK_ID" \
+          --set-comment="Play modded Minecraft" \
+          --set-key=Keywords --set-value="minecraft;modrinth;launcher;mods;" \
+          usr/share/applications/*.desktop
+      - install -Dm644 usr/share/applications/*.desktop "$FLATPAK_DEST/share/applications/$FLATPAK_ID.desktop"
+      - install -Dm644 usr/share/icons/hicolor/128x128/apps/ModrinthEnhanced.png "$FLATPAK_DEST/share/icons/hicolor/128x128/apps/$FLATPAK_ID.png"
+      - install -Dm644 usr/share/icons/hicolor/256x256@2/apps/ModrinthEnhanced.png "$FLATPAK_DEST/share/icons/hicolor/256x256/apps/$FLATPAK_ID.png"
+      - install -Dm644 "$FLATPAK_ID.metainfo.xml" "$FLATPAK_DEST/share/metainfo/$FLATPAK_ID.metainfo.xml"
+    sources:
+      - type: file
+        path: modrinth-enhanced.deb
+      - type: file
+        path: modrinth-enhanced.sh
+      - type: file
+        path: io.github.felitendo.ModrinthEnhanced.metainfo.xml

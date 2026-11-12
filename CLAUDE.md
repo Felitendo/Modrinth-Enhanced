@@ -25,6 +25,8 @@ separately, from the AUR, and stays untouched.
   with a desktop entry of its own.
 - `FAST=1` cuts the build to about a third of the time, at the cost of a few megabytes. Use it for
   anything that is not meant to be release-like: `DEV=1 FAST=1 scripts/build.sh`.
+- `DEV=1 scripts/flatpak.sh` bundles that build as `io.github.felitendo.ModrinthEnhanced.Devel`,
+  which installs beside the stable app: `flatpak install --user --reinstall -y build/artifacts/*.flatpak`.
 - Build after every change that touches the app, and install it over the last dev build, so it can
   be tried out right away. The system's pnpm and JDK are the wrong versions, and sharp must not
   build against the system's libvips:

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.felitendo.ModrinthEnhanced</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <name>Modrinth Enhanced</name>
+  <summary>Modrinth App without ads or telemetry</summary>
+  <description>
+    <p>The Modrinth App, without advertising and without telemetry, and with offline, Ely.by and custom server accounts, a skins browser and tons of fixes for Linux.</p>
+    <p>It keeps its data where every other install of Modrinth Enhanced and the official Modrinth App keeps it, so instances, settings and accounts carry over.</p>
+    <p>Modrinth Enhanced is not affiliated with or endorsed by Rinth, Inc.</p>
+  </description>
+  <developer id="io.github.felitendo">
+    <name>Felitendo</name>
+  </developer>
+  <launchable type="desktop-id">io.github.felitendo.ModrinthEnhanced.desktop</launchable>
+  <url type="homepage">https://github.com/Felitendo/Modrinth-Enhanced</url>
+  <url type="bugtracker">https://github.com/Felitendo/Modrinth-Enhanced/issues</url>
+  <url type="vcs-browser">https://github.com/Felitendo/Modrinth-Enhanced</url>
+  <categories>
+    <category>Game</category>
+  </categories>
+  <keywords>
+    <keyword>minecraft</keyword>
+    <keyword>modrinth</keyword>
+    <keyword>launcher</keyword>
+    <keyword>mods</keyword>
+  </keywords>
+  <provides>
+    <binary>modrinth-enhanced</binary>
+    <mediatype>application/x-modrinth-modpack+zip</mediatype>
+    <mediatype>x-scheme-handler/modrinth</mediatype>
+  </provides>
+  <branding>
+    <color type="primary" scheme_preference="light">#81f3af</color>
+    <color type="primary" scheme_preference="dark">#033018</color>
+  </branding>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">moderate</content_attribute>
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+  <releases>
+    <!-- scripts/flatpak.sh adds the release it builds. -->
+  </releases>
+</component>

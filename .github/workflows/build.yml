@@ -103,7 +103,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev flatpak flatpak-builder
 
       - name: Check the patched sources
         shell: bash
@@ -117,6 +117,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: scripts/build.sh
+
+      # Before the check, so it is held to the same naming as the rest.
+      - name: Build the Flatpak
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          # Ubuntu keeps bubblewrap, which flatpak-builder builds in, out of
+          # user namespaces otherwise.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          scripts/flatpak.sh
 
       - name: Check the build output
         shell: bash
