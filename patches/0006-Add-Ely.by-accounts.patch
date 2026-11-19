@@ -294,7 +294,7 @@ index bfbb1b2..cf7c3ba 100644
  	show,
  })
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index ebc92c1..35c21fa 100644
+index ee34237..0534dc8 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -9,6 +9,10 @@
@@ -353,7 +353,7 @@ index ebc92c1..35c21fa 100644
  const loginDisabled = ref(false)
  const defaultUser = ref<string | undefined>()
  const equippedSkin = ref<Skin | null>(null)
-@@ -206,9 +221,14 @@ function showOfflineAccountModal(event?: MouseEvent) {
+@@ -203,9 +218,14 @@ function showOfflineAccountModal(event?: MouseEvent) {
  	offlineAccountModal.value?.show(event)
  }
  
@@ -368,7 +368,7 @@ index ebc92c1..35c21fa 100644
  	setEquippedSkin,
  	setLoginDisabled,
  	login,
-@@ -267,8 +287,8 @@ async function login() {
+@@ -264,8 +284,8 @@ async function login() {
  	loginDisabled.value = false
  }
  
@@ -379,7 +379,7 @@ index ebc92c1..35c21fa 100644
  	await refreshValues()
  	emit('change')
  }
-@@ -303,6 +323,10 @@ const messages = defineMessages({
+@@ -300,6 +320,10 @@ const messages = defineMessages({
  		id: 'minecraft-account.add-offline-account',
  		defaultMessage: 'Add offline account',
  	},
@@ -429,7 +429,7 @@ index cb7319a..57580ff 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index fa8a650..0185856 100644
+index f54f11c..bf79b86 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -15,6 +15,7 @@ fn main() {
@@ -514,10 +514,10 @@ index b735a6c..dffcbb8 100644
  pub async fn get_default_user() -> crate::Result<Option<uuid::Uuid>> {
      let state = State::get().await?;
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 229bb37..6443da6 100644
+index 4f96ccc..ad7a966 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1172,6 +1172,22 @@ pub async fn launch_minecraft(
+@@ -1173,6 +1173,22 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -862,7 +862,7 @@ index 0000000..98930d6
 +    Ok(jar)
 +}
 diff --git a/packages/app-lib/src/util/mod.rs b/packages/app-lib/src/util/mod.rs
-index 1962d6c..395d7f1 100644
+index 3fa7b83..b98117e 100644
 --- a/packages/app-lib/src/util/mod.rs
 +++ b/packages/app-lib/src/util/mod.rs
 @@ -1,4 +1,5 @@

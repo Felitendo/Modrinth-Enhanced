@@ -291,7 +291,7 @@ index 0000000..a0eb40d
 +	return await invoke('plugin:ely-skins|ely_remove_skin', { skinId })
 +}
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index b10ea60..988dcf0 100644
+index 63bc725..5d2dda8 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
 @@ -4,6 +4,7 @@ import {
@@ -310,10 +310,10 @@ index b10ea60..988dcf0 100644
  import VirtualSkinSectionList from '@/components/ui/skin/VirtualSkinSectionList.vue'
  import { useAppSettings } from '@/composables/use-app-settings.ts'
  import { handleSevereError } from '@/composables/use-error.js'
-@@ -36,8 +38,22 @@ import { trackEvent } from '@/helpers/analytics'
+@@ -36,8 +38,22 @@ import { deleteLegacySkinPreviewStorage } from '@/features/skins/legacy-preview-
+ import { trackEvent } from '@/helpers/analytics'
  import { check_reachable, get_default_user, login as login_flow, users } from '@/helpers/auth'
  import { listenNativeDragDrop, type NativeDragDropEvent } from '@/helpers/native-drag-drop'
- import { cleanupUnusedPreviews } from '@/helpers/rendering/skin-previews'
 -import type { Cape, Skin, SkinTextureUrl } from '@/helpers/skins.ts'
 +import { ELY_FALLBACK_SKIN } from '@/helpers/ely-fallback-skin'
  import {
@@ -334,7 +334,7 @@ index b10ea60..988dcf0 100644
  	equip_skin,
  	filterDefaultSkins,
  	filterSavedSkins,
-@@ -211,6 +227,27 @@ const messages = defineMessages({
+@@ -212,6 +228,27 @@ const messages = defineMessages({
  		id: 'app.skins.sign-in.button',
  		defaultMessage: 'Sign in to Microsoft',
  	},
@@ -362,7 +362,7 @@ index b10ea60..988dcf0 100644
  })
  
  const editSkinModal = useTemplateRef('editSkinModal')
-@@ -346,10 +383,12 @@ const skinTexture = computedAsync(async () => {
+@@ -347,10 +384,12 @@ const skinTexture = computedAsync(async () => {
  const capeTexture = computed(() => currentCape.value?.texture)
  const skinVariant = computed(() => selectedSkin.value?.variant)
  const skinNametag = computed(() => (appSettings.hideNametagSkinsPage ? undefined : username.value))
@@ -379,7 +379,7 @@ index b10ea60..988dcf0 100644
  )
  const hasPendingSkinChange = computed(
  	() => !skinsMatch(selectedSkin.value, originalSelectedSkin.value),
-@@ -887,7 +926,8 @@ function isSkinFileDrag(event: DragEvent) {
+@@ -868,7 +907,8 @@ function isSkinFileDrag(event: DragEvent) {
  }
  
  function isPositionOverAddSkinButton(position: { x: number; y: number }) {
@@ -389,7 +389,7 @@ index b10ea60..988dcf0 100644
  
  	if (!element) {
  		return false
-@@ -997,6 +1037,11 @@ async function setupAddSkinDragDropListener() {
+@@ -978,6 +1018,11 @@ async function setupAddSkinDragDropListener() {
  async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	if (isSkinManagementReadOnly.value) return
  
@@ -401,7 +401,7 @@ index b10ea60..988dcf0 100644
  	const fakeEvent = new MouseEvent('click')
  	const originalSkinTexUrl = `data:image/png;base64,` + arrayBufferToBase64(buffer)
  	try {
-@@ -1011,6 +1056,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
+@@ -992,6 +1037,308 @@ async function processSkinFileBuffer(buffer: Uint8Array | ArrayBuffer) {
  	}
  }
  
@@ -710,7 +710,7 @@ index b10ea60..988dcf0 100644
  watch(
  	() => selectedSkin.value?.cape_id,
  	() => {},
-@@ -1069,8 +1416,8 @@ async function checkUserChanges() {
+@@ -1051,8 +1398,8 @@ async function checkUserChanges() {
  		if (defaultId !== currentUserId.value) {
  			await minecraftAccounts.value?.refreshValues()
  			await loadCurrentUser()
@@ -721,7 +721,7 @@ index b10ea60..988dcf0 100644
  		}
  	} catch (error) {
  		if (currentUser.value && error instanceof Error) {
-@@ -1079,8 +1426,8 @@ async function checkUserChanges() {
+@@ -1061,8 +1408,8 @@ async function checkUserChanges() {
  	}
  }
  
@@ -732,7 +732,7 @@ index b10ea60..988dcf0 100644
  </script>
  
  <template>
-@@ -1105,8 +1452,29 @@ await loadSkins()
+@@ -1087,8 +1434,29 @@ await loadSkins()
  		:proceed-label="formatMessage(commonMessages.deleteLabel)"
  		@proceed="deleteSkin"
  	/>
@@ -763,7 +763,7 @@ index b10ea60..988dcf0 100644
  		<div class="sticky top-6 self-start p-2 pt-0">
  			<h1 class="m-0 text-2xl font-bold flex items-center gap-2">
  				{{ formatMessage(appMessages.skinSelectorLabel) }}
-@@ -1284,6 +1652,80 @@ await loadSkins()
+@@ -1267,6 +1635,80 @@ await loadSkins()
  			/>
  		</div>
  	</div>
@@ -845,7 +845,7 @@ index b10ea60..988dcf0 100644
  	<div v-if="!currentUser" class="sticky w-full bottom-0 z-20 p-4 pt-0">
  		<div
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 7ad354c..a83e821 100644
+index ebf8145..defc626 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -27,6 +27,23 @@ fn main() {
@@ -1270,10 +1270,10 @@ index 90b0f62..998045a 100644
  pub mod install;
  pub mod instance;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 5347d24..66f0530 100644
+index b52793c..62ee8c8 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -308,6 +308,7 @@ fn main() {
+@@ -316,6 +316,7 @@ fn main() {
  
      builder = builder
          .plugin(api::auth::init())

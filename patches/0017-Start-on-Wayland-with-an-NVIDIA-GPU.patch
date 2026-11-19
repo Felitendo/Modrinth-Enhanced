@@ -15,10 +15,10 @@ who set it, or WEBKIT_DISABLE_DMABUF_RENDERER, keeps their value.
  1 file changed, 14 insertions(+)
 
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index dd50d07..9818507 100644
+index d219ad6..727e551 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -125,6 +125,20 @@ fn main() {
+@@ -133,6 +133,20 @@ fn main() {
          unsafe { std::env::set_var("GTK_USE_PORTAL", "1") };
      }
  

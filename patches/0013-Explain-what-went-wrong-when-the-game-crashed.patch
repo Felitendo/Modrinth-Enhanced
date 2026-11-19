@@ -880,7 +880,7 @@ index fd29e3a..9040012 100644
  })
  </script>
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 4d9704f..cfb6f4e 100644
+index 25b4dc2..1987628 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -44,6 +44,17 @@ fn main() {
@@ -970,10 +970,10 @@ index 998045a..a9d0aa3 100644
  pub mod import;
  pub mod install;
 diff --git a/apps/app/src/main.rs b/apps/app/src/main.rs
-index 66f0530..da2705a 100644
+index 62ee8c8..5b9f735 100644
 --- a/apps/app/src/main.rs
 +++ b/apps/app/src/main.rs
-@@ -309,6 +309,7 @@ fn main() {
+@@ -317,6 +317,7 @@ fn main() {
      builder = builder
          .plugin(api::auth::init())
          .plugin(api::ely_skins::init())

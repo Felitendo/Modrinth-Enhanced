@@ -49,10 +49,10 @@ index a669ece..2c44ccf 100644
  	macos: {
  		id: 'app.settings.operating-system.macos',
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index ee5c83c..73e86ed 100644
+index bdfbe93..1aeb35d 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -1842,7 +1842,7 @@
+@@ -1848,7 +1848,7 @@
      "message": "Share servers with friends"
    },
    "app.settings.app-version": {

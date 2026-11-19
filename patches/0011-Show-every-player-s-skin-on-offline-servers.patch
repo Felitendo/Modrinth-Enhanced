@@ -214,10 +214,10 @@ index f6e99d3..f06e812 100644
  export async function showInstanceInFolder(instanceId) {
  	const fullPath = await get_full_path(instanceId)
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index a83e821..b729cb4 100644
+index defc626..24ead3d 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
-@@ -422,6 +422,7 @@ fn main() {
+@@ -427,6 +427,7 @@ fn main() {
                          "show_app_db_backups_folder",
                          "export_debug_info",
                          "cancel_debug_info_export",
@@ -2428,7 +2428,7 @@ index 0000000..b64057e
 +    }
 +}
 diff --git a/packages/app-lib/src/launcher/args.rs b/packages/app-lib/src/launcher/args.rs
-index 3906ad2..e0e0151 100644
+index a59dcc7..0f1a4ad 100644
 --- a/packages/app-lib/src/launcher/args.rs
 +++ b/packages/app-lib/src/launcher/args.rs
 @@ -19,12 +19,31 @@ use minecraft_meta_manifest::{
@@ -2464,7 +2464,7 @@ index 3906ad2..e0e0151 100644
  pub fn get_class_paths(
      libraries_path: &Path,
      libraries: &[Library],
-@@ -118,6 +137,7 @@ pub fn get_jvm_arguments(
+@@ -119,6 +138,7 @@ pub fn get_jvm_arguments(
      quick_play_version: QuickPlayVersion,
      log_config: Option<&LoggingConfiguration>,
      ipc_addr: SocketAddr,
@@ -2472,8 +2472,8 @@ index 3906ad2..e0e0151 100644
  ) -> crate::Result<Vec<String>> {
      let mut parsed_arguments = Vec::new();
  
-@@ -192,6 +212,16 @@ pub fn get_jvm_arguments(
-         ]);
+@@ -201,6 +221,16 @@ pub fn get_jvm_arguments(
+         parsed_arguments.push(DISABLE_BASE64_INTRINSICS.to_string());
      }
  
 +    // Ahead of the instance's own arguments, so a `-D` of its own still wins.
@@ -2490,7 +2490,7 @@ index 3906ad2..e0e0151 100644
          if !arg.is_empty() {
              parsed_arguments.push(arg);
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index 6443da6..b39bfa8 100644
+index ad7a966..7de8cb9 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -1131,6 +1131,28 @@ pub async fn launch_minecraft(
@@ -2522,7 +2522,7 @@ index 6443da6..b39bfa8 100644
      command.args(
          args::get_jvm_arguments(
              args.get(&d::minecraft::ArgumentType::Jvm)
-@@ -1157,6 +1179,7 @@ pub async fn launch_minecraft(
+@@ -1158,6 +1180,7 @@ pub async fn launch_minecraft(
                  .as_ref()
                  .and_then(|x| x.get(&LoggingSide::Client)),
              rpc_server.address(),

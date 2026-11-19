@@ -322,7 +322,7 @@ index cf7c3ba..262311e 100644
  
  function addOfflineAccount(event: MouseEvent) {
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 35c21fa..224d776 100644
+index 0534dc8..07881e8 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -105,6 +105,7 @@
@@ -356,7 +356,7 @@ index 35c21fa..224d776 100644
  const loginDisabled = ref(false)
  const defaultUser = ref<string | undefined>()
  const equippedSkin = ref<Skin | null>(null)
-@@ -275,16 +276,8 @@ async function setAccount(account: MinecraftCredential) {
+@@ -272,16 +273,8 @@ async function setAccount(account: MinecraftCredential) {
  	emit('change')
  }
  
@@ -375,7 +375,7 @@ index 35c21fa..224d776 100644
  }
  
  async function accountAdded() {
-@@ -316,8 +309,8 @@ const messages = defineMessages({
+@@ -313,8 +306,8 @@ const messages = defineMessages({
  		defaultMessage: 'Not signed in',
  	},
  	addAccount: {
@@ -434,7 +434,7 @@ index 57580ff..9b2408e 100644
   * Adds an offline account with the given username and makes it the active one.
   *
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index 0185856..7ad354c 100644
+index bf79b86..ebf8145 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -14,6 +14,8 @@ fn main() {

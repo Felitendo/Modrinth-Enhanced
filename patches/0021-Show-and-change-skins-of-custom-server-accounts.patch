@@ -30,10 +30,10 @@ Ely.by one.
  6 files changed, 319 insertions(+), 28 deletions(-)
 
 diff --git a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-index ee32e2e..7d9b78d 100644
+index 58c13b7..757c973 100644
 --- a/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
 +++ b/apps/app-frontend/src/components/ui/skin/EditSkinModal.vue
-@@ -47,7 +47,11 @@
+@@ -48,7 +48,11 @@
  					</RadioButtons>
  				</section>
  
@@ -46,7 +46,7 @@ index ee32e2e..7d9b78d 100644
  					<h2 class="text-base font-semibold mb-2">{{ formatMessage(messages.capeSection) }}</h2>
  					<div class="relative w-fit max-w-full">
  						<Transition
-@@ -194,6 +198,10 @@ const messages = defineMessages({
+@@ -196,6 +200,10 @@ const messages = defineMessages({
  		id: 'app.skins.modal.cape-section',
  		defaultMessage: 'Cape',
  	},
@@ -57,7 +57,7 @@ index ee32e2e..7d9b78d 100644
  	noCapeTooltip: {
  		id: 'app.skins.modal.no-cape-tooltip',
  		defaultMessage: 'No cape',
-@@ -248,7 +256,8 @@ const previewSkin = ref<string>('')
+@@ -250,7 +258,8 @@ const previewSkin = ref<string>('')
  
  const variant = ref<SkinModel>('CLASSIC')
  const selectedCape = ref<Cape | undefined>(undefined)
@@ -67,7 +67,7 @@ index ee32e2e..7d9b78d 100644
  
  const selectedCapeTexture = computed(() => selectedCape.value?.texture)
  const canEditTextureAndModel = computed(() => currentSkin.value?.source !== 'default')
-@@ -379,7 +388,7 @@ async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
+@@ -381,7 +390,7 @@ async function showNew(e: MouseEvent, skinTextureUrl: SkinTextureUrl) {
  	currentSkin.value = null
  	uploadedTextureUrl.value = skinTextureUrl
  	variant.value = await determineModelType(skinTextureUrl.original)
@@ -77,7 +77,7 @@ index ee32e2e..7d9b78d 100644
  	await loadPreviewSkin()
  
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 03a61f2..364aef0 100644
+index 2286f57..6b8c0c7 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -185,11 +185,14 @@ type MinecraftCredential = {
@@ -104,11 +104,8 @@ index 03a61f2..364aef0 100644
  
  async function updateHeadUrl(skin: Skin | null) {
  	const request = ++headRequest
-@@ -214,13 +219,30 @@ async function updateHeadUrl(skin: Skin | null) {
- onUnmounted(() => {
+@@ -213,11 +218,28 @@ onUnmounted(() => {
  	headRequest++
- 	if (equippedHeadUrl.value) URL.revokeObjectURL(equippedHeadUrl.value)
-+	Object.values(serverHeads.value).forEach((url) => URL.revokeObjectURL(url))
  })
  
 +async function updateServerHeads() {
@@ -116,14 +113,15 @@ index 03a61f2..364aef0 100644
 +	for (const account of accounts.value) {
 +		const skin = account.profile.skins?.find((s) => s.state === 'ACTIVE')
 +		if (!account.auth_server || !skin?.textureKey) continue
-+		heads[account.profile.id] = await getPlayerHeadUrl({
++		heads[account.profile.id] = await renderSkinHead({
 +			texture_key: skin.textureKey,
 +			texture: skin.url,
-+		} as Skin).catch(() => '')
++			variant: 'CLASSIC',
++			source: 'custom_external',
++			is_equipped: true,
++		}).catch(() => '')
 +	}
-+	const previous = serverHeads.value
 +	serverHeads.value = heads
-+	Object.values(previous).forEach((url) => URL.revokeObjectURL(url))
 +}
 +
  async function refreshValues() {
@@ -135,7 +133,7 @@ index 03a61f2..364aef0 100644
  
  	try {
  		const skins = await get_available_skins()
-@@ -272,7 +294,10 @@ const avatarUrl = computed(() => {
+@@ -269,7 +291,10 @@ const avatarUrl = computed(() => {
  		return `https://mc-heads.net/avatar/${equippedSkin.value.texture_key}/128`
  	}
  	if (selectedAccount.value?.profile?.id) {
@@ -147,7 +145,7 @@ index 03a61f2..364aef0 100644
  	}
  	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
  })
-@@ -308,7 +333,9 @@ function getAccountAvatarUrl(account: MinecraftCredential) {
+@@ -305,7 +330,9 @@ function getAccountAvatarUrl(account: MinecraftCredential) {
  			return cachedUrl
  		}
  	}
@@ -159,10 +157,10 @@ index 03a61f2..364aef0 100644
  
  async function setAccount(account: MinecraftCredential) {
 diff --git a/apps/app-frontend/src/pages/Skins.vue b/apps/app-frontend/src/pages/Skins.vue
-index 75d9e7c..d813d0a 100644
+index 2d0b77b..81e2092 100644
 --- a/apps/app-frontend/src/pages/Skins.vue
 +++ b/apps/app-frontend/src/pages/Skins.vue
-@@ -1472,6 +1472,7 @@ await loadAccountSkins()
+@@ -1454,6 +1454,7 @@ await loadAccountSkins()
  	<EditSkinModal
  		ref="editSkinModal"
  		:capes="capes"
@@ -171,7 +169,7 @@ index 75d9e7c..d813d0a 100644
  		@saved="onSkinSaved"
  		@deleted="() => loadSkins()"
 diff --git a/packages/app-lib/src/api/minecraft_skins.rs b/packages/app-lib/src/api/minecraft_skins.rs
-index 6e44ede..107585a 100644
+index 822bf33..455ac49 100644
 --- a/packages/app-lib/src/api/minecraft_skins.rs
 +++ b/packages/app-lib/src/api/minecraft_skins.rs
 @@ -82,7 +82,7 @@ mod assets {
@@ -180,10 +178,10 @@ index 6e44ede..107585a 100644
  
 -mod png_util;
 +pub(crate) mod png_util;
+ mod render_cache;
+ mod rendering;
  
- const SKIN_CHANGE_DEBOUNCE: Duration = Duration::from_secs(10);
- 
-@@ -1331,7 +1331,7 @@ fn is_bundled_skin(texture_key: &str, variant: MinecraftSkinVariant) -> bool {
+@@ -1338,7 +1338,7 @@ fn is_bundled_skin(texture_key: &str, variant: MinecraftSkinVariant) -> bool {
      })
  }
  

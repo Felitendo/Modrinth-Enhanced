@@ -120,10 +120,10 @@ index 0844b05..0d0c525 100644
  			:visible="sidebarVisible"
  			:request-sign-in="() => requestSignIn()"
 diff --git a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
-index c9bdf68..8f3ff62 100644
+index cde7a9f..354e901 100644
 --- a/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
 +++ b/apps/app-frontend/src/features/settings/system/troubleshooting-settings.vue
-@@ -281,39 +281,6 @@ async function handleCopyAdDetails() {
+@@ -283,39 +283,6 @@ async function handleCopyAdDetails() {
  				{{ formatMessage(messages.debugInfoDescription) }}
  			</p>
  		</div>

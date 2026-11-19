@@ -440,7 +440,7 @@ index 0294be9..12c6008 100644
  
  function normalizeInstallProgress(value: unknown): WireObject {
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index b729cb4..4d9704f 100644
+index 24ead3d..25b4dc2 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -110,8 +110,10 @@ fn main() {
@@ -522,7 +522,7 @@ index 8104b3e..a956d17 100644
 +    Ok(())
 +}
 diff --git a/packages/app-lib/src/api/instance.rs b/packages/app-lib/src/api/instance.rs
-index 03b0bda..1e60177 100644
+index 0354907..3805cad 100644
 --- a/packages/app-lib/src/api/instance.rs
 +++ b/packages/app-lib/src/api/instance.rs
 @@ -62,7 +62,8 @@ pub use self::projects::{
@@ -592,10 +592,10 @@ index bd51823..5863647 100644
      .await
  }
 diff --git a/packages/app-lib/src/api/logs.rs b/packages/app-lib/src/api/logs.rs
-index 864cc7f..e8a2205 100644
+index 30ce981..d4f3cf0 100644
 --- a/packages/app-lib/src/api/logs.rs
 +++ b/packages/app-lib/src/api/logs.rs
-@@ -476,12 +476,27 @@ pub async fn delete_logs_by_filename(
+@@ -435,12 +435,27 @@ pub async fn delete_logs_by_filename(
      Ok(())
  }
  
@@ -624,7 +624,7 @@ index 864cc7f..e8a2205 100644
      let joined = lines.join("\n");
      let compacted = compact_duplicate_lines(&joined);
  
-@@ -495,7 +510,11 @@ pub async fn get_live_log_buffer(
+@@ -454,7 +469,11 @@ pub async fn get_live_log_buffer(
  }
  
  pub fn clear_live_log_buffer(instance_id: &str) {
@@ -651,7 +651,7 @@ index 4e8eb05..6ba09bb 100644
          #[cfg_attr(feature = "export-ts", ts(flatten))]
          pub event: LogEvent,
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index b39bfa8..aa2d585 100644
+index 7de8cb9..757400c 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
 @@ -916,6 +916,9 @@ pub async fn launch_minecraft(
@@ -679,7 +679,7 @@ index b39bfa8..aa2d585 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1299,7 +1306,10 @@ pub async fn launch_minecraft(
+@@ -1300,7 +1307,10 @@ pub async fn launch_minecraft(
          .recover(Some(&instance.id))
          .await
          .context("recovering interrupted content changes")?;
@@ -691,7 +691,7 @@ index b39bfa8..aa2d585 100644
          bail!(ErrorKind::LauncherError(format!(
              "instance {} is already running",
              instance.id
-@@ -1347,6 +1357,8 @@ pub async fn launch_minecraft(
+@@ -1348,6 +1358,8 @@ pub async fn launch_minecraft(
              &instance.id,
              &instance.path,
              &instance.name,

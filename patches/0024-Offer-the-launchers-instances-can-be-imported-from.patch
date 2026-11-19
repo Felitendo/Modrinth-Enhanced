@@ -135,7 +135,7 @@ index 851e44d..752832c 100644
  			return (await get_importable_instances(launcherName, path)) ?? []
  		},
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index bd63dc4..ddaaa3a 100644
+index 15f5afa..dae11a5 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -108,6 +108,7 @@ fn main() {
@@ -173,10 +173,10 @@ index 773fcb2..cda652f 100644
  /// None if it can't be found or doesn't exist
  #[tauri::command]
 diff --git a/packages/app-lib/src/api/pack/import/mod.rs b/packages/app-lib/src/api/pack/import/mod.rs
-index 86678de..2192594 100644
+index f7869dd..9c4c692 100644
 --- a/packages/app-lib/src/api/pack/import/mod.rs
 +++ b/packages/app-lib/src/api/pack/import/mod.rs
-@@ -247,36 +247,130 @@ async fn import_instance_inner(
+@@ -252,36 +252,130 @@ async fn import_instance_inner(
  pub fn get_default_launcher_path(
      r#type: ImportLauncherType,
  ) -> Option<PathBuf> {
@@ -332,7 +332,7 @@ index 86678de..2192594 100644
      let mut candidates: Vec<PathBuf> = Vec::new();
  
      // Linux/macOS: ~/.local/share/multimc is the typical location
-@@ -318,8 +412,6 @@ fn find_multimc_path() -> Option<PathBuf> {
+@@ -323,8 +417,6 @@ fn find_multimc_path() -> Option<PathBuf> {
      }
  
      candidates

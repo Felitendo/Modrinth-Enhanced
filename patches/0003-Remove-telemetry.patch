@@ -185,10 +185,10 @@ index bb20aa9..46a9749 100644
 +	void router
  }
 diff --git a/apps/app-frontend/src/locales/en-US/index.json b/apps/app-frontend/src/locales/en-US/index.json
-index 73e86ed..1cc52fa 100644
+index 1aeb35d..76bf5ec 100644
 --- a/apps/app-frontend/src/locales/en-US/index.json
 +++ b/apps/app-frontend/src/locales/en-US/index.json
-@@ -2952,7 +2952,7 @@
+@@ -2958,7 +2958,7 @@
      "message": "Discord Rich Presence"
    },
    "app.settings.privacy.telemetry.description": {

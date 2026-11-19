@@ -606,7 +606,7 @@ index 262311e..fc2cbf5 100644
  	show,
  })
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 632483e..03a61f2 100644
+index 902bfc1..2286f57 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 @@ -9,14 +9,23 @@
@@ -758,7 +758,7 @@ index 632483e..03a61f2 100644
  const microsoftLoginModal = ref<InstanceType<typeof MicrosoftLoginModal>>()
  const loginDisabled = ref(false)
  const defaultUser = ref<string | undefined>()
-@@ -226,6 +255,10 @@ function showElyAccountModal(event?: MouseEvent) {
+@@ -223,6 +252,10 @@ function showElyAccountModal(event?: MouseEvent) {
  	elyAccountModal.value?.show(event)
  }
  
@@ -769,7 +769,7 @@ index 632483e..03a61f2 100644
  const selectedAccount = computed(() =>
  	accounts.value.find((account) => account.profile.id === defaultUser.value),
  )
-@@ -248,6 +281,7 @@ defineExpose({
+@@ -245,6 +278,7 @@ defineExpose({
  	refreshValues,
  	showOfflineAccountModal,
  	showElyAccountModal,
@@ -777,7 +777,7 @@ index 632483e..03a61f2 100644
  	setEquippedSkin,
  	setLoginDisabled,
  	login,
-@@ -289,7 +323,7 @@ function login(event?: MouseEvent) {
+@@ -286,7 +320,7 @@ function login(event?: MouseEvent) {
  }
  
  async function accountAdded() {
@@ -786,7 +786,7 @@ index 632483e..03a61f2 100644
  	await refreshValues()
  	emit('change')
  }
-@@ -317,16 +351,28 @@ const messages = defineMessages({
+@@ -314,16 +348,28 @@ const messages = defineMessages({
  		defaultMessage: 'Not signed in',
  	},
  	addAccount: {
@@ -873,7 +873,7 @@ index 9b2408e..f4d24a1 100644
   * Retrieves the default user
   * @return {Promise<UUID | undefined>}
 diff --git a/apps/app/build.rs b/apps/app/build.rs
-index dc17791..a0fae94 100644
+index 126efe1..5debfe4 100644
 --- a/apps/app/build.rs
 +++ b/apps/app/build.rs
 @@ -18,6 +18,8 @@ fn main() {
@@ -1037,10 +1037,10 @@ index c16e7cc..3aadc9b 100644
  
  #[tracing::instrument]
 diff --git a/packages/app-lib/src/launcher/mod.rs b/packages/app-lib/src/launcher/mod.rs
-index aa2d585..06ce9ad 100644
+index 757400c..3cf06c2 100644
 --- a/packages/app-lib/src/launcher/mod.rs
 +++ b/packages/app-lib/src/launcher/mod.rs
-@@ -1202,10 +1202,11 @@ pub async fn launch_minecraft(
+@@ -1203,10 +1203,11 @@ pub async fn launch_minecraft(
          command.arg("--add-opens=jdk.internal/jdk.internal.misc=ALL-UNNAMED");
      }
  
@@ -1056,7 +1056,7 @@ index aa2d585..06ce9ad 100644
          let injector = crate::util::authlib_injector::get_authlib_injector(
              &state.directories,
          )
-@@ -1214,7 +1215,7 @@ pub async fn launch_minecraft(
+@@ -1215,7 +1216,7 @@ pub async fn launch_minecraft(
          command.arg(format!(
              "-javaagent:{}={}",
              injector.to_string_lossy(),

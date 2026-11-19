@@ -256,10 +256,10 @@ index e6a645d..ef33bc3 100644
  		</section>
  	</div>
 diff --git a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-index 224d776..632483e 100644
+index 07881e8..902bfc1 100644
 --- a/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
 +++ b/apps/app-frontend/src/features/minecraft-accounts/accounts-card.vue
-@@ -226,18 +226,6 @@ function showElyAccountModal(event?: MouseEvent) {
+@@ -223,18 +223,6 @@ function showElyAccountModal(event?: MouseEvent) {
  	elyAccountModal.value?.show(event)
  }
  
@@ -278,7 +278,7 @@ index 224d776..632483e 100644
  const selectedAccount = computed(() =>
  	accounts.value.find((account) => account.profile.id === defaultUser.value),
  )
-@@ -256,6 +244,26 @@ const avatarUrl = computed(() => {
+@@ -253,6 +241,26 @@ const avatarUrl = computed(() => {
  	return 'https://launcher-files.modrinth.com/assets/steve_head.png'
  })
  
