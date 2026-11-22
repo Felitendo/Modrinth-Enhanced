@@ -481,7 +481,7 @@ index 90d1682..5d10357 100644
  pub async fn skin_browser_site_skin(
      site: SkinSite,
 diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
-index 07a7bb8..13ebfe2 100644
+index fd192f8..60a283a 100644
 --- a/packages/app-lib/src/api/skin_browser.rs
 +++ b/packages/app-lib/src/api/skin_browser.rs
 @@ -1,9 +1,10 @@
@@ -499,7 +499,7 @@ index 07a7bb8..13ebfe2 100644
  
  use base64::Engine;
  use serde::{Deserialize, Serialize};
-@@ -193,6 +194,115 @@ pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
+@@ -194,6 +195,115 @@ pub async fn ely_players(term: &str) -> crate::Result<Vec<ElyPlayer>> {
          .map_err(|error| failed("read the Ely.by search", error))
  }
  

@@ -31,13 +31,13 @@ The website calls and the fallback Steve texture come from Noctrinth
  apps/app-frontend/src/pages/Skins.vue         | 464 +++++++++++++++++-
  apps/app/build.rs                             |  17 +
  apps/app/capabilities/plugins.json            |   3 +-
- apps/app/src/api/ely_skins.rs                 | 366 ++++++++++++++
+ apps/app/src/api/ely_skins.rs                 | 372 ++++++++++++++
  apps/app/src/api/mod.rs                       |   1 +
  apps/app/src/main.rs                          |   1 +
- packages/app-lib/src/api/ely_skins.rs         | 121 +++++
+ packages/app-lib/src/api/ely_skins.rs         | 138 ++++++
  packages/app-lib/src/api/mod.rs               |   1 +
  packages/app-lib/src/state/minecraft_auth.rs  |   4 +-
- 12 files changed, 1193 insertions(+), 13 deletions(-)
+ 12 files changed, 1216 insertions(+), 13 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/skin/ElySkinModal.vue
  create mode 100644 apps/app-frontend/src/helpers/ely-fallback-skin.ts
  create mode 100644 apps/app-frontend/src/helpers/ely_skins.ts
@@ -887,10 +887,10 @@ index 0c4acc3..7e849dc 100644
  }
 diff --git a/apps/app/src/api/ely_skins.rs b/apps/app/src/api/ely_skins.rs
 new file mode 100644
-index 0000000..d850755
+index 0000000..1d1337d
 --- /dev/null
 +++ b/apps/app/src/api/ely_skins.rs
-@@ -0,0 +1,366 @@
+@@ -0,0 +1,372 @@
 +//! Changing an Ely.by account's skin from the launcher's own skin page.
 +//!
 +//! Ely.by has no API for this. Its skin system only reads and its OAuth scopes
@@ -971,9 +971,10 @@ index 0000000..d850755
 +static SESSION: Mutex<()> = Mutex::const_new(());
 +
 +/// Shared by every call. `call` fetches from the site with its session,
-+/// `problem` turns an answer into an outcome when it is not a success, and
-+/// `form` builds a form post. Every write the site refuses for want of a
-+/// session answers with `error_login`.
++/// `problem` turns an answer into an outcome when it is not a success, `form`
++/// builds a form body and `signedOut` asks whether there is a session. The site
++/// refuses every call that wants one with `error_login`, and like the site, an
++/// `error` that mentions success is one.
 +const PRELUDE: &str = r#"
 +const call = async (path, init = {}) => {
 +    const response = await fetch('https://ely.by' + path, {
@@ -987,32 +988,33 @@ index 0000000..d850755
 +    return { response, json };
 +};
 +const problem = ({ response, json }) => {
-+    if (json && json.error === 'error_login') return { status: 'signed_out' };
-+    if (response.ok && !(json && json.error)) return null;
-+    const said = json && (json.text || json.error);
++    const error = json && json.error ? String(json.error) : '';
++    if (error === 'error_login') return { status: 'signed_out' };
++    if (response.ok && (!error || error.includes('success'))) return null;
++    const said = json && (json.text || json.message || json.error);
 +    return { status: 'failed', message: said ? String(said).replace(/<[^>]*>/g, '') : 'HTTP ' + response.status };
 +};
-+const form = (fields) => ({
-+    method: 'POST',
++const form = (fields, method = 'POST') => ({
++    method,
 +    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
 +    body: new URLSearchParams(fields).toString(),
 +});
++const signedOut = async () => {
++    const answer = await call('/api/legacy/notifications/count');
++    return !!(answer.json && answer.json.error === 'error_login');
++};
 +"#;
 +
-+/// Whether the site has a session. A skin that cannot exist is refused for want
-+/// of a session before anything else is looked at, and removing it changes
-+/// nothing either way.
 +const PROBE: &str = r#"
-+const answer = await call('/skins/remove/0', { method: 'POST' });
-+return answer.json && answer.json.error === 'error_login' ? { status: 'signed_out' } : { status: 'done' };
++return (await signedOut()) ? { status: 'signed_out' } : { status: 'done' };
 +"#;
 +
 +const WEAR: &str = r#"
-+return problem(await call('/skins/wear', form({ skinId: __SKIN_ID__ }))) || { status: 'done' };
++return problem(await call('/api/legacy/users/skin', form({ skinId: __SKIN_ID__ }, 'PUT'))) || { status: 'done' };
 +"#;
 +
 +const REMOVE: &str = r#"
-+return problem(await call('/skins/remove/__SKIN_ID__', { method: 'POST' })) || { status: 'done' };
++return problem(await call('/api/legacy/skins/__SKIN_ID__', { method: 'DELETE' })) || { status: 'done' };
 +"#;
 +
 +/// Uploading answers with the new skin's page, which is where its id comes
@@ -1021,35 +1023,39 @@ index 0000000..d850755
 +const bytes = Uint8Array.from(atob('__TEXTURE__'), (char) => char.charCodeAt(0));
 +const body = new FormData();
 +body.append('file', new File([bytes], 'skin.png', { type: 'image/png' }));
-+const uploaded = await call('/skins/upload', { method: 'POST', body });
++const uploaded = await call('/api/legacy/skins', { method: 'POST', body });
 +const failed = problem(uploaded);
 +if (failed) return failed;
 +const address = String((uploaded.json && uploaded.json.url) || '');
 +const at = address.indexOf('/skins/s');
-+const id = at < 0 ? 0 : parseInt(address.slice(at + '/skins/s'.length), 10);
++const id = at < 0
++    ? Number(uploaded.json && uploaded.json.extra && uploaded.json.extra.id) || 0
++    : parseInt(address.slice(at + '/skins/s'.length), 10);
 +if (!id) return { status: 'failed', message: 'Ely.by did not say where the skin went' };
-+return problem(await call('/skins/wear', form({ skinId: id }))) || { status: 'done' };
++return problem(await call('/api/legacy/users/skin', form({ skinId: id }, 'PUT'))) || { status: 'done' };
 +"#;
 +
-+/// The edit form posts every field at once and blanks whatever is left out, so
++/// The edit form sends every field at once and blanks whatever is left out, so
 +/// the skin's details are read from its edit page and sent back around the
-+/// changed model. That page redirects away rather than asking for a session, so
-+/// the session is checked first.
++/// changed model, to wherever that page's form sends them. The page redirects
++/// away rather than asking for a session, so the session is checked first.
 +const SET_MODEL: &str = r#"
-+const session = await call('/skins/remove/0', { method: 'POST' });
-+if (session.json && session.json.error === 'error_login') return { status: 'signed_out' };
++if (await signedOut()) return { status: 'signed_out' };
 +const page = await (await fetch('https://ely.by/skins/s__SKIN_ID__/edit', { credentials: 'same-origin' })).text();
 +const found = page.match(/alight\.service\.skin\s*=\s*(\{[\s\S]*?\});/);
 +if (!found) return { status: 'failed', message: 'Ely.by would not open this skin for editing' };
 +const skin = JSON.parse(found[1]);
-+return problem(await call('/skins/save/__SKIN_ID__', form({
++const edit = new DOMParser().parseFromString(page, 'text/html').querySelector('#formEditSkin');
++const action = new URL((edit && edit.getAttribute('action')) || '/api/legacy/skins/__SKIN_ID__', 'https://ely.by/');
++const method = ((edit && edit.dataset.method) || 'PUT').toUpperCase();
++return problem(await call(action.pathname + action.search, form({
 +    name: skin.name || '',
 +    description: skin.description || '',
 +    kind: String(skin.kind == null ? 0 : skin.kind),
 +    color: String(skin.color || '').replace('#', ''),
 +    tags: Array.isArray(skin.tags) ? skin.tags.join(',') : String(skin.tags || ''),
 +    isSlim: '__SLIM__',
-+}))) || { status: 'done' };
++}, method))) || { status: 'done' };
 +"#;
 +
 +#[tauri::command]
@@ -1283,10 +1289,10 @@ index b52793c..62ee8c8 100644
          .plugin(api::import::init())
 diff --git a/packages/app-lib/src/api/ely_skins.rs b/packages/app-lib/src/api/ely_skins.rs
 new file mode 100644
-index 0000000..2c659af
+index 0000000..7536cae
 --- /dev/null
 +++ b/packages/app-lib/src/api/ely_skins.rs
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,138 @@
 +//! Reading an Ely.by account's skins.
 +//!
 +//! Ely.by's skin system only reads, so changing a skin happens on the website
@@ -1310,7 +1316,14 @@ index 0000000..2c659af
 +#[derive(Deserialize)]
 +struct Listing {
 +    items: Vec<ElyUploadedSkin>,
++    #[serde(default)]
++    current: u32,
++    #[serde(default)]
++    last: u32,
 +}
++
++/// Ely.by lists 40 skins a page; this many pages is more than any account has.
++const MAX_PAGES: u32 = 25;
 +
 +#[derive(Deserialize)]
 +struct Textures {
@@ -1334,24 +1347,34 @@ index 0000000..2c659af
 +pub async fn list_uploaded_skins(
 +    username: &str,
 +) -> crate::Result<Vec<ElyUploadedSkin>> {
-+    let url = format!(
-+        "https://ely.by/skins/get?uploader={}",
-+        urlencoding::encode(username)
-+    );
++    let mut skins = Vec::new();
 +
-+    let listing: Listing = REQWEST_CLIENT
-+        .get(url)
-+        .header("X-Requested-With", "XMLHttpRequest")
-+        .header("Accept", "application/json")
-+        .send()
-+        .await
-+        .and_then(|response| response.error_for_status())
-+        .map_err(|error| failed("list the skins", error))?
-+        .json()
-+        .await
-+        .map_err(|error| failed("read the skin list", error))?;
++    for page in 1..=MAX_PAGES {
++        let url = url::Url::parse_with_params(
++            "https://ely.by/api/legacy/skins",
++            &[("uploader", username), ("page", &page.to_string())],
++        )
++        .map_err(|error| failed("list the skins", error))?;
 +
-+    Ok(listing.items)
++        let listing: Listing = REQWEST_CLIENT
++            .get(url)
++            .header("X-Requested-With", "XMLHttpRequest")
++            .header("Accept", "application/json")
++            .send()
++            .await
++            .and_then(|response| response.error_for_status())
++            .map_err(|error| failed("list the skins", error))?
++            .json()
++            .await
++            .map_err(|error| failed("read the skin list", error))?;
++
++        skins.extend(listing.items);
++        if listing.current >= listing.last {
++            break;
++        }
++    }
++
++    Ok(skins)
 +}
 +
 +/// The address of the skin an account wears, or `None` for the default one.

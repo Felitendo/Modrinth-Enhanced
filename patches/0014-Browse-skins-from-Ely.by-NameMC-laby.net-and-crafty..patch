@@ -31,8 +31,8 @@ texture endpoint or crafty.gg's lookup for that one skin.
  apps/app/src/api/skin_browser.rs              | 120 ++++
  apps/app/src/main.rs                          |   1 +
  packages/app-lib/src/api/mod.rs               |   1 +
- packages/app-lib/src/api/skin_browser.rs      | 372 +++++++++++
- 10 files changed, 1320 insertions(+), 12 deletions(-)
+ packages/app-lib/src/api/skin_browser.rs      | 373 +++++++++++
+ 10 files changed, 1321 insertions(+), 12 deletions(-)
  create mode 100644 apps/app-frontend/src/components/ui/skin/SkinBrowser.vue
  create mode 100644 apps/app-frontend/src/helpers/skin-browser.ts
  create mode 100644 apps/app/src/api/skin_browser.rs
@@ -1177,10 +1177,10 @@ index 4e77284..ce4e332 100644
  pub mod users;
 diff --git a/packages/app-lib/src/api/skin_browser.rs b/packages/app-lib/src/api/skin_browser.rs
 new file mode 100644
-index 0000000..07a7bb8
+index 0000000..fd192f8
 --- /dev/null
 +++ b/packages/app-lib/src/api/skin_browser.rs
-@@ -0,0 +1,372 @@
+@@ -0,0 +1,373 @@
 +//! Browsing skins from other sites.
 +//!
 +//! Only Ely.by's catalogue is read from here: its robots.txt invites it. NameMC,
@@ -1270,10 +1270,7 @@ index 0000000..07a7bb8
 +    tags: Vec<String>,
 +}
 +
-+/// One page of Ely.by's skin catalogue.
-+///
-+/// The filters go in the query and the page number in a form body, which is how
-+/// the catalogue page itself asks: a page number in the query is ignored.
++/// One page of Ely.by's skin catalogue, asked for as the catalogue page asks.
 +pub async fn ely_catalogue(
 +    query: &ElyCatalogueQuery,
 +) -> crate::Result<ElyCataloguePage> {
@@ -1291,7 +1288,10 @@ index 0000000..07a7bb8
 +        return Err(invalid("filter"));
 +    }
 +
-+    let mut params = vec![("sort", query.sort.clone())];
++    let mut params = vec![
++        ("sort", query.sort.clone()),
++        ("page", query.page.max(1).to_string()),
++    ];
 +    // The catalogue page leaves out whatever is not narrowing anything.
 +    if query.model != "any" {
 +        params.push(("type", query.model.clone()));
@@ -1306,15 +1306,14 @@ index 0000000..07a7bb8
 +        params.push(("tags[]", tag.clone()));
 +    }
 +
-+    let url = url::Url::parse_with_params("https://ely.by/skins/get", &params)
-+        .map_err(|error| failed("build the catalogue address", error))?;
++    let url =
++        url::Url::parse_with_params("https://ely.by/api/legacy/skins", &params)
++            .map_err(|error| failed("build the catalogue address", error))?;
 +
 +    let page: RawPage = REQWEST_CLIENT
-+        .post(url)
++        .get(url)
 +        .header("X-Requested-With", "XMLHttpRequest")
 +        .header("Accept", "application/json")
-+        .header("Content-Type", "application/x-www-form-urlencoded")
-+        .body(format!("skinsPage={}", query.page.max(1)))
 +        .send()
 +        .await
 +        .and_then(|response| response.error_for_status())
@@ -1359,9 +1358,11 @@ index 0000000..07a7bb8
 +        return Err(invalid("player search"));
 +    }
 +
-+    let url =
-+        url::Url::parse_with_params("https://ely.by/search/", &[("term", term)])
-+            .map_err(|error| failed("build the search address", error))?;
++    let url = url::Url::parse_with_params(
++        "https://ely.by/api/legacy/search",
++        &[("term", term)],
++    )
++    .map_err(|error| failed("build the search address", error))?;
 +
 +    REQWEST_CLIENT
 +        .get(url)
